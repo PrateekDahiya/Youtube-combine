@@ -1,0 +1,282 @@
+.login-box {
+    width: 100%;
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    min-height: calc(100vh - 60px);
+    padding: 20px;
+}
+
+.form-box-logo {
+    width: 50px;
+    height: 50px;
+    margin: 0;
+    object-fit: contain;
+}
+
+.login-box .box-head {
+    font-size: 35px;
+    color: var(--text-color);
+    margin-bottom: 20px;
+    font-weight: 600;
+}
+
+.register-box .box-desc {
+    font-size: 18px;
+    color: var(--text-color);
+    margin-bottom: 20px;
+    line-height: 1.5;
+}
+
+.form-box {
+    display: flex;
+    width: 100%;
+    max-width: 1200px;
+    min-height: 500px;
+    flex-direction: row;
+    justify-content: space-between;
+    border: 2px solid var(--alt-color);
+    padding: 40px;
+    border-radius: 30px;
+    background-color: var(--background-color);
+    gap: 40px;
+}
+
+.form-box form {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    width: 100%;
+    max-width: 500px;
+}
+
+.inputdata {
+    width: 100%;
+    position: relative;
+}
+
+.form-box input,
+.form-box textarea {
+    width: 100%;
+    height: 45px;
+    padding: 0 15px;
+    margin: 10px 0;
+    border: none;
+    background-color: var(--alt-color);
+    color: var(--text-color);
+    border-radius: 10px;
+    font-size: 14px;
+    transition: all 0.3s ease;
+}
+
+.form-box .invalid {
+    border: 1px solid var(--error-msg);
+}
+
+.form-box select {
+    width: 100%;
+    height: 45px;
+    border: none;
+    padding: 0 15px;
+    appearance: none;
+    background-color: var(--alt-color);
+    color: var(--text-color);
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.3s ease;
+}
+
+.form-box-left {
+    display: flex;
+    flex-direction: column;
+    justify-content: start;
+    text-align: left;
+    width: 100%;
+    max-width: 500px;
+}
+
+.form-box input::placeholder,
+.form-box textarea::placeholder {
+    color: var(--text2-color);
+}
+
+.form-box .valid:focus,
+.form-box select:focus {
+    outline: 2px solid var(--highlight-color);
+}
+
+.form-box .invalid:focus {
+    outline: 2px solid var(--error-msg);
+}
+
+.form-box button {
+    width: 150px;
+    height: 45px;
+    padding: 0 20px;
+    margin: 15px 0;
+    border: none;
+    border-radius: 22px;
+    background-color: var(--highlight-color);
+    color: var(--background-color);
+    cursor: pointer;
+    font-size: 15px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.form-box button:hover {
+    background-color: var(--text2-color);
+    color: var(--background-color);
+    transform: translateY(-2px);
+}
+
+.login-ques {
+    color: var(--text2-color);
+    font-size: 14px;
+    padding-left: 20px;
+    margin: 0;
+    transition: all 0.3s ease;
+}
+
+.login-ques:hover {
+    color: var(--text-color);
+    cursor: pointer;
+}
+
+.error {
+    color: var(--error-msg);
+    width: 100%;
+    font-size: 13px;
+    padding-left: 20px;
+    margin: 5px 0;
+    text-wrap: balance;
+}
+
+.pass-eye-box {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    position: relative;
+    width: 100%;
+}
+
+.pass-eye {
+    position: absolute;
+    right: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    margin: 0;
+    padding: 0;
+    width: 20px;
+    height: 20px;
+    filter: var(--image-filter);
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.pass-eye:hover {
+    opacity: 0.8;
+}
+
+/* Responsive breakpoints */
+@media (min-width: 1550px) {
+    .form-box {
+        max-width: 1400px;
+    }
+    .login-box .box-head {
+        font-size: 40px;
+    }
+    .register-box .box-desc {
+        font-size: 20px;
+    }
+}
+
+@media (min-width: 1200px) and (max-width: 1549px) {
+    .form-box {
+        max-width: 1200px;
+    }
+}
+
+@media (min-width: 992px) and (max-width: 1199px) {
+    .form-box {
+        max-width: 900px;
+        padding: 30px;
+    }
+    .login-box .box-head {
+        font-size: 32px;
+    }
+}
+
+@media (min-width: 768px) and (max-width: 991px) {
+    .form-box {
+        max-width: 700px;
+        padding: 25px;
+        gap: 30px;
+    }
+    .login-box .box-head {
+        font-size: 28px;
+    }
+    .register-box .box-desc {
+        font-size: 16px;
+    }
+}
+
+@media (min-width: 576px) and (max-width: 767px) {
+    .form-box {
+        flex-direction: column;
+        padding: 20px;
+        gap: 20px;
+    }
+    .form-box-left {
+        max-width: 100%;
+    }
+    .login-box .box-head {
+        font-size: 26px;
+    }
+    .register-box .box-desc {
+        font-size: 15px;
+    }
+    .form-box button {
+        width: 100%;
+    }
+}
+
+@media (max-width: 575px) {
+    .login-box {
+        padding: 15px;
+    }
+    .form-box {
+        flex-direction: column;
+        padding: 15px;
+        gap: 15px;
+        border-radius: 20px;
+    }
+    .form-box-left {
+        max-width: 100%;
+    }
+    .login-box .box-head {
+        font-size: 24px;
+    }
+    .register-box .box-desc {
+        font-size: 14px;
+    }
+    .form-box input,
+    .form-box textarea,
+    .form-box select {
+        height: 40px;
+        font-size: 13px;
+    }
+    .form-box button {
+        width: 100%;
+        height: 40px;
+        font-size: 14px;
+    }
+    .login-ques {
+        font-size: 13px;
+    }
+    .error {
+        font-size: 12px;
+    }
+}

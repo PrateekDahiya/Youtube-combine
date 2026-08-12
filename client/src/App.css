@@ -1,0 +1,145 @@
+.App {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    flex-wrap: wrap;
+    user-select: none;
+    position: relative;
+    overflow-x: hidden;
+}
+
+.menuncontent {
+    display: flex;
+    width: 100%;
+    flex-direction: row;
+    position: relative;
+    margin-top: 60px;
+    /* height: calc(100vh - 60px); */
+    overflow: hidden;
+}
+
+.menu {
+    max-width: 240px;
+    transition: transform 0.3s ease;
+    height: 100%;
+    overflow-y: auto;
+    position: relative;
+    z-index: 1;
+    flex-shrink: 0;
+}
+
+.content {
+    /* margin-left: 5px; */
+    width: 100%;
+    transition: margin-left 0.3s ease;
+    /* height: 100%; */
+    overflow-y: auto;
+    position: relative;
+    z-index: 1;
+}
+
+/* Guest user */
+
+.guestuserp {
+    color: var(--text-color);
+    font-size: 15px;
+    word-wrap: break-word;
+    margin: 0;
+}
+
+.menuguestuser {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 10px;
+    width: 150px;
+    text-align: center;
+}
+
+.sign_in {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    width: 100px;
+    border: none;
+    padding: 10px;
+    border-radius: 10px;
+    background-color: var(--alt-color);
+    color: var(--text-color);
+    cursor: pointer;
+    font-size: 15px;
+}
+
+.sign_in:hover {
+    border: 1px solid var(--highlight-color);
+}
+
+.guesticon {
+    height: 20px;
+    width: 20px;
+    margin-right: 5px;
+    filter: var(--image-filter);
+}
+
+/* Responsive breakpoints */
+/* Large screens (laptops/desktops) */
+@media (min-width: 1200px) {
+    .content {
+        margin-left: 5px;
+    }
+}
+
+/* Medium screens (tablets) */
+@media (max-width: 1199px) and (min-width: 768px) {
+    .content {
+        margin-left: 5px;
+    }
+    
+}
+
+/* Small screens (mobile landscape) */
+@media (max-width: 767px) and (min-width: 481px) {
+    .menuncontent {
+        flex-direction: column;
+    }
+    .menu {
+        position: fixed;
+        left: -50px;
+        z-index: 1000;
+        background: var(--background-color);
+        height: calc(100vh - 60px);
+        width: 50px;
+        max-width: 50px;
+    }
+    .menu.show {
+        transform: translateX(50px);
+    }
+    .content {
+        margin-left: 0;
+        width: 100%;
+    }
+}
+
+/* Extra small screens (mobile portrait) */
+@media (max-width: 480px) {
+    .menuncontent {
+        flex-direction: column;
+    }
+    .menu {
+        position: fixed;
+        left: -50px;
+        z-index: 1000;
+        background: var(--background-color);
+        height: calc(100vh - 60px);
+        width: 50px;
+        max-width: 50px;
+    }
+    .menu.show {
+        transform: translateX(50px);
+    }
+    .content {
+        margin-left: 0;
+        width: 100%;
+    }
+}

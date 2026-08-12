@@ -1,0 +1,211 @@
+.shortsbox {
+    width: 380px;
+    height: 590px;
+    border-radius: 20px;
+    background-color: var(--background-color);
+    position: relative;
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: end;
+    gap: 16px;
+    padding: 8px;
+    transition: all 0.3s ease;
+}
+
+.short-btns {
+    position: absolute;
+    right: -70px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    height: fit-content;
+    text-align: center;
+    vertical-align: middle;
+    padding: 8px;
+    border-radius: 12px;
+    background-color: rgba(0, 0, 0, 0.05);
+    transition: all 0.3s ease;
+}
+
+.short-btns p {
+    margin: 0;
+    font-size: 12px;
+    font-weight: 500;
+    text-align: center;
+    color: var(--text-color);
+    opacity: 0.9;
+    transition: opacity 0.3s ease;
+}
+
+.short-btns:hover p {
+    opacity: 1;
+}
+
+.shorts-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background-color: var(--background-color);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.shorts-btn:hover {
+    background-color: var(--text2-color);
+    transform: scale(1.05);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.shorts-btn:active {
+    transform: scale(0.95);
+}
+
+.shorts-btn img {
+    width: 24px;
+    height: 24px;
+    filter: var(--image-filter);
+    cursor: pointer;
+    transition: transform 0.3s ease;
+}
+
+.shorts-btn:hover img {
+    transform: scale(1.1);
+}
+
+.profile-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    overflow: hidden;
+    margin-top: 20px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.profile-btn:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.profile-btn:active {
+    transform: scale(0.95);
+}
+
+.profile-btn img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+}
+
+.profile-btn:hover img {
+    transform: scale(1.1);
+}
+
+/* Responsive breakpoints */
+@media (min-width: 1550px) {
+    .shortsbox {
+        gap: 20px;
+        padding: 12px;
+    }
+    .short-btns {
+        gap: 16px;
+        padding: 12px;
+    }
+    .shorts-btn {
+        height: 56px;
+        width: 56px;
+    }
+    .shorts-btn img {
+        width: 28px;
+        height: 28px;
+    }
+    .profile-btn img {
+        width: 48px;
+        height: 48px;
+    }
+}
+
+@media (min-width: 1200px) and (max-width: 1549px) {
+    .shortsbox {
+        gap: 16px;
+    }
+    .shorts-btn {
+        height: 52px;
+        width: 52px;
+    }
+    .shorts-btn img {
+        width: 26px;
+        height: 26px;
+    }
+}
+
+@media (min-width: 992px) and (max-width: 1199px) {
+    .shortsbox {
+        gap: 14px;
+    }
+    .shorts-btn {
+        height: 48px;
+        width: 48px;
+    }
+    .shorts-btn img {
+        width: 24px;
+        height: 24px;
+    }
+}
+
+@media (min-width: 768px) and (max-width: 991px) {
+    .shortsbox {
+        gap: 12px;
+    }
+    .shorts-btn {
+        height: 44px;
+        width: 44px;
+    }
+    .shorts-btn img {
+        width: 22px;
+        height: 22px;
+    }
+    .profile-btn img {
+        width: 36px;
+        height: 36px;
+    }
+}
+
+@media (max-width: 767px) {
+    .shortsbox {
+        flex-direction: column;
+        gap: 8px;
+        padding: 4px;
+    }
+    .short-btns {
+        flex-direction: row;
+        gap: 8px;
+        padding: 6px;
+        border-radius: 8px;
+    }
+    .shorts-btn {
+        height: 40px;
+        width: 40px;
+    }
+    .shorts-btn img {
+        width: 20px;
+        height: 20px;
+    }
+    .profile-btn img {
+        width: 32px;
+        height: 32px;
+    }
+    .short-btns p {
+        display: none;
+    }
+}

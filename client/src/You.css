@@ -1,0 +1,200 @@
+.outer {
+    min-height: calc(100vh - 60px);
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    padding: 20px;
+    background-color: var(--background-color);
+}
+
+.outer::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+.outer::-webkit-scrollbar-track {
+    background: var(--background-color);
+    border-radius: 10px;
+}
+
+.outer::-webkit-scrollbar-thumb {
+    background: var(--alt-color);
+    border-radius: 10px;
+}
+
+.outer::-webkit-scrollbar-thumb:hover {
+    background: var(--text2-color);
+}
+
+.channelinfo {
+    height: fit-content;
+    width: 100%;
+    display: flex;
+    flex-direction: row;
+    align-items: start;
+    gap: 24px;
+    padding: 20px;
+    background-color: var(--background-color);
+    border-radius: 16px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.banner {
+    width: 100%;
+    margin-bottom: 25px;
+    border-radius: 16px;
+    overflow: hidden;
+    position: relative;
+}
+
+.banner img {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+    border-radius: 16px;
+}
+
+.mypic {
+    height: 100px;
+    border-radius: 50%;
+    border: 3px solid var(--background-color);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.details {
+    margin-left: 20px;
+    flex: 1;
+}
+
+.details .name {
+    font-size: 28px;
+    font-weight: 600;
+    margin: 0 0 8px 0;
+    color: var(--text-color);
+}
+
+.id {
+    cursor: pointer;
+    color: var(--text2-color);
+    font-size: 16px;
+    margin-bottom: 16px;
+    display: block;
+    transition: color 0.3s ease;
+}
+
+.id:hover {
+    color: var(--text-color);
+}
+
+.mebuttons {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.mebuttons button {
+    color: var(--text2-color);
+    font-weight: 500;
+    font-size: 14px;
+    border-radius: 20px;
+    padding: 8px 16px;
+    background-color: var(--alt-color);
+    border: none;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.mebuttons button:hover {
+    color: var(--text-color);
+    background-color: var(--text2-color);
+    transform: translateY(-2px);
+}
+
+/* Responsive breakpoints */
+@media (min-width: 1550px) {
+    .outer {
+        padding: 30px;
+    }
+    .channelinfo {
+        padding: 30px;
+        gap: 30px;
+    }
+    .details .name {
+        font-size: 32px;
+    }
+}
+
+@media (min-width: 1200px) and (max-width: 1549px) {
+    .outer {
+        padding: 25px;
+    }
+    .channelinfo {
+        padding: 25px;
+        gap: 24px;
+    }
+}
+
+@media (min-width: 992px) and (max-width: 1199px) {
+    .outer {
+        padding: 20px;
+    }
+    .channelinfo {
+        padding: 20px;
+        gap: 20px;
+    }
+    .details .name {
+        font-size: 24px;
+    }
+}
+
+@media (min-width: 768px) and (max-width: 991px) {
+    .outer {
+        padding: 15px;
+    }
+    .channelinfo {
+        padding: 15px;
+        gap: 16px;
+    }
+    .details .name {
+        font-size: 22px;
+    }
+    .mypic {
+        height: 80px;
+    }
+}
+
+@media (max-width: 767px) {
+    .outer {
+        padding: 10px;
+    }
+    .channelinfo {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        padding: 15px;
+        gap: 16px;
+    }
+    .details {
+        margin-left: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+    .details .name {
+        font-size: 20px;
+    }
+    .mebuttons {
+        justify-content: center;
+    }
+    .mypic {
+        height: 70px;
+    }
+    .banner img {
+        height: 120px;
+        width: 120px;
+    }
+}

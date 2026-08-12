@@ -1,0 +1,57 @@
+:root {
+    /* Common variables */
+    --transition-speed: 0.3s;
+    --border-radius: 8px;
+    --box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    --hover-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+body.light {
+    --background-color: #f0f0f0;
+    --text-color: #0f0f0f;
+    background-color: var(--background-color);
+    color: var(--text-color);
+    --image-filter: none;
+    --alt-color: #d9d6d6;
+    --text2-color: #3f3f3f;
+    --highlight-color: #0e4eb5;
+    --error-msg: rgb(250, 95, 95);
+}
+
+body.dark {
+    --background-color: #0f0f0f;
+    --text-color: #ffffff;
+    background-color: var(--background-color);
+    color: var(--text-color);
+    --image-filter: invert(1);
+    --alt-color: #262929;
+    --text2-color: #a0a0a0;
+    --highlight-color: #0e4eb5;
+    --error-msg: rgb(194, 87, 87);
+}
+
+/* Theme transition */
+body {
+    transition: background-color var(--transition-speed) ease,
+                color var(--transition-speed) ease;
+}
+
+/* Common utility classes */
+.theme-transition {
+    transition: var(--hover-transition);
+}
+
+.theme-hover {
+    transition: var(--hover-transition);
+}
+
+.theme-hover:hover {
+    box-shadow: var(--hover-shadow);
+}
+
+/* Accessibility */
+@media (prefers-reduced-motion: reduce) {
+    :root {
+        --transition-speed: 0s;
+    }
+}

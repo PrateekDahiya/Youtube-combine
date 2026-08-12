@@ -1,0 +1,134 @@
+.cards {
+    height: 100%;
+    width: 100%;
+    overflow-y: auto;
+    display: grid;
+    grid-template-columns: repeat(3, 32%);
+    gap: 20px;
+    align-items: start;
+    padding: 20px;
+}
+
+.wider {
+    grid-template-columns: repeat(4, 24%);
+}
+
+.cards::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+.cards::-webkit-scrollbar-track {
+    background: var(--background-color);
+    border-radius: 10px;
+}
+
+.cards::-webkit-scrollbar-thumb {
+    background: var(--alt-color);
+}
+
+.cards::-webkit-scrollbar-thumb:hover {
+    background: var(--text2-color);
+}
+
+.home-guestuser {
+    width: 43%;
+    height: 15%;
+    background-color: var(--alt-color);
+    padding: 20px;
+    text-align: center;
+    border-radius: 30px;
+    border: 1px solid var(--text2-color);
+    position: relative;
+    left: 50%;
+    top: 20%;
+    transform: translate(-50%, -50%);
+}
+
+.loading {
+    text-align: center;
+}
+
+/* Responsive breakpoints */
+/* Extra large screens */
+@media (min-width: 1550px) {
+    .cards {
+        grid-template-columns: repeat(5, 19%);
+        gap: 15px;
+        padding: 25px;
+    }
+    .wider {
+        grid-template-columns: repeat(6, 16%);
+    }
+}
+
+/* Large screens */
+@media (min-width: 1200px) and (max-width: 1549px) {
+    .cards {
+        grid-template-columns: repeat(4, 23%);
+        gap: 15px;
+        padding: 20px;
+    }
+    .wider {
+        grid-template-columns: repeat(4, 23%);
+    }
+}
+
+/* Medium screens */
+@media (min-width: 992px) and (max-width: 1199px) {
+    .cards {
+        grid-template-columns: repeat(3, 31%);
+        gap: 15px;
+        padding: 15px;
+    }
+    .wider {
+        grid-template-columns: repeat(3, 31%);
+    }
+}
+
+/* Small screens */
+@media (min-width: 768px) and (max-width: 991px) {
+    .cards {
+        grid-template-columns: repeat(2, 48%);
+        gap: 15px;
+        padding: 15px;
+    }
+    .wider {
+        grid-template-columns: repeat(2, 48%);
+    }
+    .home-guestuser {
+        width: 60%;
+    }
+}
+
+/* Extra small screens */
+@media (min-width: 576px) and (max-width: 767px) {
+    .cards {
+        grid-template-columns: repeat(2, 48%);
+        gap: 10px;
+        padding: 10px;
+    }
+    .wider {
+        grid-template-columns: repeat(2, 48%);
+    }
+    .home-guestuser {
+        width: 70%;
+    }
+}
+
+/* Mobile screens */
+@media (max-width: 575px) {
+    .cards {
+        grid-template-columns: repeat(1, 100%);
+        gap: 15px;
+        padding: 10px;
+    }
+    .wider {
+        grid-template-columns: repeat(1, 100%);
+    }
+    .home-guestuser {
+        width: 90%;
+        height: auto;
+        padding: 15px;
+    }
+}

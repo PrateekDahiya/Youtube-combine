@@ -1,0 +1,273 @@
+.outerbox-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    height: 91vh;
+    width: 100%;
+    overflow-y: hidden;
+}
+
+.channel-outerbox {
+    width: 100%;
+}
+
+.category-outerbox {
+    display: flex;
+    flex-direction: column;
+    align-items: start;
+}
+
+.watch-outerbox {
+    display: flex;
+    align-items: start;
+    flex-direction: column;
+    width: 100%;
+}
+
+.subscription-outerbox {
+    width: 95%;
+    display: flex;
+    flex-direction: column;
+    align-items: start;
+}
+
+.card-loading {
+    margin: 5px;
+    border-radius: 15px;
+    width: 32%;
+}
+
+.videos-loading {
+    flex: 1;
+    height: 91vh;
+    display: flex;
+    margin-top: 10px;
+    flex-wrap: wrap;
+    overflow-y: hidden;
+    overflow-x: hidden;
+    width: 100%;
+}
+
+.videotitle-load {
+    width: 100%;
+    height: 30px;
+    margin-bottom: 5px;
+    background-color: var(--alt-color);
+    border-radius: 5px;
+}
+
+.img-load {
+    width: 100%;
+    height: 230px;
+    object-fit: cover;
+    border-radius: 10px;
+    background-color: var(--alt-color);
+}
+
+.card-loading .info {
+    display: flex;
+    flex-direction: row;
+    padding: 10px;
+    margin-top: 20px;
+    margin-bottom: 20px;
+}
+
+.viewsntime-load {
+    width: 50%;
+    height: 25px;
+    background-color: var(--alt-color);
+    border-radius: 5px;
+}
+
+.card-loading .text-load {
+    width: 100%;
+}
+
+.chl-icon-load {
+    width: 45px;
+    height: 40px;
+    border-radius: 50%;
+    margin-right: 10px;
+    background-color: var(--alt-color);
+}
+
+.info-load {
+    display: flex;
+    flex-direction: row;
+    padding: 10px;
+}
+
+.vp-videotitle-load {
+    width: 950px;
+    height: 30px;
+    margin-bottom: 5px;
+    background-color: var(--alt-color);
+    border-radius: 5px;
+}
+
+.catheading-loading {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    width: 500px;
+    height: 133px;
+}
+
+.caticon-load {
+    height: 100px;
+    width: 100px;
+    border-radius: 50%;
+    margin: 10px;
+    background-color: var(--alt-color);
+}
+
+.catheading-load {
+    height: 50px;
+    width: 100px;
+    border-radius: 10px;
+    background-color: var(--alt-color);
+}
+
+.catmenus-load {
+    height: 48px;
+    width: 100%;
+    border-bottom: 1px solid var(--alt-color);
+}
+
+.chl-banner-load {
+    width: 100%;
+    height: 170px;
+    margin-bottom: 25px;
+    border-radius: 20px;
+    background-color: var(--alt-color);
+}
+
+.channelinfo-load {
+    display: flex;
+    flex-direction: row;
+    height: fit-content;
+    width: 100%;
+    align-items: start;
+}
+
+.chl-mypic-load {
+    height: 150px;
+    width: 150px;
+    border-radius: 50%;
+    background-color: var(--alt-color);
+}
+
+.chl-details-load {
+    margin-left: 20px;
+}
+
+.name-load {
+    width: 300px;
+    height: 35px;
+    background-color: var(--alt-color);
+    border-radius: 5px;
+    background-color: var(--alt-color);
+    margin-bottom: 15px;
+}
+
+.subs-load {
+    width: 400px;
+    height: 25px;
+    background-color: var(--alt-color);
+    border-radius: 5px;
+    margin-bottom: 15px;
+}
+
+.desc-load {
+    width: 500px;
+    height: 25px;
+    background-color: var(--alt-color);
+    border-radius: 5px;
+    margin-bottom: 15px;
+}
+
+.subbuttons-load {
+    display: flex;
+    flex-direction: row;
+    align-items: start;
+}
+
+.subbuttons-load div {
+    width: 100px;
+    height: 30px;
+    margin-right: 10px;
+    background-color: var(--alt-color);
+    border-radius: 20px;
+}
+
+.menus-load {
+    height: 48px;
+    width: 100%;
+    border-bottom: 1px solid var(--alt-color);
+}
+
+.videop-load {
+    width: 950px;
+    height: 550px;
+    border-radius: 20px;
+    margin-bottom: 10px;
+    background-color: var(--alt-color);
+}
+
+.channelbox-load {
+    height: 40px;
+    width: 950px;
+}
+
+.channelbox-load {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.box-chl-icon-load {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    margin-right: 10px;
+    background-color: var(--alt-color);
+}
+
+.boxpart1-load {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+}
+
+.boxpart2-load {
+    display: flex;
+    flex-direction: row;
+}
+
+.btn-load {
+    width: 100px;
+    height: 30px;
+    margin-right: 5px;
+    border-radius: 20px;
+    background-color: var(--alt-color);
+}
+
+/* Added media query for small screens */
+@media (max-width: 768px) {
+    .card-loading {
+        width: 100%;
+    }
+    .vp-videotitle-load {
+        width: 100%;
+    }
+    .catheading-loading {
+        width: 100%;
+    }
+    .channelinfo-load {
+        flex-direction: column;
+    }
+    .chl-details-load {
+        margin-left: 0;
+    }
+}

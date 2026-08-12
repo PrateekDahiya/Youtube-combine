@@ -1,0 +1,263 @@
+.card {
+    margin: 5px;
+    position: relative;
+    border-radius: 0 0 15px 15px;
+    width: 100%;
+    height: 100%;
+    text-decoration: none;
+}
+
+.card:hover {
+    cursor: pointer;
+}
+
+.card img {
+    width: 100%;
+    height: 230px;
+    object-fit: cover;
+    border-radius: 10px;
+    object-position: center;
+}
+
+.duration {
+    position: relative;
+    bottom: 35px;
+    left: 85%;
+    background-color: rgba(0, 0, 0, 0.7);
+    color: white;
+    padding: 2px 5px;
+    border-radius: 5px;
+    font-size: 12px;
+}
+
+.trending-card {
+    display: flex;
+    flex-direction: row;
+}
+
+.card .thumbnail {
+    position: relative;
+}
+
+.card .forrelated-thumbnail {
+    width: 160px;
+    height: 120px;
+}
+
+.card .thumbnail:hover {
+    border-radius: 0px;
+}
+
+.card .info {
+    display: flex;
+    flex-direction: row;
+    padding: 10px;
+}
+
+.card .info .videotitle {
+    text-wrap: wrap;
+}
+
+.card .info img {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    margin-right: 10px;
+    z-index: 1;
+}
+
+.card .videotitle {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 500;
+}
+
+.text {
+    color: var(--text2-color);
+}
+
+.card .channelname {
+    margin: 0;
+    font-size: 13px;
+    z-index: 1;
+    text-decoration: none;
+    color: var(--text2-color);
+}
+
+.card .channelname:hover {
+    color: var(--text-color);
+}
+
+.card .info .viewsntime {
+    display: flex;
+    flex-direction: row;
+    margin: 0;
+    font-size: 14px;
+}
+
+.card .views {
+    margin: 0px;
+}
+
+.card .time {
+    margin: 0px;
+}
+
+.watch-later {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0,0,0,0.6);
+    border-radius: 50%;
+    z-index: 2;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.card:hover .watch-later,
+.watch-later.show {
+    opacity: 1;
+}
+
+.watch-later img {
+    width: 24px;
+    height: 24px;
+    filter: invert(1);
+    object-fit: contain; /* Prevents stretching */
+}
+
+/* Responsive breakpoints */
+@media (min-width: 1550px) {
+    .card img {
+        height: 280px;
+    }
+    .card .info img {
+        width: 45px;
+        height: 45px;
+    }
+    .card .videotitle {
+        font-size: 18px;
+    }
+    .card .channelname {
+        font-size: 14px;
+    }
+    .card .info .viewsntime {
+        font-size: 15px;
+    }
+}
+
+@media (min-width: 1200px) and (max-width: 1549px) {
+    .card img {
+        height: 250px;
+    }
+    .card .info img {
+        width: 42px;
+        height: 42px;
+    }
+    .card .videotitle {
+        font-size: 17px;
+    }
+}
+
+@media (min-width: 992px) and (max-width: 1199px) {
+    .card img {
+        height: 230px;
+    }
+    .card .info img {
+        width: 40px;
+        height: 40px;
+    }
+    .card .videotitle {
+        font-size: 16px;
+    }
+}
+
+@media (min-width: 768px) and (max-width: 991px) {
+    .card img {
+        height: 200px;
+    }
+    .card .info img {
+        width: 35px;
+        height: 35px;
+    }
+    .card .videotitle {
+        font-size: 15px;
+    }
+    .card .channelname {
+        font-size: 12px;
+    }
+    .card .info .viewsntime {
+        font-size: 13px;
+    }
+}
+
+@media (min-width: 576px) and (max-width: 767px) {
+    .card img {
+        height: 180px;
+    }
+    .card .info {
+        padding: 8px;
+    }
+    .card .info img {
+        width: 32px;
+        height: 32px;
+        margin-right: 8px;
+    }
+    .card .videotitle {
+        font-size: 14px;
+    }
+    .card .channelname {
+        font-size: 12px;
+    }
+    .card .info .viewsntime {
+        font-size: 12px;
+    }
+    .duration {
+        font-size: 11px;
+        padding: 1px 4px;
+    }
+}
+
+@media (max-width: 575px) {
+    .card img {
+        height: 200px;
+    }
+    .card .info {
+        flex-direction: column;
+        padding: 8px;
+    }
+    .card .info img {
+        width: 35px;
+        height: 35px;
+        margin-bottom: 8px;
+    }
+    .card .videotitle {
+        font-size: 15px;
+        margin-bottom: 4px;
+    }
+    .card .channelname {
+        font-size: 13px;
+        margin-bottom: 4px;
+    }
+    .card .info .viewsntime {
+        font-size: 12px;
+    }
+    .duration {
+        font-size: 11px;
+        padding: 1px 4px;
+    }
+    .watch-later {
+        width: 18px;
+        height: 18px;
+    }
+    .watch-later img {
+        width: 18px;
+        height: 18px;
+    }
+}

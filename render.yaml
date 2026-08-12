@@ -1,0 +1,28 @@
+services:
+  - type: web
+    name: youtube-combine
+    runtime: node
+    plan: free
+    buildCommand: npm run render-build
+    startCommand: npm start
+    envVars:
+      - key: NODE_VERSION
+        value: 20
+      - key: DB_HOST
+        sync: false
+      - key: DB_USER
+        sync: false
+      - key: DB_PASS
+        sync: false
+      - key: DB_NAME
+        sync: false
+      - key: DB_PORT
+        sync: false
+      - key: API_KEYS
+        sync: false
+      - key: YAHOO_EMAIL
+        sync: false
+      - key: YAHOO_PASS
+        sync: false
+      - key: REACT_APP_SERVER_URL
+        value: ""

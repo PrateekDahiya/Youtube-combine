@@ -1,0 +1,142 @@
+.Menu {
+    height: 100%;
+    width: 240px;
+    max-width: 240px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    margin-left: 0;
+    background: var(--background-color);
+    transition: transform 0.3s ease, width 0.3s ease;
+    position: relative;
+    box-sizing: border-box;
+    flex-shrink: 0;
+}
+
+.Menu::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+.Menu:hover::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+.Menu:hover::-webkit-scrollbar-track {
+    background: var(--background-color);
+    border-radius: 10px;
+}
+
+.Menu:hover::-webkit-scrollbar-thumb {
+    background: var(--alt-color);
+}
+
+.Menu:hover::-webkit-scrollbar-thumb:hover {
+    background: var(--text2-color);
+}
+
+.menudiv {
+    margin-top: 5px;
+    border-bottom: 1px solid var(--alt-color);
+    padding: 5px 0;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+h3 {
+    font-size: 15px;
+    padding: 0 10px;
+    margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.HiddenMenu {
+    padding: 0;
+    width: 100%;
+}
+
+.blabla {
+    font-size: 12px;
+    color: var(--text2-color);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.fullMenu {
+    width: 100%;
+    padding-right: 0;
+    box-sizing: border-box;
+}
+
+/* Menu states */
+.Menu[data-menu="Full"] {
+    width: 240px;
+    max-width: 240px;
+    transform: translateX(0);
+}
+
+.Menu[data-menu="Hidden"] {
+    width: 50px;
+    max-width: 50px;
+    transform: translateX(0);
+}
+
+.Menu[data-menu="Narrow"] {
+    width: 50px;
+    max-width: 50px;
+    transform: translateX(0);
+}
+
+/* Responsive breakpoints */
+/* Large screens (laptops/desktops) */
+@media (min-width: 1200px) {
+    .Menu[data-menu="Full"] {
+        width: 240px;
+        max-width: 240px;
+    }
+}
+
+/* Medium screens (tablets) */
+@media (max-width: 1199px) and (min-width: 768px) {
+    .Menu[data-menu="Full"] {
+        width: 240px;
+        max-width: 240px;
+    }
+}
+
+/* Small screens (mobile landscape) */
+@media (max-width: 767px) and (min-width: 481px) {
+    .Menu {
+        position: fixed;
+        left: -240px;
+        top: 60px;
+        margin-left: 0;
+        width: 240px;
+        max-width: 240px;
+        box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+        height: calc(100vh - 60px);
+    }
+    .Menu.show {
+        transform: translateX(240px);
+    }
+}
+
+/* Extra small screens (mobile portrait) */
+@media (max-width: 480px) {
+    .Menu {
+        position: fixed;
+        left: -240px;
+        top: 60px;
+        margin-left: 0;
+        width: 240px;
+        max-width: 240px;
+        box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+        height: calc(100vh - 60px);
+    }
+    .Menu.show {
+        transform: translateX(240px);
+    }
+}
