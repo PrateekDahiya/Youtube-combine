@@ -67,6 +67,15 @@ app.get("/keep-active", (req, res) => {
     res.json({ message: "Server is active" });
 });
 
+app.get("/health", (req, res) => {
+    connection.query("SELECT 1", (error) => {
+        if (error) {
+            return res.status(503).json({ status: "error", db: "unreachable" });
+        }
+        res.status(200).json({ status: "ok", db: "connected" });
+    });
+});
+
 app.get("/home", (req, res) => {
     const page_no = req.query.page;
     const query = `SELECT * FROM channels c join videos v on c.channel_id=v.channel_id where isShort = 0 order by rand() desc limit 24 offset ?`;
