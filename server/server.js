@@ -76,7 +76,7 @@ app.get("/health", (req, res) => {
     });
 });
 
-app.get("/home", (req, res) => {
+app.get("/api/home", (req, res) => {
     const page_no = req.query.page;
     const query = `SELECT * FROM channels c join videos v on c.channel_id=v.channel_id where isShort = 0 order by rand() desc limit 24 offset ?`;
     connection.query(query, [24 * (page_no - 1)], (error, results) => {
@@ -87,7 +87,7 @@ app.get("/home", (req, res) => {
     });
 });
 
-app.get("/shorts", (req, res) => {
+app.get("/api/shorts", (req, res) => {
     const video_id = req.query.video_id;
     const needmore = req.query.needmore || 0; // Default to 0 if needmore is not provided
 
@@ -130,7 +130,7 @@ app.get("/shorts", (req, res) => {
     });
 });
 
-app.get("/yourchannel", (req, res) => {
+app.get("/api/yourchannel", (req, res) => {
     const channel_id = req.query.channel_id;
     const query = `select * from channels where channel_id=?`;
     connection.query(query, [channel_id], (error, results) => {
@@ -141,7 +141,7 @@ app.get("/yourchannel", (req, res) => {
     });
 });
 
-app.get("/subscriptions", (req, res) => {
+app.get("/api/subscriptions", (req, res) => {
     const user_id = req.query.user_id;
     const isShort = req.query.isShort;
     const query = `select * from videos v inner join channels c on v.channel_id=c.channel_id where v.channel_id in (select s.channel_id from subscriptions s where s.user_id=?) and v.isShort=? order by upload_time desc limit 100`;
@@ -154,7 +154,7 @@ app.get("/subscriptions", (req, res) => {
     });
 });
 
-app.get("/watch", (req, res) => {
+app.get("/api/watch", (req, res) => {
     const videoId = req.query.video_id;
     const query = `select * from videos v join channels c on v.channel_id=c.channel_id where v.video_id= ?`;
 
@@ -166,7 +166,7 @@ app.get("/watch", (req, res) => {
     });
 });
 
-app.get("/channel", (req, res) => {
+app.get("/api/channel", (req, res) => {
     const channel_id = req.query.channel_id;
     const query = `select * from channels where channel_id=?`;
 
@@ -178,7 +178,7 @@ app.get("/channel", (req, res) => {
     });
 });
 
-app.get("/category", (req, res) => {
+app.get("/api/category", (req, res) => {
     const category = req.query.category;
     const type = req.query.type;
     const caticon = {
@@ -364,7 +364,7 @@ function fetchRelatedVideos(video_id, res) {
     });
 }
 
-app.get("/related-videos", (req, res) => {
+app.get("/api/related-videos", (req, res) => {
     const video_id = req.query.video_id;
 
     if (!video_id) {
@@ -393,7 +393,7 @@ async function fetchVideoHistory(user_chl_id) {
     });
 }
 
-app.get("/personalized-feed", async (req, res) => {
+app.get("/api/personalized-feed", async (req, res) => {
     const user_chl_id = req.query.user_id;
     const page_no = req.query.page || 1;
 
@@ -435,7 +435,7 @@ app.get("/personalized-feed", async (req, res) => {
     }
 });
 
-app.get("/trendings", (req, res) => {
+app.get("/api/trendings", (req, res) => {
     const type = req.query.type;
     const categoryMapping = {
         1: ["Music"],
@@ -476,7 +476,7 @@ app.get("/trendings", (req, res) => {
     });
 });
 
-app.get("/search", (req, res) => {
+app.get("/api/search", (req, res) => {
     const query = req.query.query;
     const searchQuery = `%${query}%`;
     const q = `select * from channels c join videos v on c.channel_id=v.channel_id where v.title like ? or v.tags like ? or c.channel_name like ?  order by upload_time desc limit 100`;
@@ -496,7 +496,7 @@ app.get("/search", (req, res) => {
     );
 });
 
-app.get("/likedvideos", (req, res) => {
+app.get("/api/likedvideos", (req, res) => {
     const user_id = req.query.user_id;
     const query = `SELECT v.*, c.* FROM likedvideos lv JOIN videos v ON lv.video_id = v.video_id JOIN channels c ON v.channel_id = c.channel_id WHERE lv.user_id = ? order by liked_time desc limit 100`;
     connection.query(query, [user_id], (error, results) => {
@@ -510,7 +510,7 @@ app.get("/likedvideos", (req, res) => {
     });
 });
 
-app.get("/watchlater", (req, res) => {
+app.get("/api/watchlater", (req, res) => {
     const user_id = req.query.user_id;
     const query = `SELECT v.*, c.* FROM watchlater lv JOIN videos v ON lv.video_id = v.video_id JOIN channels c ON v.channel_id = c.channel_id WHERE lv.user_id = ? order by added_time desc limit 100`;
     connection.query(query, [user_id], (error, results) => {
@@ -524,7 +524,7 @@ app.get("/watchlater", (req, res) => {
     });
 });
 
-app.get("/login", async (req, res) => {
+app.get("/api/login", async (req, res) => {
     const username = req.query.username;
     const email = req.query.email;
     const hashpass = req.query.hashpass;
@@ -538,7 +538,7 @@ app.get("/login", async (req, res) => {
     });
 });
 
-app.post("/register", (req, res) => {
+app.post("/api/register", (req, res) => {
     const values = {
         fname: req.body.fnamefix,
         lname: req.body.lnamefix,
@@ -623,7 +623,7 @@ app.post("/register", (req, res) => {
     );
 });
 
-app.get("/getvideobyid", (req, res) => {
+app.get("/api/getvideobyid", (req, res) => {
     const video_id = req.query.video_id;
     const query = `select * from videos v join channels c on v.channel_id=c.channel_id where v.video_id= ?`;
     connection.query(query, [video_id], (error, results) => {
@@ -634,7 +634,7 @@ app.get("/getvideobyid", (req, res) => {
     });
 });
 
-app.post("/updateUserDetail", (req, res) => {
+app.post("/api/updateUserDetail", (req, res) => {
     const field = req.body.field;
     const value = req.body.value;
     const user_id = req.body.user_id;
@@ -647,7 +647,7 @@ app.post("/updateUserDetail", (req, res) => {
     });
 });
 
-app.post("/updateChannelDetail", (req, res) => {
+app.post("/api/updateChannelDetail", (req, res) => {
     const field = req.body.field;
     const value = req.body.value;
     const channel_id = req.body.channel_id;
@@ -660,7 +660,7 @@ app.post("/updateChannelDetail", (req, res) => {
     });
 });
 
-app.post("/getUser", (req, res) => {
+app.post("/api/getUser", (req, res) => {
     const user_id = req.body.user_id;
     const query = `select * from user u join channels c on u.channel_id=c.channel_id where user_id= ?`;
     connection.query(query, [user_id], (error, results) => {
@@ -671,7 +671,7 @@ app.post("/getUser", (req, res) => {
     });
 });
 
-app.post("/deleteUser", (req, res) => {
+app.post("/api/deleteUser", (req, res) => {
     const channel_id = req.body.channel_id;
     const user_id = req.body.user_id;
 
@@ -844,7 +844,7 @@ app.post("/deleteUser", (req, res) => {
     });
 });
 
-app.get("/getvideosofchannel", (req, res) => {
+app.get("/api/getvideosofchannel", (req, res) => {
     const channel_id = req.query.channel_id;
     const searchTerm = req.query.query || ""; // default to empty string if query is not provided
     const type = req.query.type;
@@ -891,7 +891,7 @@ app.get("/getvideosofchannel", (req, res) => {
 });
 
 // Subscriptions
-app.post("/addtosubs", (req, res) => {
+app.post("/api/addtosubs", (req, res) => {
     const user_chl_id = req.body.user_chl_id;
     const channel_id = req.body.channel_id;
     const query = `INSERT INTO subscriptions (user_id,channel_id) VALUES (?, ?)`;
@@ -913,7 +913,7 @@ let offset = 0;
 let batchSize = 5;
 let totalResults = 5;
 
-app.get("/update_channels", async (req, res) => {
+app.get("/api/update_channels", async (req, res) => {
     try {
         const channelIds = await getChannelIds(offset, batchSize);
         if (channelIds.length === 0) {
@@ -952,7 +952,7 @@ async function processChannels(channelIds) {
     await Promise.all(fetchPromises);
 }
 
-app.get("/addnewchannel", async (req, res) => {
+app.get("/api/addnewchannel", async (req, res) => {
     try {
         const channelId = await getNewChannelId();
         const success = await addNewChannel(channelId);
@@ -1017,7 +1017,7 @@ const addNewChannel = async (channelId) => {
     return "True";
 };
 
-app.post("/removefromsubs", (req, res) => {
+app.post("/api/removefromsubs", (req, res) => {
     const user_chl_id = req.body.user_chl_id;
     const channel_id = req.body.channel_id;
 
@@ -1046,7 +1046,7 @@ app.post("/removefromsubs", (req, res) => {
     });
 });
 
-app.get("/issub", (req, res) => {
+app.get("/api/issub", (req, res) => {
     const user_chl = req.query.user_id;
     const channel_id = req.query.channel_id;
 
@@ -1070,7 +1070,7 @@ app.get("/issub", (req, res) => {
 });
 
 // Likes
-app.post("/addtoliked", (req, res) => {
+app.post("/api/addtoliked", (req, res) => {
     const user_id = req.body.user_id;
     const video_id = req.body.video_id;
 
@@ -1095,7 +1095,7 @@ app.post("/addtoliked", (req, res) => {
     });
 });
 
-app.post("/removefromliked", (req, res) => {
+app.post("/api/removefromliked", (req, res) => {
     const user_id = req.body.user_id;
     const video_id = req.body.video_id;
 
@@ -1124,7 +1124,7 @@ app.post("/removefromliked", (req, res) => {
     });
 });
 
-app.get("/isliked", (req, res) => {
+app.get("/api/isliked", (req, res) => {
     const user_id = req.query.user_id;
     const video_id = req.query.video_id;
 
@@ -1152,7 +1152,7 @@ app.get("/isliked", (req, res) => {
 
 // History
 
-app.post("/addtohistory", (req, res) => {
+app.post("/api/addtohistory", (req, res) => {
     const user_id = req.body.user_id;
     const video_id = req.body.video_id;
 
@@ -1176,7 +1176,7 @@ app.post("/addtohistory", (req, res) => {
     });
 });
 
-app.post("/removefromhistory", (req, res) => {
+app.post("/api/removefromhistory", (req, res) => {
     const user_id = req.body.user_id;
     const video_id = req.body.video_id;
 
@@ -1205,7 +1205,7 @@ app.post("/removefromhistory", (req, res) => {
     });
 });
 
-app.get("/history", (req, res) => {
+app.get("/api/history", (req, res) => {
     const user_id = req.query.user_id;
     const query = `SELECT v.*, c.*,h.watched_time FROM history h JOIN videos v ON h.video_id = v.video_id JOIN channels c ON v.channel_id = c.channel_id WHERE h.user_id = ? ORDER BY h.watched_time DESC LIMIT 100`;
     connection.query(query, [user_id], (error, results) => {
@@ -1219,7 +1219,7 @@ app.get("/history", (req, res) => {
 // Watch Later
 
 // Likes
-app.post("/addtowatchlater", (req, res) => {
+app.post("/api/addtowatchlater", (req, res) => {
     const user_id = req.body.user_id;
     const video_id = req.body.video_id;
 
@@ -1244,7 +1244,7 @@ app.post("/addtowatchlater", (req, res) => {
     });
 });
 
-app.post("/removefromwatchlater", (req, res) => {
+app.post("/api/removefromwatchlater", (req, res) => {
     const user_id = req.body.user_id;
     const video_id = req.body.video_id;
 
@@ -1273,7 +1273,7 @@ app.post("/removefromwatchlater", (req, res) => {
     });
 });
 
-app.get("/iswatchlater", (req, res) => {
+app.get("/api/iswatchlater", (req, res) => {
     const user_id = req.query.user_id;
     const video_id = req.query.video_id;
 
@@ -1299,7 +1299,7 @@ app.get("/iswatchlater", (req, res) => {
     });
 });
 
-app.post("/feedback", async (req, res) => {
+app.post("/api/feedback", async (req, res) => {
     const feedback = req.body.feedback;
     const reqchannelid = req.body.reqchannelid;
     const name = req.body.name;
@@ -1342,7 +1342,7 @@ app.post("/feedback", async (req, res) => {
     }
 });
 
-app.get("/getallchannels", (req, res) => {
+app.get("/api/getallchannels", (req, res) => {
     const query = `select channel_id from channels`;
 
     connection.query(query, (error, results) => {
@@ -1353,7 +1353,7 @@ app.get("/getallchannels", (req, res) => {
     });
 });
 
-app.get("/get-subs", (req, res) => {
+app.get("/api/get-subs", (req, res) => {
     const user_id = req.query.user_id;
     const query = `SELECT * FROM subscriptions s join channels c where s.channel_id=c.channel_id and s.user_id= ? order by sub_time desc`;
 
@@ -1365,7 +1365,7 @@ app.get("/get-subs", (req, res) => {
     });
 });
 
-app.get("/get-channel-ids", (req, res) => {
+app.get("/api/get-channel-ids", (req, res) => {
     const query = `SELECT channel_id FROM channels`;
     connection.query(query, (error, results) => {
         if (error) {

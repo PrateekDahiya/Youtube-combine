@@ -26,4 +26,4 @@ services:
       - key: YAHOO_PASS
         sync: false
       - key: REACT_APP_SERVER_URL
-        value: ""
+        value: "/api"
