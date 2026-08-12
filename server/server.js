@@ -1310,9 +1310,9 @@ app.post("/api/feedback", async (req, res) => {
             user: process.env.YAHOO_EMAIL,
             pass: process.env.YAHOO_PASS,
         },
-        connectionTimeout: 10000,
-        greetingTimeout: 10000,
-        socketTimeout: 10000,
+        connectionTimeout: 30000,
+        greetingTimeout: 30000,
+        socketTimeout: 30000,
     });
 
     const mailOptions = {
