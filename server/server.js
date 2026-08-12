@@ -532,7 +532,7 @@ app.get("/login", async (req, res) => {
     connection.query(query, [email, username, hashpass], (error, results) => {
         if (error) {
             console.log("User Not Found: " + error);
-            res.status(404).json({ success: false, message: "User not found" });
+            return res.status(404).json({ success: false, message: "User not found" });
         }
         res.status(200).json({ success: true, user: results[0] });
     });
