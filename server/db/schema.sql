@@ -73,61 +73,67 @@ CREATE TABLE IF NOT EXISTS videos (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ---------------------------------------------------------------------------
--- subscriptions (join table: user subscribed to channel)
+-- subscriptions (join table: subscriber's own channel -> channel subscribed to)
+-- Note: despite the column name, "user_id" here is the logged-in user's
+-- channel_id, not user.user_id -- that's how every client call (Card.js,
+-- Channel.js, Watch.js, etc.) populates it. FK points at channels, not user.
 -- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS subscriptions (
-    user_id     VARCHAR(64)  NOT NULL,
+    user_id     VARCHAR(32)  NOT NULL,
     channel_id  VARCHAR(32)  NOT NULL,
     sub_time    TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (user_id, channel_id),
     KEY idx_sub_channel_id (channel_id),
     CONSTRAINT fk_sub_user FOREIGN KEY (user_id)
-        REFERENCES user (user_id) ON DELETE CASCADE,
+        REFERENCES channels (channel_id) ON DELETE CASCADE,
     CONSTRAINT fk_sub_channel FOREIGN KEY (channel_id)
         REFERENCES channels (channel_id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ---------------------------------------------------------------------------
 -- likedvideos
+-- "user_id" is the logged-in user's channel_id (see note above).
 -- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS likedvideos (
-    user_id     VARCHAR(64)  NOT NULL,
+    user_id     VARCHAR(32)  NOT NULL,
     video_id    VARCHAR(32)  NOT NULL,
     liked_time  TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (user_id, video_id),
     KEY idx_liked_video_id (video_id),
     CONSTRAINT fk_liked_user FOREIGN KEY (user_id)
-        REFERENCES user (user_id) ON DELETE CASCADE,
+        REFERENCES channels (channel_id) ON DELETE CASCADE,
     CONSTRAINT fk_liked_video FOREIGN KEY (video_id)
         REFERENCES videos (video_id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ---------------------------------------------------------------------------
 -- history
+-- "user_id" is the logged-in user's channel_id (see note above).
 -- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS history (
-    user_id       VARCHAR(64)  NOT NULL,
+    user_id       VARCHAR(32)  NOT NULL,
     video_id      VARCHAR(32)  NOT NULL,
     watched_time  TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (user_id, video_id),
     KEY idx_history_video_id (video_id),
     CONSTRAINT fk_history_user FOREIGN KEY (user_id)
-        REFERENCES user (user_id) ON DELETE CASCADE,
+        REFERENCES channels (channel_id) ON DELETE CASCADE,
     CONSTRAINT fk_history_video FOREIGN KEY (video_id)
         REFERENCES videos (video_id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ---------------------------------------------------------------------------
 -- watchlater
+-- "user_id" is the logged-in user's channel_id (see note above).
 -- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS watchlater (
-    user_id     VARCHAR(64)  NOT NULL,
+    user_id     VARCHAR(32)  NOT NULL,
     video_id    VARCHAR(32)  NOT NULL,
     added_time  TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (user_id, video_id),
     KEY idx_watchlater_video_id (video_id),
     CONSTRAINT fk_watchlater_user FOREIGN KEY (user_id)
-        REFERENCES user (user_id) ON DELETE CASCADE,
+        REFERENCES channels (channel_id) ON DELETE CASCADE,
     CONSTRAINT fk_watchlater_video FOREIGN KEY (video_id)
         REFERENCES videos (video_id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -136,19 +142,19 @@ CREATE TABLE IF NOT EXISTS watchlater (
 -- comments
 -- Only referenced via a cascading DELETE on user removal in server.js;
 -- no insert/select code exists yet, so this is a reasonable minimal shape
--- for a video comment tied to a user. Adjust if/when comment routes are added.
+-- for a video comment tied to a channel. Adjust if/when comment routes are added.
 -- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS comments (
     comment_id    INT           NOT NULL AUTO_INCREMENT,
     video_id      VARCHAR(32)   NOT NULL,
-    user_id       VARCHAR(64)   NOT NULL,
+    user_id       VARCHAR(32)   NOT NULL,
     comment_text  TEXT          NOT NULL,
     comment_time  TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (comment_id),
     KEY idx_comment_video_id (video_id),
     KEY idx_comment_user_id (user_id),
     CONSTRAINT fk_comment_user FOREIGN KEY (user_id)
-        REFERENCES user (user_id) ON DELETE CASCADE,
+        REFERENCES channels (channel_id) ON DELETE CASCADE,
     CONSTRAINT fk_comment_video FOREIGN KEY (video_id)
         REFERENCES videos (video_id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
