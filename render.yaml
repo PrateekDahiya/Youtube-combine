@@ -21,9 +21,11 @@ services:
         sync: false
       - key: API_KEYS
         sync: false
-      - key: YAHOO_EMAIL
+      - key: RESEND_API_KEY
         sync: false
-      - key: YAHOO_PASS
+      - key: RESEND_FROM_EMAIL
+        sync: false
+      - key: NOTIFY_EMAIL
         sync: false
       - key: REACT_APP_SERVER_URL
         value: "/api"

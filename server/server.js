@@ -7,8 +7,28 @@ require("dotenv").config();
 const port = process.env.PORT || 5000;
 const axios = require("axios");
 const cors = require("cors");
-const nodemailer = require("nodemailer");
 const API_KEYS = JSON.parse(process.env.API_KEYS);
+
+async function sendEmail({ to, subject, text }) {
+    const response = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+            Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+            from: process.env.RESEND_FROM_EMAIL,
+            to,
+            subject,
+            text,
+        }),
+    });
+    if (!response.ok) {
+        const body = await response.text();
+        throw new Error(`Resend API error ${response.status}: ${body}`);
+    }
+    return response.json();
+}
 
 app.use(express.json());
 app.use(cors());
@@ -75,38 +95,6 @@ app.get("/health", (req, res) => {
         }
         res.status(200).json({ status: "ok", db: "connected" });
     });
-});
-
-app.get("/debug-smtp", async (req, res) => {
-    const net = require("net");
-    const targets = [
-        { host: "smtp.mail.yahoo.com", port: 465 },
-        { host: "smtp.mail.yahoo.com", port: 587 },
-        { host: "smtp.mail.yahoo.com", port: 25 },
-        { host: "smtp.gmail.com", port: 465 },
-        { host: "smtp.gmail.com", port: 587 },
-    ];
-    const testPort = ({ host, port }) =>
-        new Promise((resolve) => {
-            const start = Date.now();
-            const socket = net.createConnection({ host, port });
-            const done = (status, error) => {
-                socket.destroy();
-                resolve({
-                    host,
-                    port,
-                    status,
-                    ms: Date.now() - start,
-                    error: error ? error.message : undefined,
-                });
-            };
-            socket.setTimeout(8000);
-            socket.once("connect", () => done("connected"));
-            socket.once("timeout", () => done("timeout"));
-            socket.once("error", (err) => done("error", err));
-        });
-    const results = await Promise.all(targets.map(testPort));
-    res.status(200).json({ results });
 });
 
 app.get("/api/home", (req, res) => {
@@ -623,29 +611,17 @@ app.post("/api/register", (req, res) => {
                             message: "Failed to register user",
                         });
                     }
-                    const transporter = nodemailer.createTransport({
-                        service: "yahoo",
-                        auth: {
-                            user: process.env.YAHOO_EMAIL,
-                            pass: process.env.YAHOO_PASS,
-                        },
-                    });
-
-                    const mailOptions = {
-                        from: process.env.YAHOO_EMAIL,
-                        to: "dahiyaprateek27@gmail.com",
+                    sendEmail({
+                        to: process.env.NOTIFY_EMAIL,
                         subject: "New User",
                         text: `Name: ${
                             values.fname + " " + values.lname
                         }\nEmail: ${values.email}\nChannel Name: ${
                             values.chl_name
                         }`,
-                    };
-                    transporter
-                        .sendMail(mailOptions)
-                        .catch((error) =>
-                            console.error("Error sending new-user notification:", error)
-                        );
+                    }).catch((error) =>
+                        console.error("Error sending new-user notification:", error)
+                    );
                     return res.status(200).json({
                         success: true,
                         message: "Registration successful",
@@ -1337,25 +1313,12 @@ app.post("/api/feedback", async (req, res) => {
     const reqchannelid = req.body.reqchannelid;
     const name = req.body.name;
 
-    const transporter = nodemailer.createTransport({
-        service: "yahoo",
-        auth: {
-            user: process.env.YAHOO_EMAIL,
-            pass: process.env.YAHOO_PASS,
-        },
-        connectionTimeout: 30000,
-        greetingTimeout: 30000,
-        socketTimeout: 30000,
-    });
-
-    const mailOptions = {
-        from: process.env.YAHOO_EMAIL,
-        to: process.env.YAHOO_EMAIL,
-        subject: "Website Feedback",
-        text: `Name: ${name}\nMessage: ${feedback}`,
-    };
     try {
-        await transporter.sendMail(mailOptions);
+        await sendEmail({
+            to: process.env.NOTIFY_EMAIL,
+            subject: "Website Feedback",
+            text: `Name: ${name}\nMessage: ${feedback}`,
+        });
         res.status(200).json({
             sent: true,
             message: "Feedback sent successfully",

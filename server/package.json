@@ -30,7 +30,6 @@
         "mysql": "^2.18.1",
         "mysql2": "^3.9.8",
         "node-cron": "^3.0.3",
-        "node-fetch": "^3.3.2",
-        "nodemailer": "^6.9.14"
+        "node-fetch": "^3.3.2"
     }
 }
