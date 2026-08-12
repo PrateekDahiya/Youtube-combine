@@ -29,12 +29,14 @@ const Home = (params) => {
                         `${serverurl}/personalized-feed?page=${page_no}&user_id=${user.channel_id}`
                     )
                     .then((response) => {
+                        const videos = response.data.videos || [];
                         setData((prev) =>
                             prev === null
-                                ? response.data.videos
-                                : prev[0].video_id !==
-                                  response.data.videos[0].video_id
-                                ? [...prev, ...response.data.videos]
+                                ? videos
+                                : videos.length === 0
+                                ? prev
+                                : prev[0].video_id !== videos[0].video_id
+                                ? [...prev, ...videos]
                                 : prev
                         );
                     })
@@ -46,12 +48,14 @@ const Home = (params) => {
                 await axios
                     .get(`${serverurl}/home?page=${page_no}`)
                     .then((response) => {
+                        const videos = response.data.videos || [];
                         setData((prev) =>
                             prev === null
-                                ? response.data.videos
-                                : prev[0].video_id !==
-                                  response.data.videos[0].video_id
-                                ? [...prev, ...response.data.videos]
+                                ? videos
+                                : videos.length === 0
+                                ? prev
+                                : prev[0].video_id !== videos[0].video_id
+                                ? [...prev, ...videos]
                                 : prev
                         );
                     })
