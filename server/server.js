@@ -83,6 +83,8 @@ app.get("/debug-smtp", async (req, res) => {
         { host: "smtp.mail.yahoo.com", port: 465 },
         { host: "smtp.mail.yahoo.com", port: 587 },
         { host: "smtp.mail.yahoo.com", port: 25 },
+        { host: "smtp.gmail.com", port: 465 },
+        { host: "smtp.gmail.com", port: 587 },
     ];
     const testPort = ({ host, port }) =>
         new Promise((resolve) => {
