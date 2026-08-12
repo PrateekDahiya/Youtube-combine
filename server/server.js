@@ -77,6 +77,36 @@ app.get("/health", (req, res) => {
     });
 });
 
+app.get("/debug-smtp", async (req, res) => {
+    const net = require("net");
+    const targets = [
+        { host: "smtp.mail.yahoo.com", port: 465 },
+        { host: "smtp.mail.yahoo.com", port: 587 },
+        { host: "smtp.mail.yahoo.com", port: 25 },
+    ];
+    const testPort = ({ host, port }) =>
+        new Promise((resolve) => {
+            const start = Date.now();
+            const socket = net.createConnection({ host, port });
+            const done = (status, error) => {
+                socket.destroy();
+                resolve({
+                    host,
+                    port,
+                    status,
+                    ms: Date.now() - start,
+                    error: error ? error.message : undefined,
+                });
+            };
+            socket.setTimeout(8000);
+            socket.once("connect", () => done("connected"));
+            socket.once("timeout", () => done("timeout"));
+            socket.once("error", (err) => done("error", err));
+        });
+    const results = await Promise.all(targets.map(testPort));
+    res.status(200).json({ results });
+});
+
 app.get("/api/home", (req, res) => {
     const page_no = req.query.page;
     const query = `SELECT * FROM channels c join videos v on c.channel_id=v.channel_id where isShort = 0 order by rand() desc limit 24 offset ?`;
