@@ -51,6 +51,15 @@ const Settings = (params) => {
             reader.readAsDataURL(file);
         });
 
+    const uploadImage = async (file) => {
+        const formData = new FormData();
+        formData.append("file", file);
+        const response = await axios.post(`${serverurl}/upload`, formData, {
+            headers: { "Content-Type": "multipart/form-data" },
+        });
+        return response.data.url;
+    };
+
     const handleFileChange = async (e, type) => {
         const file = e.target.files && e.target.files[0];
         if (!file) return;
@@ -59,15 +68,25 @@ const Settings = (params) => {
             e.target.value = "";
             return;
         }
-        const dataURL = await readFileAsDataURL(file);
-        if (type === "icon") {
-            setIconPreview(dataURL);
-            await handleSubmit("Channel Icon", dataURL);
-        } else {
-            setBannerPreview(dataURL);
-            await handleSubmit("Channel Banner", dataURL);
+        try {
+            const preview = await readFileAsDataURL(file);
+            if (type === "icon") {
+                setIconPreview(preview);
+            } else {
+                setBannerPreview(preview);
+            }
+            const url = await uploadImage(file);
+            if (type === "icon") {
+                await handleSubmit("Channel Icon", url);
+            } else {
+                await handleSubmit("Channel Banner", url);
+            }
+        } catch (error) {
+            console.error("Error uploading image:", error);
+            alert("Failed to upload the image. Please try again.");
+        } finally {
+            e.target.value = "";
         }
-        e.target.value = "";
     };
 
     const updateCookies = async () => {

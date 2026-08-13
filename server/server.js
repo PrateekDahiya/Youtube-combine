@@ -7,7 +7,34 @@ require("dotenv").config();
 const port = process.env.PORT || 5000;
 const axios = require("axios");
 const cors = require("cors");
+const fs = require("fs");
+const multer = require("multer");
 const API_KEYS = JSON.parse(process.env.API_KEYS);
+
+const uploadsDir = path.join(__dirname, "uploads");
+if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => cb(null, uploadsDir),
+    filename: (req, file, cb) => {
+        const ext = path.extname(file.originalname).toLowerCase();
+        cb(null, Date.now() + "-" + Math.round(Math.random() * 1e9) + ext);
+    },
+});
+
+const upload = multer({
+    storage,
+    limits: { fileSize: 10 * 1024 * 1024 },
+    fileFilter: (req, file, cb) => {
+        if (/^image\/(png|jpe?g|gif|webp)$/.test(file.mimetype)) {
+            cb(null, true);
+        } else {
+            cb(new Error("Invalid image type"));
+        }
+    },
+});
 
 async function sendEmail({ to, subject, text }) {
     const response = await fetch("https://api.resend.com/emails", {
@@ -745,6 +772,20 @@ app.get("/api/getvideobyid", (req, res) => {
             console.log("Getvideobyid: " + error);
         }
         res.status(200).json({ video: results });
+    });
+});
+
+app.post("/api/upload", (req, res) => {
+    upload.single("file")(req, res, (err) => {
+        if (err) {
+            return res
+                .status(400)
+                .json({ error: err.message || "Upload failed" });
+        }
+        if (!req.file) {
+            return res.status(400).json({ error: "No file uploaded" });
+        }
+        res.status(200).json({ url: `/uploads/${req.file.filename}` });
     });
 });
 
@@ -1783,6 +1824,7 @@ const fetchAndStoreVideos = async (
 
 const clientBuildPath = path.join(__dirname, "../client/build");
 app.use(express.static(clientBuildPath));
+app.use("/uploads", express.static(uploadsDir));
 app.get("*", (req, res) => {
     res.sendFile(path.join(clientBuildPath, "index.html"));
 });

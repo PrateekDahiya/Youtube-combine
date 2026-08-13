@@ -35,7 +35,7 @@ All React application source for the VidVault front-end: the root component, pag
 | `History.js` + `History.css` | `History` | `/history` | Watch history grouped by Today/Yesterday/This Week/This Month/Older. Items removable via `/api/removefromhistory`. Honors the `ishistory` toggle. |
 | `Likedvideos.js` + `Likedvideos.css` | `Likedvideos` | `/likedvideos` | User's liked videos via `/api/likedvideos`. Honors the `islikedvideos` toggle. |
 | `Watchlater.js` + `Watchlater.css` | `Watchlater` | `/watchlater` | User's watch-later list via `/api/watchlater`. Honors the `iswatchlater` toggle. |
-| `Settings.js` + `Settings.css` | `Settings` | `/settings` | Settings hub: Account, General (theme/shorts/privacy toggles), Profile (editable user fields → `/api/updateUserDetail`), Channel (editable channel fields → `/api/updateChannelDetail`), Advanced (channel_id/user_id/Delete account → `/api/deleteUser`). Refetches user via `/api/getUser` after edits. |
+| `Settings.js` + `Settings.css` | `Settings` | `/settings` | Settings hub: Account, General (theme/shorts/privacy toggles), Profile (editable user fields → `/api/updateUserDetail`), Channel (editable channel fields → `/api/updateChannelDetail` + profile photo/banner upload via `/api/upload` then saving the returned URL), Advanced (channel_id/user_id/Delete account → `/api/deleteUser`). Refetches user via `/api/getUser` after edits. |
 | `Login.js` + `Login.css` | `Login` | `/login` (also `?type=register|feedback|logout`) | Multi-step auth form. Login (`/api/login`), Registration (`/api/register`), Feedback (`/api/feedback`), and Logout (clears `user` cookie). Hashes password client-side before sending. |
 
 ### Reusable building blocks

@@ -18,6 +18,9 @@ yarn-error.log*
 
 cookies.txt
 
+# uploaded channel images (created at runtime by server)
+server/uploads/
+
 # leftover firebase hosting config, not used for Render
 .firebase/
 firebase.json
