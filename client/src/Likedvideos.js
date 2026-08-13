@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import Card from "./Card";
 import axios from "axios";
 import "./Likedvideos.css";
+import CardGrid from "./CardGrid";
 
 const Likedvideos = (params) => {
     const [data, setData] = useState("");
@@ -31,11 +32,11 @@ const Likedvideos = (params) => {
         <div className="likedvideos-outerbox">
             <h1>Liked Videos</h1>
             {data.videos && params.active === "true" ? (
-                <div className="likedvideos-cards">
+                <CardGrid variant="likes" className="likedvideos-cards">
                     {data.videos.map((item) => (
                         <Card key={item.video_id} data={item} />
                     ))}
-                </div>
+                </CardGrid>
             ) : params.active === "false" ? (
                 <h3>Liked Videos Disabled. Enable it in General settings.</h3>
             ) : (

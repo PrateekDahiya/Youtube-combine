@@ -3,6 +3,7 @@ import Card from "./Card";
 import axios from "axios";
 import { useLocation } from "react-router-dom";
 import "./Trendings.css";
+import CardGrid from "./CardGrid";
 
 const Trendings = (params) => {
     const locationHook = useLocation();
@@ -91,7 +92,7 @@ const Trendings = (params) => {
                     <div>
                         <hr className="line"></hr>
                     </div>
-                    <div className="cards trendings">
+                    <CardGrid variant="trending" className="trendings">
                         {data.videos.map((item) => (
                             <Card
                                 key={item.video_id}
@@ -99,7 +100,7 @@ const Trendings = (params) => {
                                 forTrending={true}
                             />
                         ))}
-                    </div>
+                    </CardGrid>
                 </div>
             ) : (
                 <></>

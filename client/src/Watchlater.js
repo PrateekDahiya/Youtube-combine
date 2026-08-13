@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import Card from "./Card";
 import axios from "axios";
 import "./Watchlater.css";
+import CardGrid from "./CardGrid";
 
 const Watchlater = (params) => {
     const [data, setData] = useState("");
@@ -31,11 +32,11 @@ const Watchlater = (params) => {
         <div className="watchlater-outerbox">
             <h1>Watch Later</h1>
             {data.videos && params.active === "true" ? (
-                <div className="watchlater-cards">
+                <CardGrid variant="watchlater" className="watchlater-cards">
                     {data.videos.map((item) => (
                         <Card key={item.video_id} data={item} />
                     ))}
-                </div>
+                </CardGrid>
             ) : params.active === "false" ? (
                 <h3>Watch Later Disabled. Enable it in General settings.</h3>
             ) : (

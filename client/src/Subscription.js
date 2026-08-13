@@ -3,6 +3,7 @@ import Card from "./Card";
 import { Link } from "react-router-dom";
 import axios from "axios";
 import "./Subscription.css";
+import CardGrid from "./CardGrid";
 
 const defaultAvatar = "https://cdn-icons-png.flaticon.com/128/1077/1077063.png";
 
@@ -114,11 +115,11 @@ const Subscription = (params) => {
                         </p>
                     </div>
                     {filteredVideos.length > 0 ? (
-                        <div className="cards">
+                        <CardGrid variant="fluid">
                             {filteredVideos.map((item) => (
                                 <Card key={item.video_id} data={item} />
                             ))}
-                        </div>
+                        </CardGrid>
                     ) : (
                         <></>
                     )}

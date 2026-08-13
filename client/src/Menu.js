@@ -89,12 +89,12 @@ function Menu(params) {
         if (menu === "Full") {
             const cardElements = document.querySelectorAll(".cards.wider");
             cardElements.forEach((element) => {
-                element.className = "cards";
+                element.classList.remove("wider");
             });
         } else if (menu === "Narrow" || menu === "Hidden") {
             const cardElements = document.querySelectorAll(".cards");
             cardElements.forEach((element) => {
-                element.className = "cards wider";
+                element.classList.add("wider");
             });
         }
     }, [menu]);

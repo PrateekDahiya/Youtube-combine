@@ -1,13 +1,3 @@
-.trendings {
-    width: 75%;
-    display: grid;
-    grid-template-columns: repeat(1, 100%);
-    gap: 24px;
-    align-items: start;
-    padding: 20px 0;
-    margin: 0 auto;
-}
-
 .trend-heading {
     display: flex;
     align-items: center;
@@ -20,10 +10,6 @@
     font-size: 12px;
     color: var(--text2-color);
     width: 500px;
-}
-
-.category {
-    overflow: visible;
 }
 
 .trendheading {
@@ -121,32 +107,17 @@
     .trendheading {
         font-size: 28px;
     }
-    .trendings {
-        width: 75%;
-        gap: 30px;
-        padding: 30px 0;
-    }
 }
 
 @media (min-width: 1200px) and (max-width: 1549px) {
     .trendingbox {
         padding: 25px;
     }
-    .trendings {
-        width: 75%;
-        gap: 24px;
-        padding: 25px 0;
-    }
 }
 
 @media (min-width: 992px) and (max-width: 1199px) {
     .trendingbox {
         padding: 20px;
-    }
-    .trendings {
-        width: 75%;
-        gap: 20px;
-        padding: 20px 0;
     }
 }
 
@@ -159,11 +130,6 @@
     }
     .trendheading {
         font-size: 22px;
-    }
-    .trendings {
-        width: 85%;
-        gap: 16px;
-        padding: 15px 0;
     }
 }
 
@@ -196,10 +162,5 @@
     .menubutton {
         font-size: 14px;
         white-space: nowrap;
-    }
-    .trendings {
-        width: 95%;
-        gap: 12px;
-        padding: 10px 0;
     }
 }
