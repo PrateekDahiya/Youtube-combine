@@ -1,9 +1,7 @@
 .watchpage {
-    display: flex;
-    flex-direction: column;
+    display: block;
     overflow-y: auto;
     width: 100%;
-    gap: 20px;
     padding: 20px;
     min-height: calc(100vh - 60px);
     height: auto;
@@ -12,18 +10,15 @@
 .vplayer {
     height: auto;
     width: 100%;
-    flex: 0 0 auto;
     min-width: 0;
     display: flex;
     flex-direction: column;
-    max-height: 75vh;
     position: relative;
 }
 
 .video-player {
     width: 100%;
     height: auto;
-    max-height: 75vh;
     position: relative;
 }
 
@@ -222,7 +217,7 @@ button img {
 
 .relatedvideos {
     width: 100%;
-    margin: 20px 0 0;
+    margin: 32px 0 0;
     height: auto;
     min-width: 0;
     position: relative;
@@ -252,9 +247,6 @@ button img {
         width: 100%;
         height: auto;
     }
-    .video-player {
-        max-height: 75vh;
-    }
     .relatedvideos {
         width: 100%;
         height: auto;
@@ -269,9 +261,6 @@ button img {
         width: 100%;
         height: auto;
     }
-    .video-player {
-        max-height: 75vh;
-    }
     .relatedvideos {
         width: 100%;
         height: auto;
@@ -284,10 +273,6 @@ button img {
 @media (min-width: 992px) and (max-width: 1199px) {
     .vplayer {
         width: 100%;
-        max-height: 75vh;
-    }
-    .video-player {
-        max-height: 75vh;
     }
     .relatedvideos {
         width: 100%;
@@ -300,7 +285,6 @@ button img {
 
 @media (min-width: 768px) and (max-width: 991px) {
     .watchpage {
-        flex-direction: column;
         padding: 15px;
         height: auto;
         margin-top: 60px;
@@ -308,9 +292,6 @@ button img {
     .vplayer {
         width: 100%;
         height: auto;
-    }
-    .video-player {
-        max-height: 75vh;
     }
     .video_info {
         padding: 10px 0;
@@ -346,7 +327,6 @@ button img {
 
 @media (min-width: 576px) and (max-width: 767px) {
     .watchpage {
-        flex-direction: column;
         padding: 10px;
         height: auto;
         margin-top: 60px;
@@ -354,9 +334,6 @@ button img {
     .vplayer {
         width: 100%;
         height: auto;
-    }
-    .video-player {
-        max-height: 75vh;
     }
     .video_info {
         padding: 8px 0;
@@ -406,7 +383,6 @@ button img {
 
 @media (max-width: 575px) {
     .watchpage {
-        flex-direction: column;
         padding: 10px;
         height: auto;
         margin-top: 60px;
@@ -414,9 +390,6 @@ button img {
     .vplayer {
         width: 100%;
         height: auto;
-    }
-    .video-player {
-        max-height: 75vh;
     }
     .video_info {
         padding: 8px 0;
