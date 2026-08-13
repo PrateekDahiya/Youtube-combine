@@ -41,7 +41,11 @@
 }
 
 .cards.card-grid-category,
-.cards.card-grid-trending,
+.cards.card-grid-trending {
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+    padding: 20px 0;
+}
+
 .cards.card-grid-likes,
 .cards.card-grid-watchlater,
 .cards.card-grid-history {
@@ -73,7 +77,12 @@
     .cards.card-grid-compact,
     .cards.card-grid-tight,
     .cards.card-grid-category,
-    .cards.card-grid-trending,
+    .cards.card-grid-trending {
+        grid-template-columns: repeat(1, minmax(0, 1fr));
+        gap: 30px;
+        padding: 30px 0;
+    }
+
     .cards.card-grid-likes,
     .cards.card-grid-watchlater,
     .cards.card-grid-history {
@@ -97,7 +106,12 @@
     .cards.card-grid-compact,
     .cards.card-grid-tight,
     .cards.card-grid-category,
-    .cards.card-grid-trending,
+    .cards.card-grid-trending {
+        grid-template-columns: repeat(1, minmax(0, 1fr));
+        gap: 24px;
+        padding: 25px 0;
+    }
+
     .cards.card-grid-likes,
     .cards.card-grid-watchlater,
     .cards.card-grid-history {
@@ -121,7 +135,12 @@
     .cards.card-grid-compact,
     .cards.card-grid-tight,
     .cards.card-grid-category,
-    .cards.card-grid-trending,
+    .cards.card-grid-trending {
+        grid-template-columns: repeat(1, minmax(0, 1fr));
+        gap: 20px;
+        padding: 20px 0;
+    }
+
     .cards.card-grid-likes,
     .cards.card-grid-watchlater,
     .cards.card-grid-history {
@@ -145,7 +164,12 @@
     .cards.card-grid-compact,
     .cards.card-grid-tight,
     .cards.card-grid-category,
-    .cards.card-grid-trending,
+    .cards.card-grid-trending {
+        grid-template-columns: repeat(1, minmax(0, 1fr));
+        gap: 16px;
+        padding: 15px 0;
+    }
+
     .cards.card-grid-likes,
     .cards.card-grid-watchlater,
     .cards.card-grid-history {
@@ -169,7 +193,12 @@
     .cards.card-grid-compact,
     .cards.card-grid-tight,
     .cards.card-grid-category,
-    .cards.card-grid-trending,
+    .cards.card-grid-trending {
+        grid-template-columns: repeat(1, minmax(0, 1fr));
+        gap: 12px;
+        padding: 10px 0;
+    }
+
     .cards.card-grid-likes,
     .cards.card-grid-watchlater,
     .cards.card-grid-history {
