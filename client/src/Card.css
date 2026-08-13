@@ -154,6 +154,27 @@
     object-fit: contain; /* Prevents stretching */
 }
 
+.card-edit {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0,0,0,0.6);
+    border-radius: 50%;
+    z-index: 2;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.card:hover .card-edit {
+    opacity: 1;
+}
+
 /* Responsive breakpoints */
 @media (min-width: 1550px) {
     .card img {

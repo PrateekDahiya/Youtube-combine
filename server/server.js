@@ -1074,6 +1074,33 @@ app.get("/api/uploadingVideos", (req, res) => {
     });
 });
 
+app.post("/api/updateVideo", (req, res) => {
+    const video_id = req.body.video_id;
+    const user_id = req.body.user_id;
+    const title = (req.body.title || "").trim() || "Untitled";
+    const description = req.body.description || "";
+    const tags = req.body.tags || "";
+    const category = req.body.category || "";
+    const isShort = req.body.isShort == "short" ? 1 : req.body.isShort == "video" ? 0 : Number(req.body.isShort || 0);
+    const thumbnail_link = req.body.thumbnail_link || "";
+
+    const query = `UPDATE videos SET title = ?, video_description = ?, tags = ?, category = ?, isShort = ?, thumbnail_link = ? WHERE video_id = ? AND channel_id = ?`;
+    connection.query(
+        query,
+        [title, description, tags, category, isShort, thumbnail_link, video_id, user_id],
+        (error, results) => {
+            if (error) {
+                console.log("UpdateVideo: " + error);
+                return res.status(500).json({ error: "Failed to update video" });
+            }
+            if (results.affectedRows === 0) {
+                return res.status(403).json({ error: "Video not found or not authorized" });
+            }
+            res.status(200).json({ message: "Video updated" });
+        }
+    );
+});
+
 app.post("/api/updateUserDetail", (req, res) => {
     const field = req.body.field;
     const value = req.body.value;

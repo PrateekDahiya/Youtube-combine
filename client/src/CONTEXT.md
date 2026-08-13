@@ -26,7 +26,8 @@ All React application source for the VidVault front-end: the root component, pag
 | `Shorts.js` + `Shorts.css` | `Shorts` | `/shorts` | Vertical Shorts feed with three rotating `Shortbox` slots and up/down arrow + keyboard navigation. Fetches `/api/shorts`. |
 | `Watch.js` + `Watch.css` | `Watch` | `/watch` | Video page: fetches `/api/watch` for metadata and the Flask service for stream URLs; falls back to YouTube `<iframe>` if the Flask call fails. When `videos.link` points to an uploaded file (starts with `/uploads/` or a `res.cloudinary.com` URL) it plays the file directly via the custom player and skips the Flask/YouTube pipeline. Like/dislike/subscribe/related-videos. |
 | `Search.js` + `Search.css` | `Search` | `/search` | Hits `/api/search?query=…` and renders a grid of `Card`s. |
-| `Yourchannel.js` + `Yourchannel.css` | `Yourchannel` | `/yourchannel` | The logged-in user's own channel: banner, info, Videos/Shorts tabs, and search. Uses `/api/yourchannel` + `/api/getvideosofchannel`. (Uploading a video lives on the `/uploads` page.) |
+| `Yourchannel.js` + `Yourchannel.css` | `Yourchannel` | `/yourchannel` | The logged-in user's own channel: banner, info, Videos/Shorts tabs, and search. Each video card shows an edit button that opens the `EditVideo` modal. Uses `/api/yourchannel` + `/api/getvideosofchannel`. (Uploading a video lives on the `/uploads` page.) |
+| `EditVideo.js` | `EditVideo` | `Yourchannel.js`. Modal to edit a video's metadata (title, description, tags, category, type, thumbnail) via `/api/updateVideo`. The video file itself is never re-uploaded. Thumbnail changes upload through `/api/upload` first. Reuses the `UploadVideo.css` classes. |
 | `Channel.js` + `Channel.css` | `Channel` | `/channel` | Any channel view (by `?channel_id=`). Subscribe button (`/api/issub`, `/api/addtosubs`, `/api/removefromsubs`). |
 | `You.js` + `You.css` | `You` | `/me` | "Account" landing for signed-in users: channel banner + name. Guests see a sign-in CTA. |
 | `Subscription.js` + `Subscription.css` | `Subscription` | `/subscriptions` | Videos/Shorts from subscribed channels: `/api/subscriptions?isShort=&user_id=`. |
@@ -41,7 +42,7 @@ All React application source for the VidVault front-end: the root component, pag
 ### Reusable building blocks
 | File | Component | Used by |
 |------|-----------|---------|
-| `Card.js` + `Card.css` | `Card` | Almost every listing page. Renders a video thumbnail with title, channel icon, views, upload time, duration badge, hover watch-later button. Clicking navigates to `/watch` or `/shorts` depending on `isShort`. Adds history on click via `/api/addtohistory`. |
+| `Card.js` + `Card.css` | `Card` | Almost every listing page. Renders a video thumbnail with title, channel icon, views, upload time, duration badge, hover watch-later button. Clicking navigates to `/watch` or `/shorts` depending on `isShort`. Adds history on click via `/api/addtohistory`. Optional `onEdit` prop shows an edit button that calls back with the video row (used by `Yourchannel`). Thumbnail falls back to a Cloudinary poster frame derived from the video `link` when `thumbnail_link` is empty. |
 | `Cardloading.js` + `Cardloading.css` | `Cardloading` | Skeleton loader with shape variants for `home`, `category`, `channel`, `yourchannel`, `subscription`, `watch`. |
 | `Videoplayer.js` + `Videoplayer.css` | `VideoPlayer` | `Watch.js`. Custom video player with separate `<video>` (webm) and `<audio>` sources, sync logic, quality menu, playback-speed menu, volume, fullscreen. |
 | `Shortbox.js` + `Shortbox.css` | `Shortbox` | `Shorts.js`. Fetches the short's stream URL from the Flask `/get-short-url` endpoint. |

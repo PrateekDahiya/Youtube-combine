@@ -3,6 +3,7 @@ import "./Yourchannel.css";
 import axios from "axios";
 import Cardloading from "./Cardloading";
 import Card from "./Card";
+import EditVideo from "./EditVideo";
 
 const defaultAvatar = "https://cdn-icons-png.flaticon.com/128/1077/1077063.png";
 
@@ -10,6 +11,8 @@ const Yourchannel = (params) => {
     const [data, setData] = useState("");
     const [videos, setVideos] = useState("");
     const [typeShort, setType] = useState(0);
+    const [refresh, setRefresh] = useState(0);
+    const [editingVideo, setEditingVideo] = useState(null);
     const serverurl = process.env.REACT_APP_SERVER_URL;
     const user = params.user;
 
@@ -41,7 +44,7 @@ const Yourchannel = (params) => {
                 });
         };
         fetchVideos();
-    }, [typeShort, user]);
+    }, [typeShort, user, refresh]);
 
     function formatNumber(num) {
         if (num >= 1000000) {
@@ -226,12 +229,24 @@ const Yourchannel = (params) => {
                     {videos && videos.videos ? (
                         <div className="videos">
                             {videos.videos.map((item) => (
-                                <Card key={item.video_id} data={item} />
+                                <Card
+                                    key={item.video_id}
+                                    data={item}
+                                    onEdit={(video) => setEditingVideo(video)}
+                                />
                             ))}
                         </div>
                     ) : (
                         <></>
                     )}
+                    {editingVideo ? (
+                        <EditVideo
+                            video={editingVideo}
+                            user={user}
+                            onClose={() => setEditingVideo(null)}
+                            onUpdated={() => setRefresh((r) => r + 1)}
+                        />
+                    ) : null}
                 </div>
             ) : (
                 <Cardloading page="yourchannel" />
