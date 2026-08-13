@@ -8,6 +8,9 @@ import Cardloading from "./Cardloading";
 const Home = (params) => {
     const locationHook = useLocation();
     const [data, setData] = useState(null);
+    const [topTags, setTopTags] = useState([]);
+    const [selectedTag, setSelectedTag] = useState("All");
+    const [selectedType, setSelectedType] = useState("All");
     const serverurl = process.env.REACT_APP_SERVER_URL;
     const [page, setPage] = useState(
         new URLSearchParams(locationHook.pathname)
@@ -15,6 +18,32 @@ const Home = (params) => {
     const [page_no, setpage_no] = useState(1);
     const [startlistner, setstartlistner] = useState(false);
     const user = params.user;
+    const videoTypes = ["All", "Music", "Gaming", "Movies", "News", "Sports"];
+
+    useEffect(() => {
+        setData(null);
+        setpage_no(1);
+    }, [selectedTag, selectedType]);
+
+    useEffect(() => {
+        const fetchHomeTags = async () => {
+            if (user === "Guest" || !user.channel_id) {
+                setTopTags([]);
+                return;
+            }
+
+            try {
+                const response = await axios.get(
+                    `${serverurl}/home-tags?user_id=${user.channel_id}`
+                );
+                setTopTags(response.data.tags || []);
+            } catch (error) {
+                console.log("Error in fetching home tags: ", error.message);
+            }
+        };
+
+        fetchHomeTags();
+    }, [serverurl, user]);
 
     useEffect(() => {
         const currentpage = new URLSearchParams(locationHook.pathname);
@@ -23,6 +52,56 @@ const Home = (params) => {
 
     useEffect(() => {
         const fetchData = async () => {
+            if (selectedTag !== "All") {
+                await axios
+                    .get(
+                        `${serverurl}/feed-by-tag?tag=${encodeURIComponent(
+                            selectedTag
+                        )}&page=${page_no}`
+                    )
+                    .then((response) => {
+                        const videos = response.data.videos || [];
+                        setData((prev) =>
+                            prev === null
+                                ? videos
+                                : videos.length === 0
+                                ? prev
+                                : prev[0].video_id !== videos[0].video_id
+                                ? [...prev, ...videos]
+                                : prev
+                        );
+                    })
+                    .catch((error) => {
+                        console.log("Error in fetching: ", error.message);
+                    });
+                return;
+            }
+
+            if (selectedType !== "All") {
+                await axios
+                    .get(
+                        `${serverurl}/feed-by-tag?type=${encodeURIComponent(
+                            selectedType
+                        )}&page=${page_no}`
+                    )
+                    .then((response) => {
+                        const videos = response.data.videos || [];
+                        setData((prev) =>
+                            prev === null
+                                ? videos
+                                : videos.length === 0
+                                ? prev
+                                : prev[0].video_id !== videos[0].video_id
+                                ? [...prev, ...videos]
+                                : prev
+                        );
+                    })
+                    .catch((error) => {
+                        console.log("Error in fetching: ", error.message);
+                    });
+                return;
+            }
+
             if (user.channel_id) {
                 await axios
                     .get(
@@ -88,6 +167,48 @@ const Home = (params) => {
         <>
             {data ? (
                 <>
+                    <div className="home-tags">
+                        <div className="home-tag-row">
+                            {topTags.length > 0 ? (
+                                <>
+                                    <span className="home-tag-label">Top tags</span>
+                                    {topTags.map((tag) => (
+                                        <button
+                                            key={tag}
+                                            className={
+                                                "home-tag " +
+                                                (selectedTag === tag ? "active" : "")
+                                            }
+                                            onClick={() => {
+                                                setSelectedTag(tag);
+                                                setSelectedType("All");
+                                            }}
+                                        >
+                                            {tag}
+                                        </button>
+                                    ))}
+                                </>
+                            ) : null}
+                        </div>
+                        <div className="home-tag-row">
+                            <span className="home-tag-label">Video type</span>
+                            {videoTypes.map((tag) => (
+                                <button
+                                    key={tag}
+                                    className={
+                                        "home-tag " +
+                                        (selectedType === tag ? "active" : "")
+                                    }
+                                    onClick={() => {
+                                        setSelectedType(tag);
+                                        setSelectedTag("All");
+                                    }}
+                                >
+                                    {tag}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
                     <div
                         className="cards"
                         onLoad={() => {

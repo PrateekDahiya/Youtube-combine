@@ -108,6 +108,84 @@ app.get("/api/home", (req, res) => {
     });
 });
 
+app.get("/api/feed-by-tag", (req, res) => {
+    const tag = req.query.tag || "";
+    const type = req.query.type || "";
+    const page_no = Number(req.query.page || 1);
+    const searchQuery = `%${tag}%`;
+    const categoryMap = {
+        Music: ["Music"],
+        Gaming: ["Gaming"],
+        Movies: [
+            "Film & Animation",
+            "Short Movies",
+            "Movies",
+            "Anime/Animation",
+            "Documentary",
+            "Drama",
+            "Sci-Fi/Fantasy",
+            "Shows",
+            "Trailers",
+            "Thriller",
+        ],
+        News: ["News & Politics"],
+        Sports: ["Sports"],
+    };
+
+    const query = type
+        ? `SELECT * FROM channels c join videos v on c.channel_id=v.channel_id where v.isShort = 0 and v.category in (?) order by upload_time desc limit 24 offset ?`
+        : `SELECT * FROM channels c join videos v on c.channel_id=v.channel_id where v.isShort = 0 and (v.title like ? or v.tags like ? or v.category like ? or c.channel_name like ?) order by upload_time desc limit 24 offset ?`;
+
+    const queryParams = type
+        ? [categoryMap[type] || [type], 24 * (page_no - 1)]
+        : [searchQuery, searchQuery, searchQuery, searchQuery, 24 * (page_no - 1)];
+
+    connection.query(
+        query,
+        queryParams,
+        (error, results) => {
+            if (error) {
+                console.log(error);
+                return res.status(500).json({ error: "Database query failed" });
+            }
+            res.status(200).json({ page: "home_tag", videos: results, tag, type });
+        }
+    );
+});
+
+app.get("/api/home-tags", async (req, res) => {
+    const user_id = req.query.user_id;
+
+    if (!user_id) {
+        return res.status(400).json({ error: "Missing user_id parameter" });
+    }
+
+    try {
+        const videoHistory = await fetchVideoHistory(user_id);
+        const counts = {};
+
+        videoHistory.forEach((video) => {
+            (video.tags || "")
+                .split(",")
+                .map((tag) => tag.toLowerCase().trim())
+                .filter(Boolean)
+                .forEach((tag) => {
+                    counts[tag] = (counts[tag] || 0) + 1;
+                });
+        });
+
+        const tags = Object.entries(counts)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 5)
+            .map(([tag]) => tag);
+
+        res.status(200).json({ tags });
+    } catch (error) {
+        console.error("Error fetching home tags:", error.message);
+        res.status(500).json({ error: "Database query failed" });
+    }
+});
+
 app.get("/api/shorts", (req, res) => {
     const video_id = req.query.video_id;
     const needmore = req.query.needmore || 0; // Default to 0 if needmore is not provided
