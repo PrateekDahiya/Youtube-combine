@@ -4,11 +4,13 @@ import axios from "axios";
 import { useLocation } from "react-router-dom";
 import "./Trendings.css";
 import CardGrid from "./CardGrid";
+import Cardloading from "./Cardloading";
 
 const Trendings = (params) => {
     const locationHook = useLocation();
     const [type, setType] = useState(0);
     const [data, setdata] = useState([]);
+    const [loading, setLoading] = useState(true);
     const serverurl = process.env.REACT_APP_SERVER_URL;
     const [page, setPage] = useState(
         new URLSearchParams(locationHook.pathname)
@@ -21,6 +23,7 @@ const Trendings = (params) => {
     }, [locationHook]);
 
     useEffect(() => {
+        setLoading(true);
         const fetchData = async () => {
             await axios
                 .get(`${serverurl}/trendings?type=${type}`)
@@ -29,6 +32,9 @@ const Trendings = (params) => {
                 })
                 .catch((error) => {
                     console.log("Error in fetching: ", error.message);
+                })
+                .finally(() => {
+                    setLoading(false);
                 });
         };
         fetchData();
@@ -36,7 +42,9 @@ const Trendings = (params) => {
 
     return (
         <>
-            {data.videos ? (
+            {loading ? (
+                <Cardloading page="trendings" />
+            ) : data.videos ? (
                 <div className="trendingbox">
                     <div className="trend-heading">
                         <img

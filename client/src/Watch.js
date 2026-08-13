@@ -5,6 +5,7 @@ import axios from "axios";
 import Videoplayer from "./Videoplayer";
 import Card from "./Card";
 import CardGrid from "./CardGrid";
+import Cardloading from "./Cardloading";
 
 const defaultAvatar = "https://cdn-icons-png.flaticon.com/128/1077/1077063.png";
 
@@ -16,6 +17,7 @@ const Watch = (params) => {
     const [relateddata, setRelateddata] = useState(null);
     const [show_desc, setshow_desc] = useState(false);
     const [fetchFailed, setFetchFailed] = useState(false);
+    const [loading, setLoading] = useState(true);
     const serverurl = process.env.REACT_APP_SERVER_URL;
     const user = params.user;
     const [issubed, setissubed] = useState(false);
@@ -199,6 +201,9 @@ const Watch = (params) => {
                 })
                 .catch((error) => {
                     console.log("Error in fetching: ", error.message);
+                })
+                .finally(() => {
+                    setLoading(false);
                 });
         };
         fetchwatchdata();
@@ -237,7 +242,9 @@ const Watch = (params) => {
         setVideo_resolution(parseInt(option));
     };
 
-    return (
+    return loading ? (
+        <Cardloading page="watch" />
+    ) : (
         <>
             <div className="watchpage">
                 <div className="vplayer">

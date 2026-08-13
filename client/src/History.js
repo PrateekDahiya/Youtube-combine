@@ -4,9 +4,11 @@ import axios from "axios";
 import { Link, parsePath } from "react-router-dom";
 import "./History.css";
 import CardGrid from "./CardGrid";
+import Cardloading from "./Cardloading";
 
 const History = (params) => {
     const [data, setData] = useState([]);
+    const [loading, setLoading] = useState(true);
     const [user_chl_id, setUser_chl_id] = useState(null);
     const [hoveredCards, setHoveredCards] = useState({}); // State to manage hovered cards
     const serverurl = process.env.REACT_APP_SERVER_URL;
@@ -41,6 +43,8 @@ const History = (params) => {
                     setData(response.data.videos);
                 } catch (error) {
                     console.log("Error in fetching: ", error.message);
+                } finally {
+                    setLoading(false);
                 }
             }
         };
@@ -121,7 +125,9 @@ const History = (params) => {
                 <>
                     <div className="history-outerbox">
                         <h1>Watch History</h1>
-                        {data && params.active === "true" ? (
+                        {loading ? (
+                            <Cardloading page="history" />
+                        ) : data && params.active === "true" ? (
                             categories.map(({ title, category }) => {
                                 const cards = renderCardsByTime(category);
                                 return cards.length > 0 ? (

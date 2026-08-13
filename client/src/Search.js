@@ -5,16 +5,19 @@ import Card from "./Card";
 import axios from "axios";
 import "./Search.css";
 import CardGrid from "./CardGrid";
+import Cardloading from "./Cardloading";
 
 const defaultAvatar = "https://cdn-icons-png.flaticon.com/128/1077/1077063.png";
 
 const Search = () => {
     const locationHook = useLocation();
     const [data, setData] = useState("");
+    const [loading, setLoading] = useState(true);
     const serverurl = process.env.REACT_APP_SERVER_URL;
     const [page, setPage] = useState(locationHook.pathname);
 
     useEffect(() => {
+        setLoading(true);
         const fetchData = async () => {
             await axios
                 .get(`${serverurl}/search` + window.location.search)
@@ -23,6 +26,9 @@ const Search = () => {
                 })
                 .catch((error) => {
                     console.log("Error in fetching: ", error.message);
+                })
+                .finally(() => {
+                    setLoading(false);
                 });
         };
         fetchData();
@@ -32,7 +38,9 @@ const Search = () => {
         const currentpage = locationHook.pathname;
         setPage(currentpage);
     }, [locationHook]);
-    return (
+    return loading ? (
+        <Cardloading page="search" />
+    ) : (
         <div className="searchPage">
             <p className="channel-find-error ">
                 *If you can't find the channel, please send feedback with the

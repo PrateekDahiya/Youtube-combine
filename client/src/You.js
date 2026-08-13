@@ -2,11 +2,13 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { Link } from "react-router-dom";
 import "./You.css";
+import Cardloading from "./Cardloading";
 
 const defaultAvatar = "https://cdn-icons-png.flaticon.com/128/1077/1077063.png";
 
 const You = (params) => {
     const [data, setData] = useState("");
+    const [loading, setLoading] = useState(true);
     // const [videos, setVideos] = useState("");
     // const [typeShort, setType] = useState(0);
     const serverurl = process.env.REACT_APP_SERVER_URL;
@@ -21,10 +23,13 @@ const You = (params) => {
                 })
                 .catch((error) => {
                     console.log("Error in fetching: ", error.message);
+                })
+                .finally(() => {
+                    setLoading(false);
                 });
         };
         fetchData();
-    }, [user]);
+    }, [user, serverurl]);
 
     // function formatNumber(num) {
     //     if (num >= 1000000) {
@@ -40,7 +45,9 @@ const You = (params) => {
         <>
             {params.user !== "Guest" ? (
                 <>
-                    {data ? (
+                    {loading ? (
+                        <Cardloading page="you" />
+                    ) : data ? (
                         <div className="outer">
                             {data.channel_banner ? (
                                 data.channel_banner !== "N/A" ? (
@@ -89,7 +96,7 @@ const You = (params) => {
                             </div>
                         </div>
                     ) : (
-                        <p>loading...</p>
+                        <></>
                     )}
                 </>
             ) : (

@@ -3,9 +3,11 @@ import Card from "./Card";
 import axios from "axios";
 import "./Likedvideos.css";
 import CardGrid from "./CardGrid";
+import Cardloading from "./Cardloading";
 
 const Likedvideos = (params) => {
     const [data, setData] = useState("");
+    const [loading, setLoading] = useState(true);
     const [user_chl_id, setUser_chl_id] = useState(null);
     const serverurl = process.env.REACT_APP_SERVER_URL;
     const user = params.user;
@@ -19,6 +21,9 @@ const Likedvideos = (params) => {
                 })
                 .catch((error) => {
                     console.log("Error in fetching: ", error.message);
+                })
+                .finally(() => {
+                    setLoading(false);
                 });
         };
         fetchData();
@@ -31,7 +36,9 @@ const Likedvideos = (params) => {
     return (
         <div className="likedvideos-outerbox">
             <h1>Liked Videos</h1>
-            {data.videos && params.active === "true" ? (
+            {loading ? (
+                <Cardloading page="likes" />
+            ) : data.videos && params.active === "true" ? (
                 <CardGrid variant="likes" className="likedvideos-cards">
                     {data.videos.map((item) => (
                         <Card key={item.video_id} data={item} />

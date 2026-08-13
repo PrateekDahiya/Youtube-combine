@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import axios from "axios";
 import "./Subscription.css";
 import CardGrid from "./CardGrid";
+import Cardloading from "./Cardloading";
 
 const defaultAvatar = "https://cdn-icons-png.flaticon.com/128/1077/1077063.png";
 
@@ -12,6 +13,7 @@ const Subscription = (params) => {
     const [channels, setChannels] = useState([]);
     const [selectedChannel, setSelectedChannel] = useState("all");
     const [typeShort, setType] = useState(0);
+    const [loading, setLoading] = useState(true);
     const serverurl = process.env.REACT_APP_SERVER_URL;
     const user = params.user;
 
@@ -24,6 +26,8 @@ const Subscription = (params) => {
                 setVideos(response.data);
             } catch (error) {
                 console.log("Error in fetching: ", error.message);
+            } finally {
+                setLoading(false);
             }
         };
         fetchData();
@@ -40,7 +44,6 @@ const Subscription = (params) => {
                 console.log("Error in fetching subscriptions: ", error.message);
             }
         };
-
         fetchChannels();
     }, [serverurl, user.channel_id, user]);
 
@@ -54,6 +57,9 @@ const Subscription = (params) => {
     return (
         <>
             {params.user !== "Guest" ? (
+                loading ? (
+                    <Cardloading page="subscription" />
+                ) : (
                 <div className="subsbox">
                     <h1>Subscriptions</h1>
                     <h3>Latest</h3>
@@ -124,6 +130,7 @@ const Subscription = (params) => {
                         <></>
                     )}
                 </div>
+                )
             ) : (
                 <div className="guestuser">
                     <img
