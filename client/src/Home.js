@@ -8,6 +8,7 @@ import Cardloading from "./Cardloading";
 const Home = (params) => {
     const locationHook = useLocation();
     const [data, setData] = useState(null);
+    const [topTags, setTopTags] = useState([]);
     const [selectedTag, setSelectedTag] = useState("All");
     const serverurl = process.env.REACT_APP_SERVER_URL;
     const [page, setPage] = useState(
@@ -16,35 +17,32 @@ const Home = (params) => {
     const [page_no, setpage_no] = useState(1);
     const [startlistner, setstartlistner] = useState(false);
     const user = params.user;
-
-    const normalizeTag = (tag) => tag.toLowerCase().trim();
-
-    const getTopTags = () => {
-        const counts = {};
-
-        (data || []).forEach((item) => {
-            (item.tags || "")
-                .split(",")
-                .map(normalizeTag)
-                .filter(Boolean)
-                .forEach((tag) => {
-                    counts[tag] = (counts[tag] || 0) + 1;
-                });
-        });
-
-        return Object.entries(counts)
-            .sort((a, b) => b[1] - a[1])
-            .slice(0, 5)
-            .map(([tag]) => tag);
-    };
-
-    const topTags = getTopTags();
     const videoTypes = ["All", "Music", "Gaming", "Movies", "News", "Sports"];
 
     useEffect(() => {
         setData(null);
         setpage_no(1);
     }, [selectedTag]);
+
+    useEffect(() => {
+        const fetchHomeTags = async () => {
+            if (user === "Guest" || !user.channel_id) {
+                setTopTags([]);
+                return;
+            }
+
+            try {
+                const response = await axios.get(
+                    `${serverurl}/home-tags?user_id=${user.channel_id}`
+                );
+                setTopTags(response.data.tags || []);
+            } catch (error) {
+                console.log("Error in fetching home tags: ", error.message);
+            }
+        };
+
+        fetchHomeTags();
+    }, [serverurl, user]);
 
     useEffect(() => {
         const currentpage = new URLSearchParams(locationHook.pathname);

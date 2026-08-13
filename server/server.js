@@ -127,6 +127,39 @@ app.get("/api/feed-by-tag", (req, res) => {
     );
 });
 
+app.get("/api/home-tags", async (req, res) => {
+    const user_id = req.query.user_id;
+
+    if (!user_id) {
+        return res.status(400).json({ error: "Missing user_id parameter" });
+    }
+
+    try {
+        const videoHistory = await fetchVideoHistory(user_id);
+        const counts = {};
+
+        videoHistory.forEach((video) => {
+            (video.tags || "")
+                .split(",")
+                .map((tag) => tag.toLowerCase().trim())
+                .filter(Boolean)
+                .forEach((tag) => {
+                    counts[tag] = (counts[tag] || 0) + 1;
+                });
+        });
+
+        const tags = Object.entries(counts)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 5)
+            .map(([tag]) => tag);
+
+        res.status(200).json({ tags });
+    } catch (error) {
+        console.error("Error fetching home tags:", error.message);
+        res.status(500).json({ error: "Database query failed" });
+    }
+});
+
 app.get("/api/shorts", (req, res) => {
     const video_id = req.query.video_id;
     const needmore = req.query.needmore || 0; // Default to 0 if needmore is not provided
