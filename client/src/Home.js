@@ -41,20 +41,10 @@ const Home = (params) => {
     const topTags = getTopTags();
     const videoTypes = ["All", "Music", "Gaming", "Movies", "News", "Sports"];
 
-    const filteredData = (data || []).filter((item) => {
-        if (selectedTag === "All") return true;
-
-        const itemTags = (item.tags || "")
-            .split(",")
-            .map(normalizeTag)
-            .filter(Boolean);
-
-        if (videoTypes.includes(selectedTag)) {
-            return (item.category || "").toLowerCase() === selectedTag.toLowerCase();
-        }
-
-        return itemTags.some((tag) => tag.includes(selectedTag.toLowerCase()));
-    });
+    useEffect(() => {
+        setData(null);
+        setpage_no(1);
+    }, [selectedTag]);
 
     useEffect(() => {
         const currentpage = new URLSearchParams(locationHook.pathname);
@@ -63,6 +53,31 @@ const Home = (params) => {
 
     useEffect(() => {
         const fetchData = async () => {
+            if (selectedTag !== "All") {
+                await axios
+                    .get(
+                        `${serverurl}/feed-by-tag?tag=${encodeURIComponent(
+                            selectedTag
+                        )}&page=${page_no}`
+                    )
+                    .then((response) => {
+                        const videos = response.data.videos || [];
+                        setData((prev) =>
+                            prev === null
+                                ? videos
+                                : videos.length === 0
+                                ? prev
+                                : prev[0].video_id !== videos[0].video_id
+                                ? [...prev, ...videos]
+                                : prev
+                        );
+                    })
+                    .catch((error) => {
+                        console.log("Error in fetching: ", error.message);
+                    });
+                return;
+            }
+
             if (user.channel_id) {
                 await axios
                     .get(
@@ -170,7 +185,7 @@ const Home = (params) => {
                             setstartlistner(true);
                         }}
                     >
-                        {filteredData.map((item) => (
+                        {data.map((item) => (
                             <Card key={item.video_id} data={item} />
                         ))}
                     </div>

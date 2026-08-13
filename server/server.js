@@ -108,6 +108,25 @@ app.get("/api/home", (req, res) => {
     });
 });
 
+app.get("/api/feed-by-tag", (req, res) => {
+    const tag = req.query.tag || "";
+    const page_no = Number(req.query.page || 1);
+    const searchQuery = `%${tag}%`;
+    const query = `SELECT * FROM channels c join videos v on c.channel_id=v.channel_id where v.isShort = 0 and (v.title like ? or v.tags like ? or v.category like ? or c.channel_name like ?) order by upload_time desc limit 24 offset ?`;
+
+    connection.query(
+        query,
+        [searchQuery, searchQuery, searchQuery, searchQuery, 24 * (page_no - 1)],
+        (error, results) => {
+            if (error) {
+                console.log(error);
+                return res.status(500).json({ error: "Database query failed" });
+            }
+            res.status(200).json({ page: "home_tag", videos: results, tag });
+        }
+    );
+});
+
 app.get("/api/shorts", (req, res) => {
     const video_id = req.query.video_id;
     const needmore = req.query.needmore || 0; // Default to 0 if needmore is not provided
