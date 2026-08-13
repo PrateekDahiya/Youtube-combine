@@ -3,6 +3,7 @@ import Card from "./Card";
 import axios from "axios";
 import { Link, parsePath } from "react-router-dom";
 import "./History.css";
+import CardGrid from "./CardGrid";
 
 const History = (params) => {
     const [data, setData] = useState([]);
@@ -126,9 +127,9 @@ const History = (params) => {
                                 return cards.length > 0 ? (
                                     <div key={category}>
                                         <h2>{title}</h2>
-                                        <div className="historycards">
+                                        <CardGrid variant="history" className="historycards">
                                             {cards}
-                                        </div>
+                                        </CardGrid>
                                     </div>
                                 ) : null;
                             })

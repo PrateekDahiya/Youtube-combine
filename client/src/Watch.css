@@ -1,6 +1,7 @@
 .watchpage {
     display: flex;
     flex-direction: row;
+    flex-wrap: wrap;
     overflow-y: auto;
     width: 100%;
     gap: 20px;
@@ -10,8 +11,8 @@
 
 .vplayer {
     height: auto;
-    width: 950px;
-    flex: 1;
+    width: 100%;
+    flex: 1 1 100%;
     min-width: 0;
     display: flex;
     flex-direction: column;
@@ -220,13 +221,14 @@ button img {
 }
 
 .relatedvideos {
-    width: 400px;
-    margin: 0;
-    height: 75vh;
-    min-width: 300px;
-    position: sticky;
-    top: 80px;
+    width: 100%;
+    margin: 20px 0 0;
+    height: auto;
+    min-width: 0;
+    position: relative;
+    top: 0;
     overflow-y: auto;
+    flex: 1 1 100%;
 }
 
 .relatedvideos h2 {
@@ -247,15 +249,15 @@ button img {
 /* Responsive breakpoints */
 @media (min-width: 1550px) {
     .vplayer {
-        width: 1200px;
+        width: 100%;
         max-height: 75vh;
     }
     .video-player {
         max-height: 75vh;
     }
     .relatedvideos {
-        width: 450px;
-        height: 75vh;
+        width: 100%;
+        height: auto;
     }
     .title {
         font-size: 20px;
@@ -264,15 +266,15 @@ button img {
 
 @media (min-width: 1200px) and (max-width: 1549px) {
     .vplayer {
-        width: 950px;
+        width: 100%;
         max-height: 75vh;
     }
     .video-player {
         max-height: 75vh;
     }
     .relatedvideos {
-        width: 400px;
-        height: 75vh;
+        width: 100%;
+        height: auto;
     }
     .title {
         font-size: 18px;
@@ -281,15 +283,15 @@ button img {
 
 @media (min-width: 992px) and (max-width: 1199px) {
     .vplayer {
-        width: 800px;
+        width: 100%;
         max-height: 75vh;
     }
     .video-player {
         max-height: 75vh;
     }
     .relatedvideos {
-        width: 350px;
-        height: 75vh;
+        width: 100%;
+        height: auto;
     }
     .title {
         font-size: 17px;

@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import Card from "./Card";
 import axios from "axios";
 import "./Search.css";
+import CardGrid from "./CardGrid";
 
 const defaultAvatar = "https://cdn-icons-png.flaticon.com/128/1077/1077063.png";
 
@@ -67,11 +68,11 @@ const Search = () => {
             {data.videos && data.videos.length > 0 ? (
                 <div className="search-section">
                     <h2 className="search-heading">Videos</h2>
-                    <div className="cards search-cards">
+                    <CardGrid variant="fluid" className="search-cards">
                         {data.videos.map((item) => (
                             <Card key={item.video_id} data={item} />
                         ))}
-                    </div>
+                    </CardGrid>
                 </div>
             ) : null}
         </div>

@@ -4,6 +4,7 @@ import "./Watch.css";
 import axios from "axios";
 import Videoplayer from "./Videoplayer";
 import Card from "./Card";
+import CardGrid from "./CardGrid";
 
 const defaultAvatar = "https://cdn-icons-png.flaticon.com/128/1077/1077063.png";
 
@@ -446,7 +447,7 @@ const Watch = (params) => {
                 {relateddata && relateddata.videos && relateddata.videos.length > 0 && (
                     <div className="relatedvideos">
                         <h2>Related videos</h2>
-                        <div className="cards related-videos">
+                        <CardGrid variant="watch" className="related-videos">
                             {relateddata.videos.map((item) => (
                                 <Card
                                     key={item.video_id}
@@ -454,7 +455,7 @@ const Watch = (params) => {
                                     forrelated={true}
                                 />
                             ))}
-                        </div>
+                        </CardGrid>
                     </div>
                 )}
             </div>

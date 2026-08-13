@@ -3,6 +3,7 @@ import Card from "./Card";
 import axios from "axios";
 import { useLocation } from "react-router-dom";
 import "./Category.css";
+import CardGrid from "./CardGrid";
 
 const Category = (params) => {
     const locationHook = useLocation();
@@ -84,11 +85,11 @@ const Category = (params) => {
                     <div>
                         <hr className="line"></hr>
                     </div>
-                    <div className="cards category">
+                    <CardGrid variant="category" className="category">
                         {data.videos.map((item) => (
                             <Card key={item.video_id} data={item} />
                         ))}
-                    </div>
+                    </CardGrid>
                 </div>
             ) : (
                 <></>

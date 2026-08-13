@@ -4,6 +4,7 @@ import axios from "axios";
 import { useLocation } from "react-router-dom";
 import "./Home.css";
 import Cardloading from "./Cardloading";
+import CardGrid from "./CardGrid";
 
 const Home = (params) => {
     const locationHook = useLocation();
@@ -209,8 +210,8 @@ const Home = (params) => {
                             ))}
                         </div>
                     </div>
-                    <div
-                        className="cards"
+                    <CardGrid
+                        variant="default"
                         onLoad={() => {
                             setstartlistner(true);
                         }}
@@ -218,7 +219,7 @@ const Home = (params) => {
                         {data.map((item) => (
                             <Card key={item.video_id} data={item} />
                         ))}
-                    </div>
+                    </CardGrid>
                 </>
             ) : (
                 <Cardloading />
