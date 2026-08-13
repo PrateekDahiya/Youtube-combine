@@ -47,6 +47,9 @@ function Menu(params) {
                 setSelectedItem('You');
                 break;
             case '/yourchannel':
+                setSelectedItem('Your channel');
+                break;
+            case '/uploads':
                 setSelectedItem('Uploads');
                 break;
             case '/history':
@@ -203,13 +206,24 @@ function Menu(params) {
                             onClick={() => handleItemClick("You")}
                         />
                         {params.user !== "Guest" ? (
-                            <Menuitem
-                                imgpath="https://cdn-icons-png.flaticon.com/128/4189/4189286.png"
-                                title="Uploads"
-                                head="/yourchannel"
-                                isSelected={selectedItem === "Uploads"}
-                                onClick={() => handleItemClick("Uploads")}
-                            />
+                            <>
+                                <Menuitem
+                                    imgpath="https://cdn-icons-png.flaticon.com/128/456/456212.png"
+                                    title="Your channel"
+                                    head="/yourchannel"
+                                    isSelected={selectedItem === "Your channel"}
+                                    onClick={() =>
+                                        handleItemClick("Your channel")
+                                    }
+                                />
+                                <Menuitem
+                                    imgpath="https://cdn-icons-png.flaticon.com/128/4189/4189286.png"
+                                    title="Uploads"
+                                    head="/uploads"
+                                    isSelected={selectedItem === "Uploads"}
+                                    onClick={() => handleItemClick("Uploads")}
+                                />
+                            </>
                         ) : (
                             <></>
                         )}

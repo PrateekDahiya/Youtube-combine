@@ -9,6 +9,7 @@ import You from "./You";
 import Watch from "./Watch";
 import Subscription from "./Subscription";
 import Yourchannel from "./Yourchannel";
+import Uploads from "./Uploads";
 import Channel from "./Channel";
 import Category from "./Category";
 import Search from "./Search";
@@ -141,6 +142,10 @@ function App() {
                             <Route
                                 path="/yourchannel"
                                 element={<Yourchannel user={crntuser} />}
+                            />
+                            <Route
+                                path="/uploads"
+                                element={<Uploads user={crntuser} />}
                             />
                             <Route
                                 path="/channel"

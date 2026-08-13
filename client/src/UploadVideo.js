@@ -93,9 +93,7 @@ const UploadVideo = (params) => {
                 setTimeout(() => {
                     if (params.onClose) params.onClose();
                     if (params.onUploaded) params.onUploaded();
-                    navigate(
-                        `/yourchannel?channel_id=${user.channel_id}`
-                    );
+                    navigate(`/uploads`);
                 }, 800);
             }
         } catch (err) {
