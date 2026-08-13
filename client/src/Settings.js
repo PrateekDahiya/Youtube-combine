@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useContext } from "react";
+import React, { useEffect, useState, useContext, useRef } from "react";
 import { Link } from "react-router-dom";
 import axios from "axios";
 import { ThemeContext } from "./ThemeContext";
@@ -16,6 +16,12 @@ const Settings = (params) => {
     const [editIndex, setEditIndex] = useState(-1);
     const [newValue, setNewValue] = useState("");
     const [deleteChannel, setDeleteChannel] = useState(false);
+    const [iconPreview, setIconPreview] = useState("");
+    const [bannerPreview, setBannerPreview] = useState("");
+    const [showPasswordField, setShowPasswordField] = useState(false);
+    const [passwordValue, setPasswordValue] = useState("");
+    const iconInputRef = useRef(null);
+    const bannerInputRef = useRef(null);
     const { theme, toggleTheme } = useContext(ThemeContext);
 
     const serverurl = process.env.REACT_APP_SERVER_URL;
@@ -26,7 +32,6 @@ const Settings = (params) => {
         { label: "Email", value: user.email },
         { label: "Username", value: user.user_id },
         { label: "DOB", value: user.DOB },
-        { label: "Password", value: "Change Password" },
     ];
     const channelDetails = [
         { label: "Channel name", value: user.channel_name },
@@ -35,10 +40,35 @@ const Settings = (params) => {
         { label: "Location", value: user.location },
         { label: "Total Views", value: user.total_views },
         { label: "Subscribers", value: user.subscribers },
-        { label: "Channel Icon", value: user.channel_icon },
-        { label: "Channel Banner", value: user.channel_banner },
         { label: "Channel Keywords", value: user.keywords },
     ];
+
+    const readFileAsDataURL = (file) =>
+        new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+        });
+
+    const handleFileChange = async (e, type) => {
+        const file = e.target.files && e.target.files[0];
+        if (!file) return;
+        if (!/^image\/(png|jpe?g|gif|webp)$/.test(file.type)) {
+            alert("Please choose a valid image file (PNG, JPG, GIF, or WEBP).");
+            e.target.value = "";
+            return;
+        }
+        const dataURL = await readFileAsDataURL(file);
+        if (type === "icon") {
+            setIconPreview(dataURL);
+            await handleSubmit("Channel Icon", dataURL);
+        } else {
+            setBannerPreview(dataURL);
+            await handleSubmit("Channel Banner", dataURL);
+        }
+        e.target.value = "";
+    };
 
     const updateCookies = async () => {
         try {
@@ -117,7 +147,7 @@ const Settings = (params) => {
                 console.error("Error updating data:", error);
             }
         }
-        if (label === "Delete Channel" && value == "Delete Channel") {
+        if (label === "Delete Channel" && value === "Delete Channel") {
             try {
                 const response = await axios.post(`${serverurl}/deleteUser`, {
                     channel_id: user.channel_id,
@@ -518,6 +548,60 @@ const Settings = (params) => {
                             </p>
                         </div>
                         <div className="profile-settings parts">
+                            <div className="dual-outer">
+                                <div className="dual-part1">
+                                    <h3 className="dual-headings">
+                                        Profile photo
+                                    </h3>
+                                </div>
+                                <div className="dual-part2 dual-photo">
+                                    <div className="settings-avatar-row">
+                                        <img
+                                            alt="profile"
+                                            className="settings-avatar"
+                                            src={
+                                                iconPreview ||
+                                                user.channel_icon ||
+                                                defaultAvatar
+                                            }
+                                        />
+                                        <div className="settings-avatar-actions">
+                                            <button
+                                                className="dual-edit-btn"
+                                                onClick={() =>
+                                                    iconInputRef.current.click()
+                                                }
+                                            >
+                                                Upload photo
+                                            </button>
+                                            {iconPreview && (
+                                                <button
+                                                    className="dual-edit-btn"
+                                                    onClick={() => {
+                                                        setIconPreview("");
+                                                    }}
+                                                >
+                                                    Remove preview
+                                                </button>
+                                            )}
+                                        </div>
+                                        <input
+                                            ref={iconInputRef}
+                                            type="file"
+                                            accept="image/png,image/jpeg,image/gif,image/webp"
+                                            onChange={(e) =>
+                                                handleFileChange(e, "icon")
+                                            }
+                                            hidden
+                                        />
+                                    </div>
+                                    <p className="dual-text">
+                                        Used across VidVault as your public
+                                        identity. Choose a PNG, JPG, GIF or
+                                        WEBP image.
+                                    </p>
+                                </div>
+                            </div>
                             {userDetails.map((detail, index) => (
                                 <div className="dual-outer" key={index}>
                                     <div className="dual-part1">
@@ -529,7 +613,11 @@ const Settings = (params) => {
                                         <div className="dual-part2 dual-form">
                                             <p className="dual-text">
                                                 <input
-                                                    type="text"
+                                                    type={
+                                                        detail.label === "Email"
+                                                            ? "email"
+                                                            : "text"
+                                                    }
                                                     value={newValue}
                                                     placeholder={detail.value}
                                                     onChange={(e) => {
@@ -541,13 +629,20 @@ const Settings = (params) => {
                                                 <button
                                                     className="dual-edit-btn"
                                                     onClick={() => {
+                                                        if (
+                                                            newValue.trim() ===
+                                                            ""
+                                                        ) {
+                                                            setEditIndex(-1);
+                                                            return;
+                                                        }
                                                         handleSubmit(
                                                             detail.label,
-                                                            newValue
+                                                            newValue.trim()
                                                         );
                                                     }}
                                                 >
-                                                    Edit
+                                                    Save
                                                 </button>
                                                 <button
                                                     className="dual-edit-btn"
@@ -576,6 +671,66 @@ const Settings = (params) => {
                                     )}
                                 </div>
                             ))}
+                            <div className="dual-outer">
+                                <div className="dual-part1">
+                                    <h3 className="dual-headings">Password</h3>
+                                </div>
+                                <div className="dual-part2 dual-edit">
+                                    <p className="dual-text">
+                                        <button
+                                            className="dual-edit-btn"
+                                            onClick={() =>
+                                                setShowPasswordField(
+                                                    !showPasswordField
+                                                )
+                                            }
+                                        >
+                                            Change Password
+                                        </button>
+                                        {showPasswordField && (
+                                            <button
+                                                className="dual-edit-btn"
+                                                onClick={() =>
+                                                    setShowPasswordField(
+                                                        false
+                                                    )
+                                                }
+                                            >
+                                                Cancel
+                                            </button>
+                                        )}
+                                    </p>
+                                    {showPasswordField && (
+                                        <p className="dual-text dual-form">
+                                            <input
+                                                type="password"
+                                                value={passwordValue}
+                                                placeholder="New password"
+                                                onChange={(e) =>
+                                                    setPasswordValue(
+                                                        e.target.value
+                                                    )
+                                                }
+                                            />
+                                            <button
+                                                className="dual-edit-btn"
+                                                onClick={() => {
+                                                    params.handlePasswordChange
+                                                        ? params.handlePasswordChange(
+                                                              passwordValue
+                                                          )
+                                                        : alert(
+                                                              "Password change is not yet available."
+                                                          );
+                                                    setPasswordValue("");
+                                                }}
+                                            >
+                                                Update
+                                            </button>
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
                         </div>
                     </div>
                 ) : settings_index === 3 ? (
@@ -588,6 +743,60 @@ const Settings = (params) => {
                             </p>
                         </div>
                         <div className="channel-settings parts">
+                            <div className="dual-outer">
+                                <div className="dual-part1">
+                                    <h3 className="dual-headings">
+                                        Channel banner
+                                    </h3>
+                                </div>
+                                <div className="dual-part2 dual-photo">
+                                    <div className="settings-banner-preview">
+                                        {bannerPreview || user.channel_banner ? (
+                                            <img
+                                                alt="channel banner"
+                                                src={
+                                                    bannerPreview ||
+                                                    user.channel_banner
+                                                }
+                                            />
+                                        ) : (
+                                            <div className="settings-banner-empty">
+                                                No banner yet — upload one to
+                                                personalize your channel.
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div className="settings-avatar-actions">
+                                        <button
+                                            className="dual-edit-btn"
+                                            onClick={() =>
+                                                bannerInputRef.current.click()
+                                            }
+                                        >
+                                            Upload banner
+                                        </button>
+                                        {bannerPreview && (
+                                            <button
+                                                className="dual-edit-btn"
+                                                onClick={() =>
+                                                    setBannerPreview("")
+                                                }
+                                            >
+                                                Remove preview
+                                            </button>
+                                        )}
+                                    </div>
+                                    <input
+                                        ref={bannerInputRef}
+                                        type="file"
+                                        accept="image/png,image/jpeg,image/gif,image/webp"
+                                        onChange={(e) =>
+                                            handleFileChange(e, "banner")
+                                        }
+                                        hidden
+                                    />
+                                </div>
+                            </div>
                             {channelDetails.map((detail, index) => (
                                 <div className="dual-outer" key={index}>
                                     <div className="dual-part1">
@@ -611,13 +820,20 @@ const Settings = (params) => {
                                                 <button
                                                     className="dual-edit-btn"
                                                     onClick={() => {
+                                                        if (
+                                                            newValue.trim() ===
+                                                            ""
+                                                        ) {
+                                                            setEditIndex(-1);
+                                                            return;
+                                                        }
                                                         handleSubmit(
                                                             detail.label,
-                                                            newValue
+                                                            newValue.trim()
                                                         );
                                                     }}
                                                 >
-                                                    OK
+                                                    Save
                                                 </button>
                                                 <button
                                                     className="dual-edit-btn"
