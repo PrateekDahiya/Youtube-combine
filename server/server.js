@@ -903,9 +903,13 @@ function processVideoUpload(video_id, user_id, videoFile, thumbFile) {
     const complete = (link, thumbnail_link) => {
         removeLocalFile(videoFile.path);
         if (thumbFile) removeLocalFile(thumbFile.path);
+        let finalThumbnail = thumbnail_link;
+        if (!finalThumbnail && link.includes("cloudinary.com")) {
+            finalThumbnail = link.replace(/\.[a-zA-Z0-9]+$/, ".jpg");
+        }
         update({
             link,
-            thumbnail_link,
+            thumbnail_link: finalThumbnail,
             upload_status: 0,
             upload_progress: 100,
             upload_error: "",

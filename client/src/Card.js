@@ -190,6 +190,12 @@ const Card = (params) => {
         setlink();
     }, []);
 
+    const thumbnailSrc =
+        params.data.thumbnail_link ||
+        (params.data.link && params.data.link.includes("res.cloudinary.com")
+            ? params.data.link.replace(/\.[a-zA-Z0-9]+$/, ".jpg")
+            : "");
+
     return (
         <Link
             to={linkto}
@@ -230,7 +236,7 @@ const Card = (params) => {
                     forrelated ? "thumbnail forrelated-thumbnail" : "thumbnail"
                 }
                 title={params.data.channel_name}
-                src={params.data.thumbnail_link || ""}
+                src={thumbnailSrc}
                 alt={params.data.title || ""}
             />
             <>

@@ -223,7 +223,7 @@ const Yourchannel = (params) => {
                             title="Search"
                         />
                     </div>
-                    {videos.data ? (
+                    {videos && videos.videos ? (
                         <div className="videos">
                             {videos.videos.map((item) => (
                                 <Card key={item.video_id} data={item} />
