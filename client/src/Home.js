@@ -145,7 +145,7 @@ const Home = (params) => {
         };
 
         fetchData();
-    }, [page_no, user.channel_id]);
+    }, [page_no, user.channel_id, selectedTag, selectedType, serverurl, user]);
 
     const handleScroll = async () => {
         const cards = document.getElementsByClassName("cards")[0];
