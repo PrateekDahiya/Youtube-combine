@@ -1,5 +1,6 @@
 import React, { useState, useRef } from "react";
 import axios from "axios";
+import { useNavigate } from "react-router-dom";
 import "./UploadVideo.css";
 
 const UploadVideo = (params) => {
@@ -19,6 +20,7 @@ const UploadVideo = (params) => {
     const thumbInputRef = useRef(null);
     const serverurl = process.env.REACT_APP_SERVER_URL;
     const user = params.user;
+    const navigate = useNavigate();
 
     const categories = [
         "Music",
@@ -87,11 +89,14 @@ const UploadVideo = (params) => {
                 { headers: { "Content-Type": "multipart/form-data" } }
             );
             if (response.status === 200) {
-                setSuccess("Video uploaded successfully!");
+                setSuccess("Upload started! Track progress in Your channel.");
                 setTimeout(() => {
                     if (params.onClose) params.onClose();
                     if (params.onUploaded) params.onUploaded();
-                }, 1200);
+                    navigate(
+                        `/yourchannel?channel_id=${user.channel_id}`
+                    );
+                }, 800);
             }
         } catch (err) {
             console.error("Upload error:", err);

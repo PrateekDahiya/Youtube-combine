@@ -9,6 +9,7 @@ A collection of **one-off SQL migrations** that take an already-provisioned data
 | File | Purpose |
 |------|---------|
 | `001_fix_user_id_fk_target.sql` | Repoints the `user_id` foreign keys in `subscriptions`, `likedvideos`, `history`, `watchlater`, and `comments` from `user(user_id)` to `channels(channel_id)` and narrows the column to `VARCHAR(32)`. Also applies `ON DELETE CASCADE`. Assumptions: `schema.sql` was previously applied with the older (incorrect) FK target. |
+| `002_add_video_upload_status.sql` | Adds `upload_status` (0 ready / 1 pending / 2 failed), `upload_progress` (0-100) and `upload_error` columns to `videos` so user-uploaded videos can be inserted before their Cloudinary upload finishes, hidden from public feeds until ready, and show the failure reason if upload fails. Assumptions: `schema.sql` applied at a revision without these columns. |
 
 ## Why this migration exists
 

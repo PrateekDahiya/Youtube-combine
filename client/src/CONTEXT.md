@@ -26,7 +26,7 @@ All React application source for the VidVault front-end: the root component, pag
 | `Shorts.js` + `Shorts.css` | `Shorts` | `/shorts` | Vertical Shorts feed with three rotating `Shortbox` slots and up/down arrow + keyboard navigation. Fetches `/api/shorts`. |
 | `Watch.js` + `Watch.css` | `Watch` | `/watch` | Video page: fetches `/api/watch` for metadata and the Flask service for stream URLs; falls back to YouTube `<iframe>` if the Flask call fails. When `videos.link` points to an uploaded file (starts with `/uploads/` or a `res.cloudinary.com` URL) it plays the file directly via the custom player and skips the Flask/YouTube pipeline. Like/dislike/subscribe/related-videos. |
 | `Search.js` + `Search.css` | `Search` | `/search` | Hits `/api/search?query=…` and renders a grid of `Card`s. |
-| `Yourchannel.js` + `Yourchannel.css` | `Yourchannel` | `/yourchannel` | The logged-in user's own channel: banner, info, Videos/Shorts tabs, search, and an "Upload video" button that opens the `UploadVideo` modal. Uses `/api/yourchannel` + `/api/getvideosofchannel`. |
+| `Yourchannel.js` + `Yourchannel.css` | `Yourchannel` | `/yourchannel` | The logged-in user's own channel: banner, info, Videos/Shorts tabs, search, an "Uploads" section listing in-progress/failed uploads (`/api/uploadingVideos`, polls every 2s while anything is uploading), and an "Upload video" button that opens the `UploadVideo` modal. Uses `/api/yourchannel` + `/api/getvideosofchannel`. |
 | `Channel.js` + `Channel.css` | `Channel` | `/channel` | Any channel view (by `?channel_id=`). Subscribe button (`/api/issub`, `/api/addtosubs`, `/api/removefromsubs`). |
 | `You.js` + `You.css` | `You` | `/me` | "Account" landing for signed-in users: channel banner + name. Guests see a sign-in CTA. |
 | `Subscription.js` + `Subscription.css` | `Subscription` | `/subscriptions` | Videos/Shorts from subscribed channels: `/api/subscriptions?isShort=&user_id=`. |
@@ -46,7 +46,7 @@ All React application source for the VidVault front-end: the root component, pag
 | `Videoplayer.js` + `Videoplayer.css` | `VideoPlayer` | `Watch.js`. Custom video player with separate `<video>` (webm) and `<audio>` sources, sync logic, quality menu, playback-speed menu, volume, fullscreen. |
 | `Shortbox.js` + `Shortbox.css` | `Shortbox` | `Shorts.js`. Fetches the short's stream URL from the Flask `/get-short-url` endpoint. |
 | `Shortplayer.js` + `Shortplayer.css` | `Shortplayer` | `Shortbox.js`. Plays the short, auto-loops, falls back to YouTube `<iframe>` when fetching the stream URL fails. |
-| `UploadVideo.js` + `UploadVideo.css` | `UploadVideo` | `Header.js`, `Yourchannel.js`. Popup modal to upload a video to the user's own channel: collects video file, thumbnail, title, description, tags, category, type (video/short) and POSTs to `/api/uploadVideo`. |
+| `UploadVideo.js` + `UploadVideo.css` | `UploadVideo` | `Header.js`, `Yourchannel.js`. Popup modal to upload a video to the user's own channel: collects video file, thumbnail, title, description, tags, category, type (video/short) and POSTs to `/api/uploadVideo`. Since uploads are now async (saved to DB first, Cloudinary upload in background), the modal closes and navigates to `/yourchannel`, where the Uploads section tracks progress/failures. |
 
 ### Theme & styles
 | File | Role |

@@ -18,7 +18,7 @@ Holds the **MySQL schema** and migration SQL for the VidVault database. These fi
 |-------|----|-----------|-------|
 | `channels` | `channel_id VARCHAR(32)` | `idx_channel_name` | Stores YouTube channel metadata. Channel icon/banner are URLs. |
 | `user` | `user_id VARCHAR(64)` | `uniq_email` on `email`; `idx_user_channel_id` | `user_id` = login username, `username` = display full name. `channel_id` FK to `channels` (ON DELETE SET NULL). |
-| `videos` | `video_id VARCHAR(32)` | `idx_video_channel_id`, `idx_video_category`, `idx_video_upload_time`, `idx_video_isshort` | `isShort TINYINT(1)` = duration ≤ 61. `channel_id` FK to `channels` (ON DELETE CASCADE). |
+| `videos` | `video_id VARCHAR(32)` | `idx_video_channel_id`, `idx_video_category`, `idx_video_upload_time`, `idx_video_isshort` | `isShort TINYINT(1)` = duration ≤ 61. `channel_id` FK to `channels` (ON DELETE CASCADE). `upload_status TINYINT(1)` = 0 ready / 1 pending / 2 failed (for user-uploaded videos); `upload_progress INT` (0-100); `upload_error VARCHAR(255)`. Listing queries filter `upload_status = 0`. |
 | `subscriptions` | (`user_id`, `channel_id`) | `idx_sub_channel_id` | **`user_id` here is the logged-in user's `channel_id`, not `user.user_id`** (per the code's behavior; FK points at `channels`). |
 | `likedvideos` | (`user_id`, `video_id`) | `idx_liked_video_id` | `user_id` → `channels.channel_id` (CASCADE). `video_id` → `videos.video_id` (CASCADE). |
 | `history` | (`user_id`, `video_id`) | `idx_history_video_id` | Same `user_id` convention. `watched_time` default `CURRENT_TIMESTAMP`. |

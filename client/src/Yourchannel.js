@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import "./Yourchannel.css";
 import axios from "axios";
 import Cardloading from "./Cardloading";
@@ -13,8 +13,30 @@ const Yourchannel = (params) => {
     const [typeShort, setType] = useState(0);
     const [refresh, setRefresh] = useState(0);
     const [showUpload, setShowUpload] = useState(false);
+    const [uploads, setUploads] = useState([]);
     const serverurl = process.env.REACT_APP_SERVER_URL;
     const user = params.user;
+
+    const fetchUploads = useCallback(async () => {
+        try {
+            const response = await axios.get(
+                `${serverurl}/uploadingVideos?channel_id=${user.channel_id}`
+            );
+            setUploads(response.data.uploads || []);
+        } catch (error) {
+            console.log("Error fetching uploads: ", error.message);
+        }
+    }, [serverurl, user.channel_id]);
+
+    useEffect(() => {
+        fetchUploads();
+    }, [fetchUploads, refresh]);
+
+    useEffect(() => {
+        if (!uploads.some((u) => u.upload_status === 1)) return;
+        const timer = setInterval(fetchUploads, 2000);
+        return () => clearInterval(timer);
+    }, [uploads, fetchUploads]);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -232,6 +254,47 @@ const Yourchannel = (params) => {
                             Upload video
                         </button>
                     </div>
+                    {uploads.length > 0 ? (
+                        <div className="uploads-section">
+                            <p className="uploads-heading">Uploads</p>
+                            {uploads.map((u) => (
+                                <div key={u.video_id} className="upload-item">
+                                    <div className="upload-item-info">
+                                        <p className="upload-item-title">
+                                            {u.title}
+                                        </p>
+                                        <p
+                                            className={
+                                                "upload-item-status" +
+                                                (u.upload_status === 2
+                                                    ? " failed"
+                                                    : "")
+                                            }
+                                        >
+                                            {u.upload_status === 1
+                                                ? `Uploading… ${u.upload_progress}%`
+                                                : u.upload_status === 2
+                                                    ? `Failed: ${
+                                                          u.upload_error ||
+                                                          "Upload failed"
+                                                      }`
+                                                    : "Complete"}
+                                        </p>
+                                    </div>
+                                    {u.upload_status === 1 ? (
+                                        <div className="upload-progress-bar">
+                                            <div
+                                                className="upload-progress-fill"
+                                                style={{
+                                                    width: `${u.upload_progress}%`,
+                                                }}
+                                            />
+                                        </div>
+                                    ) : null}
+                                </div>
+                            ))}
+                        </div>
+                    ) : null}
                     {videos.data ? (
                         <div className="videos">
                             {videos.videos.map((item) => (

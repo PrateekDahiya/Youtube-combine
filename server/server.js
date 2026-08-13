@@ -26,21 +26,37 @@ function isCloudinaryConfigured() {
     );
 }
 
-function cloudinaryUpload(filePath, resourceType, folder) {
+function cloudinaryUpload(filePath, resourceType, folder, onProgress) {
     return new Promise((resolve, reject) => {
-        cloudinary.uploader.upload(
-            filePath,
+        const stream = cloudinary.uploader.upload_stream(
             { resource_type: resourceType, folder },
             (error, result) => {
                 if (error) reject(error);
                 else resolve(result.secure_url);
             }
         );
+        const total = fs.statSync(filePath).size;
+        let sent = 0;
+        const reader = fs.createReadStream(filePath);
+        reader.on("data", (chunk) => {
+            sent += chunk.length;
+            if (onProgress && total > 0) {
+                onProgress(Math.round((sent / total) * 100));
+            }
+        });
+        reader.on("error", reject);
+        reader.pipe(stream);
     });
 }
 
 function removeLocalFile(filePath) {
     fs.unlink(filePath, () => {});
+}
+
+function cloudinaryErrorMessage(err) {
+    if (!err) return "Cloudinary upload failed";
+    if (err.message) return err.message;
+    return String(err);
 }
 
 const uploadsDir = path.join(__dirname, "uploads");
@@ -182,7 +198,7 @@ app.get("/health", (req, res) => {
 
 app.get("/api/home", (req, res) => {
     const page_no = Number(req.query.page || 1);
-    const query = `SELECT * FROM channels c join videos v on c.channel_id=v.channel_id where isShort = 0 order by upload_time desc limit 24 offset ?`;
+    const query = `SELECT * FROM channels c join videos v on c.channel_id=v.channel_id where isShort = 0 and v.upload_status = 0 order by upload_time desc limit 24 offset ?`;
     connection.query(query, [24 * (page_no - 1)], (error, results) => {
         if (error) {
             console.log(error);
@@ -216,8 +232,8 @@ app.get("/api/feed-by-tag", (req, res) => {
     };
 
     const query = type
-        ? `SELECT * FROM channels c join videos v on c.channel_id=v.channel_id where v.isShort = 0 and v.category in (?) order by upload_time desc limit 24 offset ?`
-        : `SELECT * FROM channels c join videos v on c.channel_id=v.channel_id where v.isShort = 0 and (v.title like ? or v.tags like ? or v.category like ? or c.channel_name like ?) order by upload_time desc limit 24 offset ?`;
+        ? `SELECT * FROM channels c join videos v on c.channel_id=v.channel_id where v.isShort = 0 and v.upload_status = 0 and v.category in (?) order by upload_time desc limit 24 offset ?`
+        : `SELECT * FROM channels c join videos v on c.channel_id=v.channel_id where v.isShort = 0 and v.upload_status = 0 and (v.title like ? or v.tags like ? or v.category like ? or c.channel_name like ?) order by upload_time desc limit 24 offset ?`;
 
     const queryParams = type
         ? [categoryMap[type] || [type], 24 * (page_no - 1)]
@@ -287,7 +303,7 @@ app.get("/api/shorts", (req, res) => {
             WHERE c2.channel_id = (
                 SELECT v3.channel_id FROM videos v3 
                 WHERE v3.video_id = ?
-            ) AND v2.video_id != ?
+            ) AND v2.video_id != ? AND v2.upload_status = 0
             ORDER BY v2.upload_time
             LIMIT 5 OFFSET ?)
         `;
@@ -296,7 +312,7 @@ app.get("/api/shorts", (req, res) => {
         query = `
             SELECT v.*, c.* FROM videos v 
             INNER JOIN channels c ON c.channel_id = v.channel_id 
-            WHERE v.isShort = 1 
+            WHERE v.isShort = 1 AND v.upload_status = 0 
             ORDER BY RAND() DESC 
             LIMIT 5 OFFSET ?
         `;
@@ -327,7 +343,7 @@ app.get("/api/subscriptions", (req, res) => {
     const user_id = req.query.user_id;
     const isShort = req.query.isShort;
     const page_no = Number(req.query.page || 1);
-    const query = `select * from videos v inner join channels c on v.channel_id=c.channel_id where v.channel_id in (select s.channel_id from subscriptions s where s.user_id=?) and v.isShort=? order by v.upload_time desc limit 24 offset ?`;
+    const query = `select * from videos v inner join channels c on v.channel_id=c.channel_id where v.channel_id in (select s.channel_id from subscriptions s where s.user_id=?) and v.isShort=? and v.upload_status = 0 order by v.upload_time desc limit 24 offset ?`;
 
     connection.query(query, [user_id, isShort, 24 * (page_no - 1)], (error, results) => {
         if (error) {
@@ -403,7 +419,7 @@ app.get("/api/category", (req, res) => {
         fashionbeauty: ["Pets & Animals", "Travel & Events"],
         shopping: ["Autos & Vehicles"],
     };
-    const query = `select * from videos v join channels c on v.channel_id=c.channel_id where v.category in (?) and v.isShort = ? order by v.upload_time desc limit 24 offset ?`;
+    const query = `select * from videos v join channels c on v.channel_id=c.channel_id where v.category in (?) and v.isShort = ? and v.upload_status = 0 order by v.upload_time desc limit 24 offset ?`;
     connection.query(
         query,
         [categoryMapping[category], type, 24 * (page_no - 1)],
@@ -477,6 +493,7 @@ function createFeedAndGenerateSQL(
                 SELECT v.*, ROW_NUMBER() OVER(PARTITION BY v.channel_id ORDER BY v.video_id) AS channel_row_number
                 FROM videos v
                 WHERE v.isShort = 0
+                AND v.upload_status = 0
             ) AS v
             JOIN channels c ON v.channel_id = c.channel_id
             WHERE v.channel_row_number <= ${maxVideosPerChannel}
@@ -493,6 +510,7 @@ function createFeedAndGenerateSQL(
                 FROM videos v
                 WHERE v.video_id NOT IN (${excludearray}) 
                 AND v.isShort = 0
+                AND v.upload_status = 0
             ) AS v
             JOIN channels c ON v.channel_id = c.channel_id
             WHERE v.channel_row_number <= ${maxVideosPerChannel}
@@ -647,7 +665,7 @@ app.get("/api/trendings", (req, res) => {
     let query = `SELECT *, ((LOG(v.views + 1) * 0.3) + (v.likes * 0.3) + ((1 / (DATEDIFF(NOW(), v.upload_time) + 1)) * 0.4)) AS trending_score
                  FROM videos v
                  JOIN channels c ON v.channel_id = c.channel_id
-                 WHERE v.upload_time >= NOW() - INTERVAL 10 DAY AND isShort = 0`;
+                 WHERE v.upload_time >= NOW() - INTERVAL 10 DAY AND isShort = 0 AND v.upload_status = 0`;
 
     if (type != 0) {
         query += " AND v.category IN (?)";
@@ -670,7 +688,7 @@ app.get("/api/search", (req, res) => {
     const query = req.query.query;
     const searchQuery = `%${query}%`;
     const page_no = Number(req.query.page || 1);
-    const videoQuery = `select * from channels c join videos v on c.channel_id=v.channel_id where v.title like ? or v.tags like ? or c.channel_name like ? order by v.upload_time desc limit 24 offset ?`;
+    const videoQuery = `select * from channels c join videos v on c.channel_id=v.channel_id where v.upload_status = 0 and (v.title like ? or v.tags like ? or c.channel_name like ?) order by v.upload_time desc limit 24 offset ?`;
     const channelQuery = `select * from channels where channel_name like ? or short_desc like ? or custom_url like ? or keywords like ? order by subscribers desc limit 20`;
 
     connection.query(
@@ -849,18 +867,87 @@ app.post("/api/upload", (req, res) => {
             removeLocalFile(req.file.path);
             res.status(200).json({ url });
         } catch (uploadErr) {
-            console.log("Cloudinary image upload: " + uploadErr);
+            console.log("Cloudinary image upload: " + JSON.stringify(uploadErr));
             removeLocalFile(req.file.path);
-            res.status(500).json({ error: "Cloudinary upload failed" });
+            res.status(500).json({ error: cloudinaryErrorMessage(uploadErr) });
         }
     });
 });
+
+function processVideoUpload(video_id, user_id, videoFile, thumbFile) {
+    const update = (fields) => {
+        const sets = [];
+        const params = [];
+        Object.entries(fields).forEach(([col, val]) => {
+            sets.push(`${col} = ?`);
+            params.push(val);
+        });
+        params.push(video_id);
+        connection.query(
+            `UPDATE videos SET ${sets.join(", ")} WHERE video_id = ?`,
+            params,
+            (error) => {
+                if (error) console.log("UploadVideo status update: " + error);
+            }
+        );
+    };
+
+    let lastPersist = 0;
+    const persistProgress = (p) => {
+        const now = Date.now();
+        if (now - lastPersist < 500) return;
+        lastPersist = now;
+        update({ upload_progress: p });
+    };
+
+    const complete = (link, thumbnail_link) => {
+        removeLocalFile(videoFile.path);
+        if (thumbFile) removeLocalFile(thumbFile.path);
+        update({
+            link,
+            thumbnail_link,
+            upload_status: 0,
+            upload_progress: 100,
+            upload_error: "",
+        });
+        connection.query(
+            `UPDATE channels SET video_count = video_count + 1 WHERE channel_id = ?`,
+            [user_id],
+            (updateErr) => {
+                if (updateErr) {
+                    console.log("UploadVideo count update: " + updateErr);
+                }
+            }
+        );
+    };
+
+    const fail = (err) => {
+        console.log("Cloudinary background upload: " + err);
+        removeLocalFile(videoFile.path);
+        if (thumbFile) removeLocalFile(thumbFile.path);
+        update({ upload_status: 2, upload_error: cloudinaryErrorMessage(err) });
+    };
+
+    cloudinaryUpload(videoFile.path, "video", "vidvault/videos", persistProgress)
+        .then((link) => {
+            if (thumbFile) {
+                update({ upload_progress: 50 });
+                return cloudinaryUpload(
+                    thumbFile.path,
+                    "image",
+                    "vidvault/thumbnails"
+                ).then((thumbnail_link) => complete(link, thumbnail_link));
+            }
+            complete(link, "");
+        })
+        .catch(fail);
+}
 
 app.post("/api/uploadVideo", (req, res) => {
     videoUpload.fields([
         { name: "video", maxCount: 1 },
         { name: "thumbnail", maxCount: 1 },
-    ])(req, res, async (err) => {
+    ])(req, res, (err) => {
         if (err) {
             return res
                 .status(400)
@@ -885,44 +972,13 @@ app.post("/api/uploadVideo", (req, res) => {
         const isShort = type === "short" ? 1 : 0;
         const video_id = generateVideoId(user_id || "upload");
 
-        let link;
-        let thumbnail_link = "";
-
-        if (isCloudinaryConfigured()) {
-            try {
-                link = await cloudinaryUpload(videoFile.path, "video", "vidvault/videos");
-                if (thumbFile) {
-                    thumbnail_link = await cloudinaryUpload(
-                        thumbFile.path,
-                        "image",
-                        "vidvault/thumbnails"
-                    );
-                }
-            } catch (uploadErr) {
-                console.log("Cloudinary video upload: " + uploadErr);
-                removeLocalFile(videoFile.path);
-                if (thumbFile) removeLocalFile(thumbFile.path);
-                return res
-                    .status(500)
-                    .json({ error: "Cloudinary upload failed" });
-            }
-            removeLocalFile(videoFile.path);
-            if (thumbFile) removeLocalFile(thumbFile.path);
-        } else {
-            link = `/uploads/${videoFile.filename}`;
-            thumbnail_link = thumbFile
-                ? `/uploads/${thumbFile.filename}`
-                : "";
-        }
-
-        const query = `INSERT INTO videos (video_id, title, views, likes, dislikes, link, upload_time, channel_id, thumbnail_link, video_description, duration, tags, category, isShort)
-                       VALUES (?, ?, 0, 0, 0, ?, NOW(), ?, ?, ?, ?, ?, ?, ?)`;
+        const insertQuery = `INSERT INTO videos (video_id, title, views, likes, dislikes, link, upload_time, channel_id, thumbnail_link, video_description, duration, tags, category, isShort, upload_status, upload_progress)
+                             VALUES (?, ?, 0, 0, 0, '', NOW(), ?, ?, ?, ?, ?, ?, ?, 1, 0)`;
         const params = [
             video_id,
             title,
-            link,
             user_id,
-            thumbnail_link,
+            "",
             description,
             duration,
             tags,
@@ -930,27 +986,87 @@ app.post("/api/uploadVideo", (req, res) => {
             isShort,
         ];
 
-        connection.query(query, params, (error, results) => {
+        connection.query(insertQuery, params, (error) => {
             if (error) {
                 console.log("UploadVideo insert: " + error);
                 return res
                     .status(500)
                     .json({ error: "Failed to save video details" });
             }
-            connection.query(
-                `UPDATE channels SET video_count = video_count + 1 WHERE channel_id = ?`,
-                [user_id],
-                (updateErr) => {
-                    if (updateErr) {
-                        console.log("UploadVideo count update: " + updateErr);
+            if (isCloudinaryConfigured()) {
+                res.status(200).json({
+                    message: "Video upload started",
+                    video_id,
+                    upload_status: 1,
+                });
+                setTimeout(
+                    () =>
+                        processVideoUpload(
+                            video_id,
+                            user_id,
+                            videoFile,
+                            thumbFile
+                        ),
+                    0
+                );
+            } else {
+                const link = `/uploads/${videoFile.filename}`;
+                const thumbnail_link = thumbFile
+                    ? `/uploads/${thumbFile.filename}`
+                    : "";
+                connection.query(
+                    `UPDATE videos SET link = ?, thumbnail_link = ?, upload_status = 0, upload_progress = 100 WHERE video_id = ?`,
+                    [link, thumbnail_link, video_id],
+                    (updateErr) => {
+                        if (updateErr) {
+                            console.log(
+                                "UploadVideo local link update: " + updateErr
+                            );
+                        }
+                        connection.query(
+                            `UPDATE channels SET video_count = video_count + 1 WHERE channel_id = ?`,
+                            [user_id],
+                            (countErr) => {
+                                if (countErr) {
+                                    console.log(
+                                        "UploadVideo count update: " + countErr
+                                    );
+                                }
+                                res.status(200).json({
+                                    message: "Video uploaded successfully",
+                                    video_id,
+                                    upload_status: 0,
+                                });
+                            }
+                        );
                     }
-                    res.status(200).json({
-                        message: "Video uploaded successfully",
-                        video_id,
-                    });
-                }
-            );
+                );
+            }
         });
+    });
+});
+
+app.get("/api/uploadStatus", (req, res) => {
+    const video_id = req.query.video_id;
+    const query = `SELECT video_id, upload_status, upload_progress, link, upload_error FROM videos WHERE video_id = ?`;
+    connection.query(query, [video_id], (error, results) => {
+        if (error) {
+            console.log("UploadStatus: " + error);
+            return res.status(500).json({ error: "Internal server error" });
+        }
+        res.status(200).json({ upload: results[0] || null });
+    });
+});
+
+app.get("/api/uploadingVideos", (req, res) => {
+    const channel_id = req.query.channel_id;
+    const query = `SELECT video_id, title, upload_status, upload_progress, upload_error FROM videos WHERE channel_id = ? AND upload_status != 0 ORDER BY upload_time DESC LIMIT 50`;
+    connection.query(query, [channel_id], (error, results) => {
+        if (error) {
+            console.log("UploadingVideos: " + error);
+            return res.status(500).json({ error: "Internal server error" });
+        }
+        res.status(200).json({ uploads: results });
     });
 });
 
@@ -1176,7 +1292,7 @@ app.get("/api/getvideosofchannel", (req, res) => {
     if (searchTerm === "") {
         query = `SELECT * FROM videos v 
                  JOIN channels c ON v.channel_id = c.channel_id 
-                 WHERE v.channel_id = ? AND v.isShort = ? 
+                 WHERE v.channel_id = ? AND v.isShort = ? AND v.upload_status = 0 
                  ORDER BY upload_time DESC 
                  LIMIT 24 OFFSET ?`;
         params = [channel_id, type, 24 * (page_no - 1)];
@@ -1191,7 +1307,7 @@ app.get("/api/getvideosofchannel", (req, res) => {
     } else {
         query = `SELECT * FROM videos v 
                  JOIN channels c ON v.channel_id = c.channel_id 
-                 WHERE v.channel_id = ? AND v.isShort = ? 
+                 WHERE v.channel_id = ? AND v.isShort = ? AND v.upload_status = 0 
                  AND (v.title LIKE ?) 
                  ORDER BY upload_time DESC 
                  LIMIT 24 OFFSET ?`;
