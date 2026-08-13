@@ -3,6 +3,7 @@ import "./Yourchannel.css";
 import axios from "axios";
 import Cardloading from "./Cardloading";
 import Card from "./Card";
+import UploadVideo from "./UploadVideo";
 
 const defaultAvatar = "https://cdn-icons-png.flaticon.com/128/1077/1077063.png";
 
@@ -10,6 +11,8 @@ const Yourchannel = (params) => {
     const [data, setData] = useState("");
     const [videos, setVideos] = useState("");
     const [typeShort, setType] = useState(0);
+    const [refresh, setRefresh] = useState(0);
+    const [showUpload, setShowUpload] = useState(false);
     const serverurl = process.env.REACT_APP_SERVER_URL;
     const user = params.user;
 
@@ -41,7 +44,7 @@ const Yourchannel = (params) => {
                 });
         };
         fetchVideos();
-    }, [typeShort, user]);
+    }, [typeShort, user, refresh]);
 
     function formatNumber(num) {
         if (num >= 1000000) {
@@ -222,6 +225,12 @@ const Yourchannel = (params) => {
                             src="https://cdn-icons-png.flaticon.com/128/2811/2811806.png"
                             title="Search"
                         />
+                        <button
+                            className="upload-video-btn"
+                            onClick={() => setShowUpload(true)}
+                        >
+                            Upload video
+                        </button>
                     </div>
                     {videos.data ? (
                         <div className="videos">
@@ -232,6 +241,13 @@ const Yourchannel = (params) => {
                     ) : (
                         <></>
                     )}
+                    {showUpload ? (
+                        <UploadVideo
+                            user={user}
+                            onClose={() => setShowUpload(false)}
+                            onUploaded={() => setRefresh((r) => r + 1)}
+                        />
+                    ) : null}
                 </div>
             ) : (
                 <Cardloading page="yourchannel" />

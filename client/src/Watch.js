@@ -28,6 +28,7 @@ const Watch = (params) => {
     const [qualityoptions, setQualityoptions] = useState([480, 720, 1080]);
     const [video_url, setVideo_url] = useState("");
     const [audio_url, setAudio_url] = useState("");
+    const [isUploaded, setIsUploaded] = useState(false);
 
     function formatNumber(num) {
         if (num === undefined || num === null) return "0";
@@ -168,36 +169,47 @@ const Watch = (params) => {
         fetchData();
     }, [video_id, serverurl]);
 
-    const [i, seti] = useState(true);
     useEffect(() => {
-        if (i === true) {
-            const fetchstreamURL = async () => {
-                try {
-                    const response = await axios.get(
-                        `https://flaskapp-5c1j.onrender.com/get_video_url${window.location.search}`
-                    );
+        if (!watchdata || !watchdata.video_id) return;
+        if (watchdata.link && watchdata.link.startsWith("/uploads/")) {
+            return;
+        }
+        let cancelled = false;
+        const fetchstreamURL = async () => {
+            try {
+                const response = await axios.get(
+                    `https://flaskapp-5c1j.onrender.com/get_video_url${window.location.search}`
+                );
+                if (!cancelled) {
                     setData(response.data);
                     setFetchFailed(false);
-                } catch (error) {
-                    console.log("Error in fetching: ", error.message);
-                    setFetchFailed(true);
-                    // Set timeout to show YouTube player after 10 seconds
-                    setTimeout(() => {
-                        setFetchFailed(true);
-                    }, 10000);
                 }
-            };
-            fetchstreamURL();
-            seti(false);
-        }
-    }, [i]);
+            } catch (error) {
+                console.log("Error in fetching: ", error.message);
+                if (!cancelled) {
+                    setFetchFailed(true);
+                }
+            }
+        };
+        fetchstreamURL();
+        return () => {
+            cancelled = true;
+        };
+    }, [watchdata]);
 
     useEffect(() => {
         const fetchwatchdata = async () => {
             await axios
                 .get(`${serverurl}/watch` + window.location.search)
                 .then((response) => {
-                    setwatchdata(response.data.data[0]);
+                    const row = response.data.data[0];
+                    setwatchdata(row || {});
+                    if (row && row.link && row.link.startsWith("/uploads/")) {
+                        setIsUploaded(true);
+                        setVideo_url(row.link);
+                        setAudio_url("");
+                        setFetchFailed(false);
+                    }
                 })
                 .catch((error) => {
                     console.log("Error in fetching: ", error.message);
@@ -249,7 +261,7 @@ const Watch = (params) => {
             <div className="watchpage">
                 <div className="vplayer">
                     <div className="video-player">
-                        {fetchFailed ? (
+                        {fetchFailed && !isUploaded ? (
                             <div style={{
                                 position: 'relative',
                                 width: '100%',

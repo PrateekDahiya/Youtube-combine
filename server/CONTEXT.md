@@ -65,6 +65,7 @@ express()                                            // on port process.env.PORT
 | POST | `/api/updateUserDetail` | Updates a field on `user` — **`field` is interpolated into SQL**. |
 | POST | `/api/updateChannelDetail` | Updates a field on `channels` — **`field` is interpolated into SQL**. |
 | POST | `/api/upload` | `multipart/form-data` file upload (`field: file`). Saves the image to `server/uploads/` and returns `{ url: "/uploads/<file>" }`. Files served statically from `/uploads/*`. |
+| POST | `/api/uploadVideo` | `multipart/form-data` video upload (`video` + optional `thumbnail` + `title`, `description`, `tags`, `category`, `type`, `user_id`). Max 30 MB. Inserts a row into `videos` (local `/uploads/<file>` link) and bumps `channels.video_count`. |
 | POST | `/api/getUser` | Returns full `user+channel` join for a `user_id`. |
 | POST | `/api/deleteUser` | Transaction that deletes history, watchlater, likedvideos, subscriptions, comments, user, and channel. |
 | GET | `/api/getvideosofchannel?channel_id=&type=&query=` | Videos of a channel with optional title LIKE filter. |

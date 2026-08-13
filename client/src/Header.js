@@ -4,6 +4,7 @@ import { ThemeContext } from "./ThemeContext.js";
 import { Link } from "react-router-dom";
 import "./Header.css";
 import "./themes.css";
+import UploadVideo from "./UploadVideo";
 
 const defaultAvatar = "https://cdn-icons-png.flaticon.com/128/1077/1077063.png";
 
@@ -16,6 +17,7 @@ const Header = (params) => {
     const [isprofilemenu, setIsprofilemenu] = useState(false);
     const [profilemenuhover, setProfilemenuhover] = useState(false);
     const [isSearchVisible, setIsSearchVisible] = useState(false);
+    const [showUpload, setShowUpload] = useState(false);
     const searchRef = useRef(null);
     const profileMenuRef = useRef(null);
 
@@ -120,6 +122,7 @@ const Header = (params) => {
                                 src="https://cdn-icons-png.flaticon.com/128/4189/4189286.png"
                                 alt="Create"
                                 title="Create"
+                                onClick={() => setShowUpload(true)}
                             />
                             <img
                                 className="notifications"
@@ -269,6 +272,12 @@ const Header = (params) => {
                     )}
                 </div>
             </div>
+            {showUpload ? (
+                <UploadVideo
+                    user={user}
+                    onClose={() => setShowUpload(false)}
+                />
+            ) : null}
         </div>
     );
 };

@@ -36,6 +36,30 @@ const upload = multer({
     },
 });
 
+const videoStorage = multer.diskStorage({
+    destination: (req, file, cb) => cb(null, uploadsDir),
+    filename: (req, file, cb) => {
+        cb(
+            null,
+            "vid-" + Date.now() + "-" + Math.round(Math.random() * 1e9) + path.extname(file.originalname).toLowerCase()
+        );
+    },
+});
+
+const videoUpload = multer({
+    storage: videoStorage,
+    limits: { fileSize: 30 * 1024 * 1024 },
+    fileFilter: (req, file, cb) => {
+        if (/^video\//.test(file.mimetype)) {
+            cb(null, true);
+        } else if (/^image\/(png|jpe?g|gif|webp)$/.test(file.mimetype)) {
+            cb(null, true);
+        } else {
+            cb(new Error("Invalid file type"));
+        }
+    },
+});
+
 async function sendEmail({ to, subject, text }) {
     const response = await fetch("https://api.resend.com/emails", {
         method: "POST",
@@ -786,6 +810,78 @@ app.post("/api/upload", (req, res) => {
             return res.status(400).json({ error: "No file uploaded" });
         }
         res.status(200).json({ url: `/uploads/${req.file.filename}` });
+    });
+});
+
+app.post("/api/uploadVideo", (req, res) => {
+    videoUpload.fields([
+        { name: "video", maxCount: 1 },
+        { name: "thumbnail", maxCount: 1 },
+    ])(req, res, (err) => {
+        if (err) {
+            return res
+                .status(400)
+                .json({ error: err.message || "Upload failed" });
+        }
+        if (!req.files || !req.files.video) {
+            return res.status(400).json({ error: "No video file uploaded" });
+        }
+        const videoFile = req.files.video[0];
+        const thumbFile =
+            req.files.thumbnail && req.files.thumbnail[0]
+                ? req.files.thumbnail[0]
+                : null;
+
+        const title = (req.body.title || "").trim() || "Untitled";
+        const description = req.body.description || "";
+        const tags = req.body.tags || "";
+        const category = req.body.category || "";
+        const type = req.body.type;
+        const user_id = req.body.user_id;
+        const duration = parseInt(req.body.duration || 0, 10);
+        const isShort = type === "short" ? 1 : 0;
+        const video_id = generateVideoId(user_id || "upload");
+        const link = `/uploads/${videoFile.filename}`;
+        const thumbnail_link = thumbFile
+            ? `/uploads/${thumbFile.filename}`
+            : "";
+
+        const query = `INSERT INTO videos (video_id, title, views, likes, dislikes, link, upload_time, channel_id, thumbnail_link, video_description, duration, tags, category, isShort)
+                       VALUES (?, ?, 0, 0, 0, ?, NOW(), ?, ?, ?, ?, ?, ?, ?)`;
+        const params = [
+            video_id,
+            title,
+            link,
+            user_id,
+            thumbnail_link,
+            description,
+            duration,
+            tags,
+            category,
+            isShort,
+        ];
+
+        connection.query(query, params, (error, results) => {
+            if (error) {
+                console.log("UploadVideo insert: " + error);
+                return res
+                    .status(500)
+                    .json({ error: "Failed to save video details" });
+            }
+            connection.query(
+                `UPDATE channels SET video_count = video_count + 1 WHERE channel_id = ?`,
+                [user_id],
+                (updateErr) => {
+                    if (updateErr) {
+                        console.log("UploadVideo count update: " + updateErr);
+                    }
+                    res.status(200).json({
+                        message: "Video uploaded successfully",
+                        video_id,
+                    });
+                }
+            );
+        });
     });
 });
 

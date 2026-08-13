@@ -24,9 +24,9 @@ All React application source for the VidVault front-end: the root component, pag
 |------|-----------|----------|-----------------|
 | `Home.js` + `Home.css` | `Home` | `/`, `/home` | Infinite-scroll grid of `Card`s. Logged-out → `/api/home`; logged-in → `/api/personalized-feed` (uses history tags). |
 | `Shorts.js` + `Shorts.css` | `Shorts` | `/shorts` | Vertical Shorts feed with three rotating `Shortbox` slots and up/down arrow + keyboard navigation. Fetches `/api/shorts`. |
-| `Watch.js` + `Watch.css` | `Watch` | `/watch` | Video page: fetches `/api/watch` for metadata and the Flask service for stream URLs; falls back to YouTube `<iframe>` if the Flask call fails. Like/dislike/subscribe/related-videos. |
+| `Watch.js` + `Watch.css` | `Watch` | `/watch` | Video page: fetches `/api/watch` for metadata and the Flask service for stream URLs; falls back to YouTube `<iframe>` if the Flask call fails. When `videos.link` starts with `/uploads/` (a locally uploaded video) it plays the file directly via the custom player and skips the Flask/YouTube pipeline. Like/dislike/subscribe/related-videos. |
 | `Search.js` + `Search.css` | `Search` | `/search` | Hits `/api/search?query=…` and renders a grid of `Card`s. |
-| `Yourchannel.js` + `Yourchannel.css` | `Yourchannel` | `/yourchannel` | The logged-in user's own channel: banner, info, Videos/Shorts tabs, search. Uses `/api/yourchannel` + `/api/getvideosofchannel`. |
+| `Yourchannel.js` + `Yourchannel.css` | `Yourchannel` | `/yourchannel` | The logged-in user's own channel: banner, info, Videos/Shorts tabs, search, and an "Upload video" button that opens the `UploadVideo` modal. Uses `/api/yourchannel` + `/api/getvideosofchannel`. |
 | `Channel.js` + `Channel.css` | `Channel` | `/channel` | Any channel view (by `?channel_id=`). Subscribe button (`/api/issub`, `/api/addtosubs`, `/api/removefromsubs`). |
 | `You.js` + `You.css` | `You` | `/me` | "Account" landing for signed-in users: channel banner + name. Guests see a sign-in CTA. |
 | `Subscription.js` + `Subscription.css` | `Subscription` | `/subscriptions` | Videos/Shorts from subscribed channels: `/api/subscriptions?isShort=&user_id=`. |
@@ -46,6 +46,7 @@ All React application source for the VidVault front-end: the root component, pag
 | `Videoplayer.js` + `Videoplayer.css` | `VideoPlayer` | `Watch.js`. Custom video player with separate `<video>` (webm) and `<audio>` sources, sync logic, quality menu, playback-speed menu, volume, fullscreen. |
 | `Shortbox.js` + `Shortbox.css` | `Shortbox` | `Shorts.js`. Fetches the short's stream URL from the Flask `/get-short-url` endpoint. |
 | `Shortplayer.js` + `Shortplayer.css` | `Shortplayer` | `Shortbox.js`. Plays the short, auto-loops, falls back to YouTube `<iframe>` when fetching the stream URL fails. |
+| `UploadVideo.js` + `UploadVideo.css` | `UploadVideo` | `Header.js`, `Yourchannel.js`. Popup modal to upload a video to the user's own channel: collects video file (≤30 MB), thumbnail, title, description, tags, category, type (video/short) and POSTs to `/api/uploadVideo`. |
 
 ### Theme & styles
 | File | Role |
