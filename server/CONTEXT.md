@@ -45,7 +45,7 @@ express()                                            // on port process.env.PORT
 | GET | `/keep-active` | Liveness — returns `{ message: "Server is active" }`. |
 | GET | `/health` | Render health check — pings DB with `SELECT 1`, returns 200 or 503. |
 | GET | `/api/home?page=` | Random 24 non-short videos per page. |
-| GET | `/api/feed-by-tag?tag=&page=` | 24 non-short videos matching a clicked home tag/category. |
+| GET | `/api/feed-by-tag?tag=&type=&page=` | 24 non-short videos matching a clicked home keyword or video type. |
 | GET | `/api/home-tags?user_id=` | Top 5 keyword tags from the logged-in user's watched history. |
 | GET | `/api/shorts?video_id=&needmore=` | Short feed; if `video_id` given returns same short + 5 from the same channel. |
 | GET | `/api/yourchannel?channel_id=` | Row from `channels` for the logged-in user's channel. |

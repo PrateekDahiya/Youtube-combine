@@ -110,19 +110,45 @@ app.get("/api/home", (req, res) => {
 
 app.get("/api/feed-by-tag", (req, res) => {
     const tag = req.query.tag || "";
+    const type = req.query.type || "";
     const page_no = Number(req.query.page || 1);
     const searchQuery = `%${tag}%`;
-    const query = `SELECT * FROM channels c join videos v on c.channel_id=v.channel_id where v.isShort = 0 and (v.title like ? or v.tags like ? or v.category like ? or c.channel_name like ?) order by upload_time desc limit 24 offset ?`;
+    const categoryMap = {
+        Music: ["Music"],
+        Gaming: ["Gaming"],
+        Movies: [
+            "Film & Animation",
+            "Short Movies",
+            "Movies",
+            "Anime/Animation",
+            "Documentary",
+            "Drama",
+            "Sci-Fi/Fantasy",
+            "Shows",
+            "Trailers",
+            "Thriller",
+        ],
+        News: ["News & Politics"],
+        Sports: ["Sports"],
+    };
+
+    const query = type
+        ? `SELECT * FROM channels c join videos v on c.channel_id=v.channel_id where v.isShort = 0 and v.category in (?) order by upload_time desc limit 24 offset ?`
+        : `SELECT * FROM channels c join videos v on c.channel_id=v.channel_id where v.isShort = 0 and (v.title like ? or v.tags like ? or v.category like ? or c.channel_name like ?) order by upload_time desc limit 24 offset ?`;
+
+    const queryParams = type
+        ? [categoryMap[type] || [type], 24 * (page_no - 1)]
+        : [searchQuery, searchQuery, searchQuery, searchQuery, 24 * (page_no - 1)];
 
     connection.query(
         query,
-        [searchQuery, searchQuery, searchQuery, searchQuery, 24 * (page_no - 1)],
+        queryParams,
         (error, results) => {
             if (error) {
                 console.log(error);
                 return res.status(500).json({ error: "Database query failed" });
             }
-            res.status(200).json({ page: "home_tag", videos: results, tag });
+            res.status(200).json({ page: "home_tag", videos: results, tag, type });
         }
     );
 });

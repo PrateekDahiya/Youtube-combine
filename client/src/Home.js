@@ -10,6 +10,7 @@ const Home = (params) => {
     const [data, setData] = useState(null);
     const [topTags, setTopTags] = useState([]);
     const [selectedTag, setSelectedTag] = useState("All");
+    const [selectedType, setSelectedType] = useState("All");
     const serverurl = process.env.REACT_APP_SERVER_URL;
     const [page, setPage] = useState(
         new URLSearchParams(locationHook.pathname)
@@ -22,7 +23,7 @@ const Home = (params) => {
     useEffect(() => {
         setData(null);
         setpage_no(1);
-    }, [selectedTag]);
+    }, [selectedTag, selectedType]);
 
     useEffect(() => {
         const fetchHomeTags = async () => {
@@ -56,6 +57,31 @@ const Home = (params) => {
                     .get(
                         `${serverurl}/feed-by-tag?tag=${encodeURIComponent(
                             selectedTag
+                        )}&page=${page_no}`
+                    )
+                    .then((response) => {
+                        const videos = response.data.videos || [];
+                        setData((prev) =>
+                            prev === null
+                                ? videos
+                                : videos.length === 0
+                                ? prev
+                                : prev[0].video_id !== videos[0].video_id
+                                ? [...prev, ...videos]
+                                : prev
+                        );
+                    })
+                    .catch((error) => {
+                        console.log("Error in fetching: ", error.message);
+                    });
+                return;
+            }
+
+            if (selectedType !== "All") {
+                await axios
+                    .get(
+                        `${serverurl}/feed-by-tag?type=${encodeURIComponent(
+                            selectedType
                         )}&page=${page_no}`
                     )
                     .then((response) => {
@@ -153,7 +179,10 @@ const Home = (params) => {
                                                 "home-tag " +
                                                 (selectedTag === tag ? "active" : "")
                                             }
-                                            onClick={() => setSelectedTag(tag)}
+                                            onClick={() => {
+                                                setSelectedTag(tag);
+                                                setSelectedType("All");
+                                            }}
                                         >
                                             {tag}
                                         </button>
@@ -168,9 +197,12 @@ const Home = (params) => {
                                     key={tag}
                                     className={
                                         "home-tag " +
-                                        (selectedTag === tag ? "active" : "")
+                                        (selectedType === tag ? "active" : "")
                                     }
-                                    onClick={() => setSelectedTag(tag)}
+                                    onClick={() => {
+                                        setSelectedType(tag);
+                                        setSelectedTag("All");
+                                    }}
                                 >
                                     {tag}
                                 </button>
