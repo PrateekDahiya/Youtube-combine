@@ -47,7 +47,7 @@ function Menu(params) {
                 setSelectedItem('You');
                 break;
             case '/yourchannel':
-                setSelectedItem('Your channel');
+                setSelectedItem('Uploads');
                 break;
             case '/history':
                 setSelectedItem('History');
@@ -204,11 +204,11 @@ function Menu(params) {
                         />
                         {params.user !== "Guest" ? (
                             <Menuitem
-                                imgpath="https://cdn-icons-png.flaticon.com/128/456/456212.png"
-                                title="Your channel"
+                                imgpath="https://cdn-icons-png.flaticon.com/128/4189/4189286.png"
+                                title="Uploads"
                                 head="/yourchannel"
-                                isSelected={selectedItem === "Your channel"}
-                                onClick={() => handleItemClick("Your channel")}
+                                isSelected={selectedItem === "Uploads"}
+                                onClick={() => handleItemClick("Uploads")}
                             />
                         ) : (
                             <></>

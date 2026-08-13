@@ -16,7 +16,7 @@ All React application source for the VidVault front-end: the root component, pag
 |------|-----------|------|
 | `App.js` | `App` | Root; routes; passes `user` prop to every page. |
 | `Header.js` + `Header.css` | `Header` | Top bar: hamburger, VidVault logo, search box, profile dropdown (login/logout, theme toggle, settings). Receives `onClick` and `user` from `App`. |
-| `Menu.js` + `Menu.css` | `Menu` | Left sidebar with three modes (`Full`, `Narrow`, `Hidden`) controlled by a `menu` prop. Lists Home/Shorts/Subscriptions/You/History/Watch later/Liked/Trending/Categories/Settings/Feedback. Fetches subscriptions via `/api/get-subs`. |
+| `Menu.js` + `Menu.css` | `Menu` | Left sidebar with three modes (`Full`, `Narrow`, `Hidden`) controlled by a `menu` prop. Lists Home/Shorts/Subscriptions/You/Uploads (→ `/yourchannel`, replaces the old "Your channel" item)/History/Watch later/Liked/Trending/Categories/Settings/Feedback. Fetches subscriptions via `/api/get-subs`. |
 | `Menuitem.js` + `Menuitem.css` | `Menuitem` | Reusable sidebar item (icon + label as a `<Link>`). Used by `Menu.js`. |
 
 ### Pages
