@@ -64,8 +64,8 @@ express()                                            // on port process.env.PORT
 | GET | `/api/getvideobyid?video_id=` | Single video row (used internally). |
 | POST | `/api/updateUserDetail` | Updates a field on `user` — **`field` is interpolated into SQL**. |
 | POST | `/api/updateChannelDetail` | Updates a field on `channels` — **`field` is interpolated into SQL**. |
-| POST | `/api/upload` | `multipart/form-data` file upload (`field: file`). Saves the image to `server/uploads/` and returns `{ url: "/uploads/<file>" }`. Files served statically from `/uploads/*`. |
-| POST | `/api/uploadVideo` | `multipart/form-data` video upload (`video` + optional `thumbnail` + `title`, `description`, `tags`, `category`, `type`, `user_id`). Max 30 MB. Inserts a row into `videos` (local `/uploads/<file>` link) and bumps `channels.video_count`. |
+| POST | `/api/upload` | `multipart/form-data` file upload (`field: file`). If `CLOUDINARY_*` env vars are set, uploads the image to Cloudinary (folder `vidvault/photos`) and returns `{ url: "<cloudinary secure_url>" }`; otherwise falls back to saving in `server/uploads/` and returns `{ url: "/uploads/<file>" }`. |
+| POST | `/api/uploadVideo` | `multipart/form-data` video upload (`video` + optional `thumbnail` + `title`, `description`, `tags`, `category`, `type`, `user_id`). Limit 500 MB (multer), effectively unlimited. With `CLOUDINARY_*` set, uploads video (folder `vidvault/videos`) + thumbnail (`vidvault/thumbnails`) to Cloudinary and stores the secure URLs; otherwise falls back to local `/uploads/<file>`. Inserts a row into `videos` and bumps `channels.video_count`. |
 | POST | `/api/getUser` | Returns full `user+channel` join for a `user_id`. |
 | POST | `/api/deleteUser` | Transaction that deletes history, watchlater, likedvideos, subscriptions, comments, user, and channel. |
 | GET | `/api/getvideosofchannel?channel_id=&type=&query=` | Videos of a channel with optional title LIKE filter. |

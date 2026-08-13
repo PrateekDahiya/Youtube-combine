@@ -40,11 +40,6 @@ const UploadVideo = (params) => {
             e.target.value = "";
             return;
         }
-        if (file.size > 30 * 1024 * 1024) {
-            setError("Video must be 30 MB or smaller.");
-            e.target.value = "";
-            return;
-        }
         setVideoFile(file);
         setVideoPreview(URL.createObjectURL(file));
     };
@@ -126,7 +121,7 @@ const UploadVideo = (params) => {
                 </div>
                 <div className="upload-modal-body">
                     <div className="upload-field">
-                        <label>Video file (max 30 MB)</label>
+                        <label>Video file</label>
                         <input
                             ref={videoInputRef}
                             type="file"

@@ -9,7 +9,39 @@ const axios = require("axios");
 const cors = require("cors");
 const fs = require("fs");
 const multer = require("multer");
+const cloudinary = require("cloudinary").v2;
 const API_KEYS = JSON.parse(process.env.API_KEYS);
+
+cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET,
+});
+
+function isCloudinaryConfigured() {
+    return !!(
+        process.env.CLOUDINARY_CLOUD_NAME &&
+        process.env.CLOUDINARY_API_KEY &&
+        process.env.CLOUDINARY_API_SECRET
+    );
+}
+
+function cloudinaryUpload(filePath, resourceType, folder) {
+    return new Promise((resolve, reject) => {
+        cloudinary.uploader.upload(
+            filePath,
+            { resource_type: resourceType, folder },
+            (error, result) => {
+                if (error) reject(error);
+                else resolve(result.secure_url);
+            }
+        );
+    });
+}
+
+function removeLocalFile(filePath) {
+    fs.unlink(filePath, () => {});
+}
 
 const uploadsDir = path.join(__dirname, "uploads");
 if (!fs.existsSync(uploadsDir)) {
@@ -48,7 +80,7 @@ const videoStorage = multer.diskStorage({
 
 const videoUpload = multer({
     storage: videoStorage,
-    limits: { fileSize: 30 * 1024 * 1024 },
+    limits: { fileSize: 500 * 1024 * 1024 },
     fileFilter: (req, file, cb) => {
         if (/^video\//.test(file.mimetype)) {
             cb(null, true);
@@ -800,7 +832,7 @@ app.get("/api/getvideobyid", (req, res) => {
 });
 
 app.post("/api/upload", (req, res) => {
-    upload.single("file")(req, res, (err) => {
+    upload.single("file")(req, res, async (err) => {
         if (err) {
             return res
                 .status(400)
@@ -809,7 +841,18 @@ app.post("/api/upload", (req, res) => {
         if (!req.file) {
             return res.status(400).json({ error: "No file uploaded" });
         }
-        res.status(200).json({ url: `/uploads/${req.file.filename}` });
+        if (!isCloudinaryConfigured()) {
+            return res.status(200).json({ url: `/uploads/${req.file.filename}` });
+        }
+        try {
+            const url = await cloudinaryUpload(req.file.path, "image", "vidvault/photos");
+            removeLocalFile(req.file.path);
+            res.status(200).json({ url });
+        } catch (uploadErr) {
+            console.log("Cloudinary image upload: " + uploadErr);
+            removeLocalFile(req.file.path);
+            res.status(500).json({ error: "Cloudinary upload failed" });
+        }
     });
 });
 
@@ -817,7 +860,7 @@ app.post("/api/uploadVideo", (req, res) => {
     videoUpload.fields([
         { name: "video", maxCount: 1 },
         { name: "thumbnail", maxCount: 1 },
-    ])(req, res, (err) => {
+    ])(req, res, async (err) => {
         if (err) {
             return res
                 .status(400)
@@ -841,10 +884,36 @@ app.post("/api/uploadVideo", (req, res) => {
         const duration = parseInt(req.body.duration || 0, 10);
         const isShort = type === "short" ? 1 : 0;
         const video_id = generateVideoId(user_id || "upload");
-        const link = `/uploads/${videoFile.filename}`;
-        const thumbnail_link = thumbFile
-            ? `/uploads/${thumbFile.filename}`
-            : "";
+
+        let link;
+        let thumbnail_link = "";
+
+        if (isCloudinaryConfigured()) {
+            try {
+                link = await cloudinaryUpload(videoFile.path, "video", "vidvault/videos");
+                if (thumbFile) {
+                    thumbnail_link = await cloudinaryUpload(
+                        thumbFile.path,
+                        "image",
+                        "vidvault/thumbnails"
+                    );
+                }
+            } catch (uploadErr) {
+                console.log("Cloudinary video upload: " + uploadErr);
+                removeLocalFile(videoFile.path);
+                if (thumbFile) removeLocalFile(thumbFile.path);
+                return res
+                    .status(500)
+                    .json({ error: "Cloudinary upload failed" });
+            }
+            removeLocalFile(videoFile.path);
+            if (thumbFile) removeLocalFile(thumbFile.path);
+        } else {
+            link = `/uploads/${videoFile.filename}`;
+            thumbnail_link = thumbFile
+                ? `/uploads/${thumbFile.filename}`
+                : "";
+        }
 
         const query = `INSERT INTO videos (video_id, title, views, likes, dislikes, link, upload_time, channel_id, thumbnail_link, video_description, duration, tags, category, isShort)
                        VALUES (?, ?, 0, 0, 0, ?, NOW(), ?, ?, ?, ?, ?, ?, ?)`;

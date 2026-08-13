@@ -30,6 +30,10 @@ const Watch = (params) => {
     const [audio_url, setAudio_url] = useState("");
     const [isUploaded, setIsUploaded] = useState(false);
 
+    const isUploadedLink = (link) =>
+        !!link &&
+        (link.startsWith("/uploads/") || link.includes("res.cloudinary.com"));
+
     function formatNumber(num) {
         if (num === undefined || num === null) return "0";
         if (num >= 1000000) {
@@ -171,7 +175,7 @@ const Watch = (params) => {
 
     useEffect(() => {
         if (!watchdata || !watchdata.video_id) return;
-        if (watchdata.link && watchdata.link.startsWith("/uploads/")) {
+        if (watchdata.link && isUploadedLink(watchdata.link)) {
             return;
         }
         let cancelled = false;
@@ -204,7 +208,7 @@ const Watch = (params) => {
                 .then((response) => {
                     const row = response.data.data[0];
                     setwatchdata(row || {});
-                    if (row && row.link && row.link.startsWith("/uploads/")) {
+                    if (row && row.link && isUploadedLink(row.link)) {
                         setIsUploaded(true);
                         setVideo_url(row.link);
                         setAudio_url("");
