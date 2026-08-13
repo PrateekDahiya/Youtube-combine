@@ -5,33 +5,61 @@ import axios from "axios";
 import "./Subscription.css";
 import CardGrid from "./CardGrid";
 import Cardloading from "./Cardloading";
+import InfiniteScroll from "./InfiniteScroll";
 
 const defaultAvatar = "https://cdn-icons-png.flaticon.com/128/1077/1077063.png";
 
 const Subscription = (params) => {
-    const [videos, setVideos] = useState([]);
+    const [videos, setVideos] = useState({ data: [] });
     const [channels, setChannels] = useState([]);
     const [selectedChannel, setSelectedChannel] = useState("all");
     const [typeShort, setType] = useState(0);
     const [loading, setLoading] = useState(true);
+    const [loadingMore, setLoadingMore] = useState(false);
+    const [hasMore, setHasMore] = useState(true);
+    const [page_no, setpage_no] = useState(1);
     const serverurl = process.env.REACT_APP_SERVER_URL;
     const user = params.user;
 
+    const mergeVideos = (newVideos) => {
+        setVideos((prev) => {
+            const existing = prev.data || [];
+            const existingIds = new Set(existing.map((v) => v.video_id));
+            const fresh = newVideos.filter((v) => !existingIds.has(v.video_id));
+            return fresh.length > 0
+                ? { ...prev, data: [...existing, ...fresh] }
+                : prev;
+        });
+        if (newVideos.length < 24) {
+            setHasMore(false);
+        }
+    };
+
     useEffect(() => {
+        setVideos({ data: [] });
+        setpage_no(1);
+        setHasMore(true);
+        setLoading(true);
+    }, [typeShort]);
+
+    useEffect(() => {
+        if (loadingMore || !hasMore) return;
+        setLoadingMore(true);
         const fetchData = async () => {
             try {
                 const response = await axios.get(
-                    `${serverurl}/subscriptions?isShort=${typeShort}&user_id=${user.channel_id}`
+                    `${serverurl}/subscriptions?isShort=${typeShort}&user_id=${user.channel_id}&page=${page_no}`
                 );
-                setVideos(response.data);
+                mergeVideos(response.data.data || []);
             } catch (error) {
                 console.log("Error in fetching: ", error.message);
             } finally {
                 setLoading(false);
+                setLoadingMore(false);
             }
         };
         fetchData();
-    }, [typeShort, user.channel_id, serverurl, user]);
+    }, [typeShort, page_no, user.channel_id, serverurl, user]);
 
     useEffect(() => {
         const fetchChannels = async () => {
@@ -53,6 +81,11 @@ const Subscription = (params) => {
             : (videos.data || []).filter(
                   (item) => item.channel_id === selectedChannel
               );
+
+    const loadMore = () => {
+        if (loadingMore || !hasMore) return;
+        setpage_no((prev) => prev + 1);
+    };
 
     return (
         <>
@@ -125,6 +158,11 @@ const Subscription = (params) => {
                             {filteredVideos.map((item) => (
                                 <Card key={item.video_id} data={item} />
                             ))}
+                            <InfiniteScroll
+                                hasMore={hasMore}
+                                loading={loadingMore}
+                                onLoadMore={loadMore}
+                            />
                         </CardGrid>
                     ) : (
                         <></>

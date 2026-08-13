@@ -5,12 +5,16 @@ import { useLocation } from "react-router-dom";
 import "./Category.css";
 import CardGrid from "./CardGrid";
 import Cardloading from "./Cardloading";
+import InfiniteScroll from "./InfiniteScroll";
 
 const Category = (params) => {
     const locationHook = useLocation();
     const [typeShort, setType] = useState(0);
-    const [data, setdata] = useState([]);
+    const [data, setdata] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [page_no, setpage_no] = useState(1);
+    const [loadingMore, setLoadingMore] = useState(false);
+    const [hasMore, setHasMore] = useState(true);
     const serverurl = process.env.REACT_APP_SERVER_URL;
     const [category, setCategory] = useState(
         new URLSearchParams(locationHook.search).get("category")
@@ -27,8 +31,32 @@ const Category = (params) => {
         setCategory(currentCategory);
     }, [locationHook]);
 
+    const mergeVideos = (videos) => {
+        setdata((prev) => {
+            if (prev === null || prev.videos === undefined) {
+                return { ...(prev || {}), videos };
+            }
+            const existingIds = new Set(prev.videos.map((v) => v.video_id));
+            const fresh = videos.filter((v) => !existingIds.has(v.video_id));
+            return fresh.length > 0
+                ? { ...prev, videos: [...prev.videos, ...fresh] }
+                : prev;
+        });
+        if (videos.length < 24) {
+            setHasMore(false);
+        }
+    };
+
     useEffect(() => {
+        setdata(null);
+        setpage_no(1);
+        setHasMore(true);
         setLoading(true);
+    }, [typeShort, category]);
+
+    useEffect(() => {
+        if (loadingMore || !hasMore) return;
+        setLoadingMore(true);
         const fetchData = async () => {
             await axios
                 .get(
@@ -36,26 +64,35 @@ const Category = (params) => {
                         "?category=" +
                         category +
                         "&type=" +
-                        typeShort
+                        typeShort +
+                        "&page=" +
+                        page_no
                 )
                 .then((response) => {
-                    setdata(response.data);
+                    mergeVideos(response.data.videos || []);
+                    setdata((prev) => ({ ...prev, caticon: response.data.caticon, category: response.data.category }));
                 })
                 .catch((error) => {
                     console.log("Error in fetching: ", error.message);
                 })
                 .finally(() => {
                     setLoading(false);
+                    setLoadingMore(false);
                 });
         };
         fetchData();
-    }, [typeShort, category, user]);
+    }, [typeShort, category, page_no, user]);
+
+    const loadMore = () => {
+        if (loadingMore || !hasMore) return;
+        setpage_no((prev) => prev + 1);
+    };
 
     return (
         <>
             {loading ? (
                 <Cardloading page="category" />
-            ) : data.videos ? (
+            ) : data && data.videos ? (
                 <div className="categorybox">
                     <div className="heading">
                         <img
@@ -97,6 +134,11 @@ const Category = (params) => {
                         {data.videos.map((item) => (
                             <Card key={item.video_id} data={item} />
                         ))}
+                        <InfiniteScroll
+                            hasMore={hasMore}
+                            loading={loadingMore}
+                            onLoadMore={loadMore}
+                        />
                     </CardGrid>
                 </div>
             ) : (

@@ -4,16 +4,20 @@ import "./Channel.css";
 import axios from "axios";
 import Card from "./Card";
 import Cardloading from "./Cardloading";
+import InfiniteScroll from "./InfiniteScroll";
 
 const defaultAvatar = "https://cdn-icons-png.flaticon.com/128/1077/1077063.png";
 
 const Channel = (params) => {
     const locationHook = useLocation();
     const [data, setData] = useState("");
-    const [videos, setVideos] = useState("");
+    const [videos, setVideos] = useState({ videos: [] });
     const [query, setQuery] = useState("");
     const [typeShort, setType] = useState(0);
     const [refresh, setrefresh] = useState(0);
+    const [page_no, setpage_no] = useState(1);
+    const [loadingMore, setLoadingMore] = useState(false);
+    const [hasMore, setHasMore] = useState(true);
     const [issubed, setissubed] = useState(false);
     const [user_chl_id, setUser_chl_id] = useState(null);
     const serverurl = process.env.REACT_APP_SERVER_URL;
@@ -85,7 +89,29 @@ const Channel = (params) => {
         setrefresh(refresh + 1);
     }
 
+    const mergeVideos = (newVideos) => {
+        setVideos((prev) => {
+            const existing = prev.videos || [];
+            const existingIds = new Set(existing.map((v) => v.video_id));
+            const fresh = newVideos.filter((v) => !existingIds.has(v.video_id));
+            return fresh.length > 0
+                ? { videos: [...existing, ...fresh] }
+                : prev;
+        });
+        if (newVideos.length < 24) {
+            setHasMore(false);
+        }
+    };
+
     useEffect(() => {
+        setVideos({ videos: [] });
+        setpage_no(1);
+        setHasMore(true);
+    }, [typeShort, refresh, channel_id]);
+
+    useEffect(() => {
+        if (loadingMore || !hasMore) return;
+        setLoadingMore(true);
         const fetchVideos = async () => {
             await axios
                 .get(
@@ -95,17 +121,27 @@ const Channel = (params) => {
                         "&type=" +
                         typeShort +
                         "&query=" +
-                        query
+                        query +
+                        "&page=" +
+                        page_no
                 )
                 .then((response) => {
-                    setVideos(response.data);
+                    mergeVideos(response.data.videos || []);
                 })
                 .catch((error) => {
                     console.log("Error in fetching: ", error.message);
+                })
+                .finally(() => {
+                    setLoadingMore(false);
                 });
         };
         fetchVideos();
-    }, [typeShort, refresh, channel_id, user]);
+    }, [typeShort, refresh, channel_id, page_no, user]);
+
+    const loadMore = () => {
+        if (loadingMore || !hasMore) return;
+        setpage_no((prev) => prev + 1);
+    };
 
     useEffect(() => {
         setUser_chl_id(user.channel_id);
@@ -321,6 +357,11 @@ const Channel = (params) => {
                             <Card key={item.video_id} data={item} />
                         ))}
                     </div>
+                    <InfiniteScroll
+                        hasMore={hasMore}
+                        loading={loadingMore}
+                        onLoadMore={loadMore}
+                    />
                 </div>
             ) : (
                 <Cardloading page="channel" />

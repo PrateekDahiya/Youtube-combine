@@ -98,8 +98,8 @@ app.get("/health", (req, res) => {
 });
 
 app.get("/api/home", (req, res) => {
-    const page_no = req.query.page;
-    const query = `SELECT * FROM channels c join videos v on c.channel_id=v.channel_id where isShort = 0 order by rand() desc limit 24 offset ?`;
+    const page_no = Number(req.query.page || 1);
+    const query = `SELECT * FROM channels c join videos v on c.channel_id=v.channel_id where isShort = 0 order by upload_time desc limit 24 offset ?`;
     connection.query(query, [24 * (page_no - 1)], (error, results) => {
         if (error) {
             console.log(error);
@@ -243,9 +243,10 @@ app.get("/api/yourchannel", (req, res) => {
 app.get("/api/subscriptions", (req, res) => {
     const user_id = req.query.user_id;
     const isShort = req.query.isShort;
-    const query = `select * from videos v inner join channels c on v.channel_id=c.channel_id where v.channel_id in (select s.channel_id from subscriptions s where s.user_id=?) and v.isShort=? order by upload_time desc limit 100`;
+    const page_no = Number(req.query.page || 1);
+    const query = `select * from videos v inner join channels c on v.channel_id=c.channel_id where v.channel_id in (select s.channel_id from subscriptions s where s.user_id=?) and v.isShort=? order by v.upload_time desc limit 24 offset ?`;
 
-    connection.query(query, [user_id, isShort], (error, results) => {
+    connection.query(query, [user_id, isShort, 24 * (page_no - 1)], (error, results) => {
         if (error) {
             console.log(error);
         }
@@ -280,6 +281,7 @@ app.get("/api/channel", (req, res) => {
 app.get("/api/category", (req, res) => {
     const category = req.query.category;
     const type = req.query.type;
+    const page_no = Number(req.query.page || 1);
     const caticon = {
         gaming: "https://yt3.googleusercontent.com/pzvUHajbQDLDt63gKFYUX445k3VprUs8CeJFpNTxGQZlk0grOSkAqU8Th1_C97dyYM3nENgjbw=s120-c-k-c0x00ffffff-no-rj",
         music: "https://yt3.googleusercontent.com/vCqmJ7cdUYpvR0bqLpWIe8ktaor4QafQLlfQyTuZy-M9W_YafT8Wo9kdsKL2St1BrkMRpVSJgA=s176-c-k-c0x00ffffff-no-rj-mo",
@@ -318,10 +320,10 @@ app.get("/api/category", (req, res) => {
         fashionbeauty: ["Pets & Animals", "Travel & Events"],
         shopping: ["Autos & Vehicles"],
     };
-    const query = `select * from videos v join channels c on v.channel_id=c.channel_id where v.category in (?) and v.isShort = ? order by rand() desc limit 100`;
+    const query = `select * from videos v join channels c on v.channel_id=c.channel_id where v.category in (?) and v.isShort = ? order by v.upload_time desc limit 24 offset ?`;
     connection.query(
         query,
-        [categoryMapping[category], type],
+        [categoryMapping[category], type, 24 * (page_no - 1)],
         (error, results) => {
             if (error) {
                 console.log(error);
@@ -541,6 +543,7 @@ app.get("/api/personalized-feed", async (req, res) => {
 
 app.get("/api/trendings", (req, res) => {
     const type = req.query.type;
+    const page_no = Number(req.query.page || 1);
     const categoryMapping = {
         1: ["Music"],
         2: ["Gaming"],
@@ -567,9 +570,9 @@ app.get("/api/trendings", (req, res) => {
         query += " AND v.category IN (?)";
     }
 
-    query += " ORDER BY trending_score DESC LIMIT 30";
+    query += " ORDER BY trending_score DESC LIMIT 24 OFFSET ?";
 
-    const queryParams = type != 0 ? [categoryMapping[type]] : [];
+    const queryParams = type != 0 ? [categoryMapping[type], 24 * (page_no - 1)] : [24 * (page_no - 1)];
 
     connection.query(query, queryParams, (error, results) => {
         if (error) {
@@ -583,12 +586,13 @@ app.get("/api/trendings", (req, res) => {
 app.get("/api/search", (req, res) => {
     const query = req.query.query;
     const searchQuery = `%${query}%`;
-    const videoQuery = `select * from channels c join videos v on c.channel_id=v.channel_id where v.title like ? or v.tags like ? or c.channel_name like ? order by upload_time desc limit 100`;
+    const page_no = Number(req.query.page || 1);
+    const videoQuery = `select * from channels c join videos v on c.channel_id=v.channel_id where v.title like ? or v.tags like ? or c.channel_name like ? order by v.upload_time desc limit 24 offset ?`;
     const channelQuery = `select * from channels where channel_name like ? or short_desc like ? or custom_url like ? or keywords like ? order by subscribers desc limit 20`;
 
     connection.query(
         videoQuery,
-        [searchQuery, searchQuery, searchQuery],
+        [searchQuery, searchQuery, searchQuery, 24 * (page_no - 1)],
         (videoError, videoResults) => {
             if (videoError) {
                 console.log(videoError);
@@ -958,17 +962,20 @@ app.get("/api/getvideosofchannel", (req, res) => {
     const channel_id = req.query.channel_id;
     const searchTerm = req.query.query || ""; // default to empty string if query is not provided
     const type = req.query.type;
+    const page_no = Number(req.query.page || 1);
     const formattedSearchTerm = `%${searchTerm}%`; // Add wildcards
 
+    let params;
     let query;
     if (searchTerm === "") {
         query = `SELECT * FROM videos v 
                  JOIN channels c ON v.channel_id = c.channel_id 
                  WHERE v.channel_id = ? AND v.isShort = ? 
                  ORDER BY upload_time DESC 
-                 LIMIT 100`;
+                 LIMIT 24 OFFSET ?`;
+        params = [channel_id, type, 24 * (page_no - 1)];
 
-        connection.query(query, [channel_id, type], (error, results) => {
+        connection.query(query, params, (error, results) => {
             if (error) {
                 console.error(error);
                 return res.status(500).json({ error: "Database query failed" });
@@ -981,11 +988,12 @@ app.get("/api/getvideosofchannel", (req, res) => {
                  WHERE v.channel_id = ? AND v.isShort = ? 
                  AND (v.title LIKE ?) 
                  ORDER BY upload_time DESC 
-                 LIMIT 100`;
+                 LIMIT 24 OFFSET ?`;
+        params = [channel_id, type, formattedSearchTerm, 24 * (page_no - 1)];
 
         connection.query(
             query,
-            [channel_id, type, formattedSearchTerm],
+            params,
             (error, results) => {
                 if (error) {
                     console.error(error);

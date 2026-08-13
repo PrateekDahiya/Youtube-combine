@@ -6,38 +6,72 @@ import axios from "axios";
 import "./Search.css";
 import CardGrid from "./CardGrid";
 import Cardloading from "./Cardloading";
+import InfiniteScroll from "./InfiniteScroll";
 
 const defaultAvatar = "https://cdn-icons-png.flaticon.com/128/1077/1077063.png";
 
 const Search = () => {
     const locationHook = useLocation();
-    const [data, setData] = useState("");
+    const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
     const serverurl = process.env.REACT_APP_SERVER_URL;
-    const [page, setPage] = useState(locationHook.pathname);
+    const [page_no, setpage_no] = useState(1);
+    const [loadingMore, setLoadingMore] = useState(false);
+    const [hasMore, setHasMore] = useState(true);
+    const queryString = locationHook.search;
+
+    const mergeVideos = (videos) => {
+        setData((prev) => {
+            if (prev === null || prev.videos === undefined) {
+                return { ...(prev || {}), videos };
+            }
+            const existingIds = new Set(prev.videos.map((v) => v.video_id));
+            const fresh = videos.filter((v) => !existingIds.has(v.video_id));
+            return fresh.length > 0
+                ? { ...prev, videos: [...prev.videos, ...fresh] }
+                : prev;
+        });
+        if (videos.length < 24) {
+            setHasMore(false);
+        }
+    };
 
     useEffect(() => {
+        setData(null);
+        setpage_no(1);
+        setHasMore(true);
         setLoading(true);
+    }, [queryString]);
+
+    useEffect(() => {
+        if (loadingMore || !hasMore) return;
+        setLoadingMore(true);
         const fetchData = async () => {
             await axios
-                .get(`${serverurl}/search` + window.location.search)
+                .get(`${serverurl}/search` + queryString + "&page=" + page_no)
                 .then((response) => {
-                    setData(response.data);
+                    mergeVideos(response.data.videos || []);
+                    setData((prev) => ({
+                        ...(prev || {}),
+                        channels: response.data.channels || [],
+                    }));
                 })
                 .catch((error) => {
                     console.log("Error in fetching: ", error.message);
                 })
                 .finally(() => {
                     setLoading(false);
+                    setLoadingMore(false);
                 });
         };
         fetchData();
-    }, [page]);
+    }, [queryString, page_no]);
 
-    useEffect(() => {
-        const currentpage = locationHook.pathname;
-        setPage(currentpage);
-    }, [locationHook]);
+    const loadMore = () => {
+        if (loadingMore || !hasMore) return;
+        setpage_no((prev) => prev + 1);
+    };
+
     return loading ? (
         <Cardloading page="search" />
     ) : (
@@ -47,7 +81,7 @@ const Search = () => {
                 channel ID to add it instantly.
             </p>
             <div className="search-results">
-                {data.channels && data.channels.length > 0 ? (
+                {data && data.channels && data.channels.length > 0 ? (
                     <div className="search-section">
                         <h2 className="search-heading">Channels</h2>
                         <div className="channel-results">
@@ -74,7 +108,7 @@ const Search = () => {
                         </div>
                     </div>
                 ) : null}
-                {data.videos && data.videos.length > 0 ? (
+                {data && data.videos && data.videos.length > 0 ? (
                     <div className="search-section">
                         <h2 className="search-heading">Videos</h2>
                         <CardGrid variant="fluid" className="search-cards">
@@ -82,6 +116,11 @@ const Search = () => {
                                 <Card key={item.video_id} data={item} />
                             ))}
                         </CardGrid>
+                        <InfiniteScroll
+                            hasMore={hasMore}
+                            loading={loadingMore}
+                            onLoadMore={loadMore}
+                        />
                     </div>
                 ) : null}
             </div>
