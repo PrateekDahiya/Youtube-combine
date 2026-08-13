@@ -222,7 +222,7 @@ button img {
     min-width: 0;
     position: relative;
     top: 0;
-    overflow-y: auto;
+    overflow: visible;
     flex: 0 0 auto;
 }
 
@@ -232,13 +232,20 @@ button img {
     color: var(--text-color);
 }
 
-.related-videos {
+.cards.related-videos {
     display: grid;
     width: 100%;
     grid-template-columns: repeat(1, 100%);
     justify-content: center;
     overflow: visible;
     gap: 10px;
+    flex: 0 0 auto;
+    min-height: 0;
+}
+
+.cards.related-videos .card {
+    margin: 0;
+    width: 100%;
 }
 
 /* Responsive breakpoints */
