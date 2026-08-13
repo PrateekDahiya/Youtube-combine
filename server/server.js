@@ -505,19 +505,37 @@ app.get("/api/trendings", (req, res) => {
 app.get("/api/search", (req, res) => {
     const query = req.query.query;
     const searchQuery = `%${query}%`;
-    const q = `select * from channels c join videos v on c.channel_id=v.channel_id where v.title like ? or v.tags like ? or c.channel_name like ?  order by upload_time desc limit 100`;
+    const videoQuery = `select * from channels c join videos v on c.channel_id=v.channel_id where v.title like ? or v.tags like ? or c.channel_name like ? order by upload_time desc limit 100`;
+    const channelQuery = `select * from channels where channel_name like ? or short_desc like ? or custom_url like ? or keywords like ? order by subscribers desc limit 20`;
+
     connection.query(
-        q,
+        videoQuery,
         [searchQuery, searchQuery, searchQuery],
-        (error, results) => {
-            if (error) {
-                console.log(error);
+        (videoError, videoResults) => {
+            if (videoError) {
+                console.log(videoError);
+                return res.status(500).json({ error: "Internal Server Error" });
             }
-            res.status(200).json({
-                page: "search",
-                videos: results,
-                query: query,
-            });
+
+            connection.query(
+                channelQuery,
+                [searchQuery, searchQuery, searchQuery, searchQuery],
+                (channelError, channelResults) => {
+                    if (channelError) {
+                        console.log(channelError);
+                        return res
+                            .status(500)
+                            .json({ error: "Internal Server Error" });
+                    }
+
+                    res.status(200).json({
+                        page: "search",
+                        videos: videoResults,
+                        channels: channelResults,
+                        query: query,
+                    });
+                }
+            );
         }
     );
 });

@@ -1,8 +1,11 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
+import { Link } from "react-router-dom";
 import Card from "./Card";
 import axios from "axios";
 import "./Search.css";
+
+const defaultAvatar = "https://cdn-icons-png.flaticon.com/128/1077/1077063.png";
 
 const Search = () => {
     const locationHook = useLocation();
@@ -34,15 +37,43 @@ const Search = () => {
                 *If you can't find the channel, please send feedback with the
                 channel ID to add it instantly.
             </p>
-            {data.videos ? (
-                <div className="cards search-cards">
-                    {data.videos.map((item) => (
-                        <Card key={item.video_id} data={item} />
-                    ))}
+            {data.channels && data.channels.length > 0 ? (
+                <div className="search-section">
+                    <h2 className="search-heading">Channels</h2>
+                    <div className="channel-results">
+                        {data.channels.map((item) => (
+                            <Link
+                                key={item.channel_id}
+                                to={`/channel?channel_id=${item.channel_id}`}
+                                className="channel-result"
+                            >
+                                <img
+                                    src={item.channel_icon || defaultAvatar}
+                                    alt={item.channel_name || "channel"}
+                                />
+                                <div className="channel-result-text">
+                                    <p className="channel-result-name">
+                                        {item.channel_name || ""}
+                                    </p>
+                                    <p className="channel-result-meta">
+                                        {item.custom_url || ""}
+                                    </p>
+                                </div>
+                            </Link>
+                        ))}
+                    </div>
                 </div>
-            ) : (
-                <></>
-            )}
+            ) : null}
+            {data.videos && data.videos.length > 0 ? (
+                <div className="search-section">
+                    <h2 className="search-heading">Videos</h2>
+                    <div className="cards search-cards">
+                        {data.videos.map((item) => (
+                            <Card key={item.video_id} data={item} />
+                        ))}
+                    </div>
+                </div>
+            ) : null}
         </div>
     );
 };
