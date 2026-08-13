@@ -2,8 +2,8 @@
     display: flex;
     flex-direction: column;
     width: 100%;
-    min-height: calc(100vh - 60px);
-    overflow-y: auto;
+    height: calc(100vh - 60px);
+    overflow: hidden;
     padding: 20px;
     background-color: var(--background-color);
 }
@@ -28,15 +28,19 @@
 }
 
 .search-cards {
-    overflow: visible;
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: 24px;
+    overflow-y: auto;
     padding: 20px 0;
 }
 
 .search-section {
     margin-top: 8px;
+}
+
+.search-section:has(.cards) {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
 }
 
 .search-heading {
