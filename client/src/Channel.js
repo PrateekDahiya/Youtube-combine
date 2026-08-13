@@ -5,6 +5,8 @@ import axios from "axios";
 import Card from "./Card";
 import Cardloading from "./Cardloading";
 
+const defaultAvatar = "https://cdn-icons-png.flaticon.com/128/1077/1077063.png";
+
 const Channel = (params) => {
     const locationHook = useLocation();
     const [data, setData] = useState("");
@@ -175,7 +177,7 @@ const Channel = (params) => {
                             className="mypic"
                             title={data.channel_name}
                             alt="Profile"
-                            src={data.channel_icon}
+                            src={data.channel_icon || defaultAvatar}
                         />
                         <div className="details">
                             <p className="name">{data.channel_name}</p>

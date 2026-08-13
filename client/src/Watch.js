@@ -5,6 +5,8 @@ import axios from "axios";
 import Videoplayer from "./Videoplayer";
 import Card from "./Card";
 
+const defaultAvatar = "https://cdn-icons-png.flaticon.com/128/1077/1077063.png";
+
 const Watch = (params) => {
     const [data, setData] = useState("");
     const [isliked, setisliked] = useState(false);
@@ -284,7 +286,7 @@ const Watch = (params) => {
                                 >
                                     <img
                                         className="channelicon"
-                                        src={watchdata.channel_icon}
+                                        src={watchdata.channel_icon || defaultAvatar}
                                         title="channel"
                                         alt="channel"
                                     />

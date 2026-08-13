@@ -4,6 +4,8 @@ import axios from "axios";
 import Cookies from "js-cookie";
 import "./Card.css";
 
+const defaultAvatar = "https://cdn-icons-png.flaticon.com/128/1077/1077063.png";
+
 const Card = (params) => {
     const navigate = useNavigate();
     const [linkto, setLinkto] = useState();
@@ -241,7 +243,7 @@ const Card = (params) => {
                 <div className="info">
                     {forrelated ? null : (
                         <img
-                            src={params.data.channel_icon || ""}
+                            src={params.data.channel_icon || defaultAvatar}
                             alt={params.data.channel_name || ""}
                             title={params.data.channel_name || ""}
                             onClick={(e) => {

@@ -5,6 +5,8 @@ import { Link } from "react-router-dom";
 import "./Header.css";
 import "./themes.css";
 
+const defaultAvatar = "https://cdn-icons-png.flaticon.com/128/1077/1077063.png";
+
 const Header = (params) => {
     const locationHook = useLocation();
     const [query, setQuery] = useState("");
@@ -127,7 +129,7 @@ const Header = (params) => {
                             />
                             <img
                                 className="profilepic"
-                                src={user.channel_icon}
+                                src={user.channel_icon || defaultAvatar}
                                 title={user.username}
                                 alt="Profile"
                                 onClick={toggleDropdown}
@@ -141,7 +143,7 @@ const Header = (params) => {
                                 <div className="profile-box">
                                     <img
                                         className="profile-box-img"
-                                        src={user.channel_icon}
+                                        src={user.channel_icon || defaultAvatar}
                                         alt="profile"
                                     ></img>
                                     <div>
