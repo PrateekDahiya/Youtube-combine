@@ -32,7 +32,8 @@
 
 .trending-card {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
+    align-items: flex-start;
     width: 100%;
 }
 
@@ -46,9 +47,8 @@
 }
 
 .card.trending-card .thumbnail {
-    width: 100%;
-    height: auto;
-    aspect-ratio: 16 / 9;
+    width: 260px;
+    height: 146px;
     flex-shrink: 0;
 }
 
@@ -173,9 +173,7 @@
         font-size: 15px;
     }
 
-    .card.trending-card .thumbnail {
-        width: 100%;
-    }
+    .card.trending-card .thumbnail { width: 300px; height: 169px; }
 }
 
 @media (min-width: 1200px) and (max-width: 1549px) {
@@ -190,9 +188,7 @@
         font-size: 17px;
     }
 
-    .card.trending-card .thumbnail {
-        width: 100%;
-    }
+    .card.trending-card .thumbnail { width: 280px; height: 158px; }
 }
 
 @media (min-width: 992px) and (max-width: 1199px) {
@@ -207,9 +203,7 @@
         font-size: 16px;
     }
 
-    .card.trending-card .thumbnail {
-        width: 100%;
-    }
+    .card.trending-card .thumbnail { width: 260px; height: 146px; }
 }
 
 @media (min-width: 768px) and (max-width: 991px) {
@@ -228,6 +222,10 @@
     }
     .card .info .viewsntime {
         font-size: 13px;
+    }
+
+    .card.trending-card {
+        flex-direction: column;
     }
 
     .card.trending-card .thumbnail {
@@ -260,6 +258,10 @@
     .duration {
         font-size: 11px;
         padding: 1px 4px;
+    }
+
+    .card.trending-card {
+        flex-direction: column;
     }
 
     .card.trending-card .thumbnail {
@@ -303,6 +305,10 @@
     .watch-later img {
         width: 18px;
         height: 18px;
+    }
+
+    .card.trending-card {
+        flex-direction: column;
     }
 
     .card.trending-card .thumbnail {
