@@ -265,7 +265,8 @@ function createFeedAndGenerateSQL(
     tags,
     excludedVideoIds = [],
     maxVideosPerChannel = 5,
-    limit = 24 // Specify the limit of videos to retrieve
+    limit = 24, // Specify the limit of videos to retrieve
+    offset = null
 ) {
     const wordCount = {};
 
@@ -317,7 +318,7 @@ function createFeedAndGenerateSQL(
             JOIN channels c ON v.channel_id = c.channel_id
             WHERE v.channel_row_number <= ${maxVideosPerChannel}
             ORDER BY score DESC
-            LIMIT ${limit}
+            LIMIT ${limit}${offset !== null ? ` OFFSET ${offset}` : ""}
         `;
     } else {
         const excludearray = filteredExcludedIds.join(", ");
@@ -333,7 +334,7 @@ function createFeedAndGenerateSQL(
             JOIN channels c ON v.channel_id = c.channel_id
             WHERE v.channel_row_number <= ${maxVideosPerChannel}
             ORDER BY score DESC
-            LIMIT ${limit}
+            LIMIT ${limit}${offset !== null ? ` OFFSET ${offset}` : ""}
         `;
     }
 
@@ -367,7 +368,7 @@ function fetchRelatedVideos(video_id, res) {
         }
 
         // Generate SQL query
-        const sqlQuery = createFeedAndGenerateSQL(tags) + " LIMIT 20"; // Ensure space before LIMIT
+        const sqlQuery = createFeedAndGenerateSQL(tags, [], 5, 20);
 
         connection.query(sqlQuery, (error, relatedVideos) => {
             if (error) {
@@ -433,9 +434,13 @@ app.get("/api/personalized-feed", async (req, res) => {
             .split(",")
             .map((tag) => tag.trim());
 
-        const sqlQuery =
-            createFeedAndGenerateSQL(tags, excludedVideoIds) +
-            `OFFSET ${24 * page_no}`;
+        const sqlQuery = createFeedAndGenerateSQL(
+            tags,
+            excludedVideoIds,
+            5,
+            24,
+            24 * (page_no - 1)
+        );
 
         connection.query(sqlQuery, (error, feed) => {
             if (error) {
@@ -941,8 +946,8 @@ app.get("/api/update_channels", async (req, res) => {
 
 function getChannelIds(offset, limit) {
     return new Promise((resolve, reject) => {
-        const query = `SELECT channel_id FROM channels LIMIT ${limit} OFFSET ${offset}`;
-        connection.query(query, (error, results) => {
+        const query = `SELECT channel_id FROM channels LIMIT ? OFFSET ?`;
+        connection.query(query, [limit, offset], (error, results) => {
             if (error) {
                 return reject(error);
             }
