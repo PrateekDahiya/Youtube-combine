@@ -3,6 +3,8 @@ import axios from "axios";
 import { Link } from "react-router-dom";
 import "./You.css";
 
+const defaultAvatar = "https://cdn-icons-png.flaticon.com/128/1077/1077063.png";
+
 const You = (params) => {
     const [data, setData] = useState("");
     // const [videos, setVideos] = useState("");
@@ -60,7 +62,7 @@ const You = (params) => {
                                     className="mypic"
                                     alt="Profile"
                                     title={data.channel_name}
-                                    src={data.channel_icon}
+                                    src={data.channel_icon || defaultAvatar}
                                 />
                                 <div className="details">
                                     <p className="name">{data.channel_name}</p>

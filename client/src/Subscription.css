@@ -29,6 +29,50 @@
     margin-bottom: 24px;
 }
 
+.channel-strip {
+    display: flex;
+    gap: 12px;
+    overflow-x: auto;
+    padding: 0 20px 18px;
+    margin-bottom: 6px;
+    scrollbar-width: thin;
+}
+
+.channel-strip::-webkit-scrollbar {
+    height: 6px;
+}
+
+.channel-strip::-webkit-scrollbar-thumb {
+    background: var(--alt-color);
+    border-radius: 999px;
+}
+
+.channel-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    border: none;
+    border-radius: 999px;
+    padding: 8px 14px;
+    background: var(--alt-color);
+    color: var(--text-color);
+    cursor: pointer;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.channel-pill img {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.channel-pill.active {
+    background: var(--text-color);
+    color: var(--background-color);
+}
+
 .menubutton {
     font-size: 16px;
     font-weight: 500;

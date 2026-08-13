@@ -4,6 +4,8 @@ import { Link } from "react-router-dom";
 import axios from "axios";
 import Shortplayer from "./Shortplayer";
 
+const defaultAvatar = "https://cdn-icons-png.flaticon.com/128/1077/1077063.png";
+
 const Shortbox = (params) => {
     const [data, setData] = useState("");
     const [shortdata, setShortdata] = useState(null);
@@ -114,7 +116,7 @@ const Shortbox = (params) => {
                         <img
                             alt="short-btn"
                             title={shortdata.channel_name}
-                            src={shortdata.channel_icon}
+                            src={shortdata.channel_icon || defaultAvatar}
                         />
                     ) : (
                         ""

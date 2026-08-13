@@ -265,7 +265,8 @@ function createFeedAndGenerateSQL(
     tags,
     excludedVideoIds = [],
     maxVideosPerChannel = 5,
-    limit = 24 // Specify the limit of videos to retrieve
+    limit = 24, // Specify the limit of videos to retrieve
+    offset = null
 ) {
     const wordCount = {};
 
@@ -317,7 +318,7 @@ function createFeedAndGenerateSQL(
             JOIN channels c ON v.channel_id = c.channel_id
             WHERE v.channel_row_number <= ${maxVideosPerChannel}
             ORDER BY score DESC
-            LIMIT ${limit}
+            LIMIT ${limit}${offset !== null ? ` OFFSET ${offset}` : ""}
         `;
     } else {
         const excludearray = filteredExcludedIds.join(", ");
@@ -333,7 +334,7 @@ function createFeedAndGenerateSQL(
             JOIN channels c ON v.channel_id = c.channel_id
             WHERE v.channel_row_number <= ${maxVideosPerChannel}
             ORDER BY score DESC
-            LIMIT ${limit}
+            LIMIT ${limit}${offset !== null ? ` OFFSET ${offset}` : ""}
         `;
     }
 
@@ -367,7 +368,7 @@ function fetchRelatedVideos(video_id, res) {
         }
 
         // Generate SQL query
-        const sqlQuery = createFeedAndGenerateSQL(tags) + " LIMIT 20"; // Ensure space before LIMIT
+        const sqlQuery = createFeedAndGenerateSQL(tags, [], 5, 20);
 
         connection.query(sqlQuery, (error, relatedVideos) => {
             if (error) {
@@ -433,9 +434,13 @@ app.get("/api/personalized-feed", async (req, res) => {
             .split(",")
             .map((tag) => tag.trim());
 
-        const sqlQuery =
-            createFeedAndGenerateSQL(tags, excludedVideoIds) +
-            `OFFSET ${24 * page_no}`;
+        const sqlQuery = createFeedAndGenerateSQL(
+            tags,
+            excludedVideoIds,
+            5,
+            24,
+            24 * (page_no - 1)
+        );
 
         connection.query(sqlQuery, (error, feed) => {
             if (error) {
@@ -500,19 +505,37 @@ app.get("/api/trendings", (req, res) => {
 app.get("/api/search", (req, res) => {
     const query = req.query.query;
     const searchQuery = `%${query}%`;
-    const q = `select * from channels c join videos v on c.channel_id=v.channel_id where v.title like ? or v.tags like ? or c.channel_name like ?  order by upload_time desc limit 100`;
+    const videoQuery = `select * from channels c join videos v on c.channel_id=v.channel_id where v.title like ? or v.tags like ? or c.channel_name like ? order by upload_time desc limit 100`;
+    const channelQuery = `select * from channels where channel_name like ? or short_desc like ? or custom_url like ? or keywords like ? order by subscribers desc limit 20`;
+
     connection.query(
-        q,
+        videoQuery,
         [searchQuery, searchQuery, searchQuery],
-        (error, results) => {
-            if (error) {
-                console.log(error);
+        (videoError, videoResults) => {
+            if (videoError) {
+                console.log(videoError);
+                return res.status(500).json({ error: "Internal Server Error" });
             }
-            res.status(200).json({
-                page: "search",
-                videos: results,
-                query: query,
-            });
+
+            connection.query(
+                channelQuery,
+                [searchQuery, searchQuery, searchQuery, searchQuery],
+                (channelError, channelResults) => {
+                    if (channelError) {
+                        console.log(channelError);
+                        return res
+                            .status(500)
+                            .json({ error: "Internal Server Error" });
+                    }
+
+                    res.status(200).json({
+                        page: "search",
+                        videos: videoResults,
+                        channels: channelResults,
+                        query: query,
+                    });
+                }
+            );
         }
     );
 });
@@ -941,8 +964,8 @@ app.get("/api/update_channels", async (req, res) => {
 
 function getChannelIds(offset, limit) {
     return new Promise((resolve, reject) => {
-        const query = `SELECT channel_id FROM channels LIMIT ${limit} OFFSET ${offset}`;
-        connection.query(query, (error, results) => {
+        const query = `SELECT channel_id FROM channels LIMIT ? OFFSET ?`;
+        connection.query(query, [limit, offset], (error, results) => {
             if (error) {
                 return reject(error);
             }

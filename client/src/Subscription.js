@@ -4,8 +4,12 @@ import { Link } from "react-router-dom";
 import axios from "axios";
 import "./Subscription.css";
 
+const defaultAvatar = "https://cdn-icons-png.flaticon.com/128/1077/1077063.png";
+
 const Subscription = (params) => {
     const [videos, setVideos] = useState([]);
+    const [channels, setChannels] = useState([]);
+    const [selectedChannel, setSelectedChannel] = useState("all");
     const [typeShort, setType] = useState(0);
     const serverurl = process.env.REACT_APP_SERVER_URL;
     const user = params.user;
@@ -24,12 +28,67 @@ const Subscription = (params) => {
         fetchData();
     }, [typeShort, user.channel_id, serverurl, user]);
 
+    useEffect(() => {
+        const fetchChannels = async () => {
+            try {
+                const response = await axios.get(
+                    `${serverurl}/get-subs?user_id=${user.channel_id}`
+                );
+                setChannels(response.data.subscription || []);
+            } catch (error) {
+                console.log("Error in fetching subscriptions: ", error.message);
+            }
+        };
+
+        fetchChannels();
+    }, [serverurl, user.channel_id, user]);
+
+    const filteredVideos =
+        selectedChannel === "all"
+            ? videos.data || []
+            : (videos.data || []).filter(
+                  (item) => item.channel_id === selectedChannel
+              );
+
     return (
         <>
             {params.user !== "Guest" ? (
                 <div className="subsbox">
                     <h1>Subscriptions</h1>
                     <h3>Latest</h3>
+                    {channels.length > 0 ? (
+                        <div className="channel-strip">
+                            <button
+                                className={
+                                    "channel-pill " +
+                                    (selectedChannel === "all" ? "active" : "")
+                                }
+                                onClick={() => setSelectedChannel("all")}
+                            >
+                                All
+                            </button>
+                            {channels.map((item) => (
+                                <button
+                                    key={item.channel_id}
+                                    className={
+                                        "channel-pill " +
+                                        (selectedChannel === item.channel_id
+                                            ? "active"
+                                            : "")
+                                    }
+                                    onClick={() =>
+                                        setSelectedChannel(item.channel_id)
+                                    }
+                                >
+                                    <img
+                                        src={item.channel_icon || defaultAvatar}
+                                        alt={item.channel_name}
+                                    />
+                                    <span>{item.channel_name}</span>
+                                </button>
+                            ))}
+                        </div>
+                    ) : null}
                     <div className="menus">
                         <p
                             className={
@@ -54,9 +113,9 @@ const Subscription = (params) => {
                             Shorts
                         </p>
                     </div>
-                    {videos.data ? (
+                    {filteredVideos.length > 0 ? (
                         <div className="cards">
-                            {videos.data.map((item) => (
+                            {filteredVideos.map((item) => (
                                 <Card key={item.video_id} data={item} />
                             ))}
                         </div>

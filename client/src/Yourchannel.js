@@ -4,6 +4,8 @@ import axios from "axios";
 import Cardloading from "./Cardloading";
 import Card from "./Card";
 
+const defaultAvatar = "https://cdn-icons-png.flaticon.com/128/1077/1077063.png";
+
 const Yourchannel = (params) => {
     const [data, setData] = useState("");
     const [videos, setVideos] = useState("");
@@ -105,7 +107,7 @@ const Yourchannel = (params) => {
                         <img
                             className="mypic"
                             alt="Profile"
-                            src={data.channel_icon}
+                            src={data.channel_icon || defaultAvatar}
                             title={data.channel_name}
                         />
                         <div className="details">

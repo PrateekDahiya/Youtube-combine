@@ -5,6 +5,8 @@ import { ThemeContext } from "./ThemeContext";
 
 import "./Settings.css";
 
+const defaultAvatar = "https://cdn-icons-png.flaticon.com/128/1077/1077063.png";
+
 const Settings = (params) => {
     const [settings_index, setSettings_index] = useState(0);
     const [iswatchlater, setIswatchlater] = useState("true");
@@ -213,7 +215,7 @@ const Settings = (params) => {
                                                 alt="profile"
                                                 className="dual-profile-img"
                                                 title={user.channel_name}
-                                                src={user.channel_icon}
+                                                src={user.channel_icon || defaultAvatar}
                                             />
                                         </div>
                                         <div className="dual-part2">
