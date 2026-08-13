@@ -8,6 +8,7 @@ import Cardloading from "./Cardloading";
 const Home = (params) => {
     const locationHook = useLocation();
     const [data, setData] = useState(null);
+    const [selectedTag, setSelectedTag] = useState("All");
     const serverurl = process.env.REACT_APP_SERVER_URL;
     const [page, setPage] = useState(
         new URLSearchParams(locationHook.pathname)
@@ -15,6 +16,45 @@ const Home = (params) => {
     const [page_no, setpage_no] = useState(1);
     const [startlistner, setstartlistner] = useState(false);
     const user = params.user;
+
+    const normalizeTag = (tag) => tag.toLowerCase().trim();
+
+    const getTopTags = () => {
+        const counts = {};
+
+        (data || []).forEach((item) => {
+            (item.tags || "")
+                .split(",")
+                .map(normalizeTag)
+                .filter(Boolean)
+                .forEach((tag) => {
+                    counts[tag] = (counts[tag] || 0) + 1;
+                });
+        });
+
+        return Object.entries(counts)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 5)
+            .map(([tag]) => tag);
+    };
+
+    const topTags = getTopTags();
+    const videoTypes = ["All", "Music", "Gaming", "Movies", "News", "Sports"];
+
+    const filteredData = (data || []).filter((item) => {
+        if (selectedTag === "All") return true;
+
+        const itemTags = (item.tags || "")
+            .split(",")
+            .map(normalizeTag)
+            .filter(Boolean);
+
+        if (videoTypes.includes(selectedTag)) {
+            return (item.category || "").toLowerCase() === selectedTag.toLowerCase();
+        }
+
+        return itemTags.some((tag) => tag.includes(selectedTag.toLowerCase()));
+    });
 
     useEffect(() => {
         const currentpage = new URLSearchParams(locationHook.pathname);
@@ -88,13 +128,49 @@ const Home = (params) => {
         <>
             {data ? (
                 <>
+                    <div className="home-tags">
+                        <div className="home-tag-row">
+                            {topTags.length > 0 ? (
+                                <>
+                                    <span className="home-tag-label">Top tags</span>
+                                    {topTags.map((tag) => (
+                                        <button
+                                            key={tag}
+                                            className={
+                                                "home-tag " +
+                                                (selectedTag === tag ? "active" : "")
+                                            }
+                                            onClick={() => setSelectedTag(tag)}
+                                        >
+                                            {tag}
+                                        </button>
+                                    ))}
+                                </>
+                            ) : null}
+                        </div>
+                        <div className="home-tag-row">
+                            <span className="home-tag-label">Video type</span>
+                            {videoTypes.map((tag) => (
+                                <button
+                                    key={tag}
+                                    className={
+                                        "home-tag " +
+                                        (selectedTag === tag ? "active" : "")
+                                    }
+                                    onClick={() => setSelectedTag(tag)}
+                                >
+                                    {tag}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
                     <div
                         className="cards"
                         onLoad={() => {
                             setstartlistner(true);
                         }}
                     >
-                        {data.map((item) => (
+                        {filteredData.map((item) => (
                             <Card key={item.video_id} data={item} />
                         ))}
                     </div>

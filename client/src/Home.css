@@ -9,6 +9,56 @@
     padding: 20px;
 }
 
+.home-tags {
+    width: 100%;
+    padding: 14px 20px 0;
+    background-color: var(--background-color);
+}
+
+.home-tag-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 10px;
+    scrollbar-width: thin;
+}
+
+.home-tag-row::-webkit-scrollbar {
+    height: 6px;
+}
+
+.home-tag-row::-webkit-scrollbar-thumb {
+    background: var(--alt-color);
+    border-radius: 999px;
+}
+
+.home-tag-label {
+    color: var(--text2-color);
+    font-size: 13px;
+    font-weight: 600;
+    flex-shrink: 0;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.home-tag {
+    border: none;
+    border-radius: 999px;
+    padding: 8px 14px;
+    background: var(--alt-color);
+    color: var(--text-color);
+    cursor: pointer;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.home-tag.active {
+    background: var(--text-color);
+    color: var(--background-color);
+}
+
 .wider {
     grid-template-columns: repeat(4, 24%);
 }
@@ -52,6 +102,9 @@
 /* Responsive breakpoints */
 /* Extra large screens */
 @media (min-width: 1550px) {
+    .home-tags {
+        padding: 16px 25px 0;
+    }
     .cards {
         grid-template-columns: repeat(5, 19%);
         gap: 15px;
@@ -64,6 +117,9 @@
 
 /* Large screens */
 @media (min-width: 1200px) and (max-width: 1549px) {
+    .home-tags {
+        padding: 16px 20px 0;
+    }
     .cards {
         grid-template-columns: repeat(4, 23%);
         gap: 15px;
@@ -76,6 +132,9 @@
 
 /* Medium screens */
 @media (min-width: 992px) and (max-width: 1199px) {
+    .home-tags {
+        padding: 14px 15px 0;
+    }
     .cards {
         grid-template-columns: repeat(3, 31%);
         gap: 15px;
@@ -88,6 +147,9 @@
 
 /* Small screens */
 @media (min-width: 768px) and (max-width: 991px) {
+    .home-tags {
+        padding: 12px 15px 0;
+    }
     .cards {
         grid-template-columns: repeat(2, 48%);
         gap: 15px;
@@ -103,6 +165,9 @@
 
 /* Extra small screens */
 @media (min-width: 576px) and (max-width: 767px) {
+    .home-tags {
+        padding: 12px 10px 0;
+    }
     .cards {
         grid-template-columns: repeat(2, 48%);
         gap: 10px;
@@ -118,6 +183,9 @@
 
 /* Mobile screens */
 @media (max-width: 575px) {
+    .home-tags {
+        padding: 10px 10px 0;
+    }
     .cards {
         grid-template-columns: repeat(1, 100%);
         gap: 15px;
