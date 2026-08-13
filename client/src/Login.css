@@ -6,6 +6,7 @@
     align-items: center;
     min-height: calc(100vh - 60px);
     padding: 20px;
+    overflow-y: auto;
 }
 
 .form-box-logo {

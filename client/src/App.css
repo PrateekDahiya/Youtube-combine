@@ -35,7 +35,7 @@
     height: 100%;
     display: flex;
     flex-direction: column;
-    overflow-y: auto;
+    overflow-y: hidden;
     position: relative;
     z-index: 1;
 }
