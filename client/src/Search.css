@@ -8,39 +8,42 @@
     background-color: var(--background-color);
 }
 
-.searchPage::-webkit-scrollbar {
+.search-results {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+}
+
+.search-results::-webkit-scrollbar {
     width: 8px;
     height: 8px;
 }
 
-.searchPage::-webkit-scrollbar-track {
+.search-results::-webkit-scrollbar-track {
     background: var(--background-color);
     border-radius: 10px;
 }
 
-.searchPage::-webkit-scrollbar-thumb {
+.search-results::-webkit-scrollbar-thumb {
     background: var(--alt-color);
     border-radius: 10px;
 }
 
-.searchPage::-webkit-scrollbar-thumb:hover {
+.search-results::-webkit-scrollbar-thumb:hover {
     background: var(--text2-color);
-}
-
-.search-cards {
-    overflow-y: auto;
-    padding: 20px 0;
 }
 
 .search-section {
     margin-top: 8px;
 }
 
-.search-section:has(.cards) {
-    flex: 1;
+.cards.search-cards {
+    flex: 0 0 auto;
     min-height: 0;
-    display: flex;
-    flex-direction: column;
+    overflow: visible;
+    padding: 20px 0;
 }
 
 .search-heading {
@@ -113,7 +116,7 @@
     .searchPage {
         padding: 30px;
     }
-    .search-cards {
+    .cards.search-cards {
         gap: 30px;
         padding: 30px 0;
     }
@@ -127,7 +130,7 @@
     .searchPage {
         padding: 25px;
     }
-    .search-cards {
+    .cards.search-cards {
         gap: 24px;
         padding: 25px 0;
     }
@@ -137,7 +140,7 @@
     .searchPage {
         padding: 20px;
     }
-    .search-cards {
+    .cards.search-cards {
         gap: 20px;
         padding: 20px 0;
     }
@@ -147,7 +150,7 @@
     .searchPage {
         padding: 15px;
     }
-    .search-cards {
+    .cards.search-cards {
         gap: 16px;
         padding: 15px 0;
     }
@@ -161,7 +164,7 @@
     .searchPage {
         padding: 10px;
     }
-    .search-cards {
+    .cards.search-cards {
         gap: 12px;
         padding: 10px 0;
     }

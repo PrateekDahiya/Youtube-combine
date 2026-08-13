@@ -46,43 +46,45 @@ const Search = () => {
                 *If you can't find the channel, please send feedback with the
                 channel ID to add it instantly.
             </p>
-            {data.channels && data.channels.length > 0 ? (
-                <div className="search-section">
-                    <h2 className="search-heading">Channels</h2>
-                    <div className="channel-results">
-                        {data.channels.map((item) => (
-                            <Link
-                                key={item.channel_id}
-                                to={`/channel?channel_id=${item.channel_id}`}
-                                className="channel-result"
-                            >
-                                <img
-                                    src={item.channel_icon || defaultAvatar}
-                                    alt={item.channel_name || "channel"}
-                                />
-                                <div className="channel-result-text">
-                                    <p className="channel-result-name">
-                                        {item.channel_name || ""}
-                                    </p>
-                                    <p className="channel-result-meta">
-                                        {item.custom_url || ""}
-                                    </p>
-                                </div>
-                            </Link>
-                        ))}
+            <div className="search-results">
+                {data.channels && data.channels.length > 0 ? (
+                    <div className="search-section">
+                        <h2 className="search-heading">Channels</h2>
+                        <div className="channel-results">
+                            {data.channels.map((item) => (
+                                <Link
+                                    key={item.channel_id}
+                                    to={`/channel?channel_id=${item.channel_id}`}
+                                    className="channel-result"
+                                >
+                                    <img
+                                        src={item.channel_icon || defaultAvatar}
+                                        alt={item.channel_name || "channel"}
+                                    />
+                                    <div className="channel-result-text">
+                                        <p className="channel-result-name">
+                                            {item.channel_name || ""}
+                                        </p>
+                                        <p className="channel-result-meta">
+                                            {item.custom_url || ""}
+                                        </p>
+                                    </div>
+                                </Link>
+                            ))}
+                        </div>
                     </div>
-                </div>
-            ) : null}
-            {data.videos && data.videos.length > 0 ? (
-                <div className="search-section">
-                    <h2 className="search-heading">Videos</h2>
-                    <CardGrid variant="fluid" className="search-cards">
-                        {data.videos.map((item) => (
-                            <Card key={item.video_id} data={item} />
-                        ))}
-                    </CardGrid>
-                </div>
-            ) : null}
+                ) : null}
+                {data.videos && data.videos.length > 0 ? (
+                    <div className="search-section">
+                        <h2 className="search-heading">Videos</h2>
+                        <CardGrid variant="fluid" className="search-cards">
+                            {data.videos.map((item) => (
+                                <Card key={item.video_id} data={item} />
+                            ))}
+                        </CardGrid>
+                    </div>
+                ) : null}
+            </div>
         </div>
     );
 };
