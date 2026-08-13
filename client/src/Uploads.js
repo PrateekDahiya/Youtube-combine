@@ -3,10 +3,12 @@ import { Link } from "react-router-dom";
 import "./Uploads.css";
 import axios from "axios";
 import UploadVideo from "./UploadVideo";
+import EditVideo from "./EditVideo";
 
 const Uploads = (params) => {
     const [uploads, setUploads] = useState([]);
     const [showUpload, setShowUpload] = useState(false);
+    const [editingVideo, setEditingVideo] = useState(null);
     const serverurl = process.env.REACT_APP_SERVER_URL;
     const user = params.user;
 
@@ -57,6 +59,22 @@ const Uploads = (params) => {
             {uploads.length > 0 ? (
                 uploads.map((u) => (
                     <div key={u.video_id} className="upload-item">
+                        {u.thumbnail_link ? (
+                            <img
+                                className="upload-item-thumb"
+                                src={u.thumbnail_link}
+                                alt=""
+                            />
+                        ) : u.link && u.link.includes("res.cloudinary.com") ? (
+                            <img
+                                className="upload-item-thumb"
+                                src={u.link.replace(
+                                    /\.[a-zA-Z0-9]+$/,
+                                    ".jpg"
+                                )}
+                                alt=""
+                            />
+                        ) : null}
                         <div className="upload-item-info">
                             <p className="upload-item-title">{u.title}</p>
                             <p
@@ -71,7 +89,7 @@ const Uploads = (params) => {
                                         ? `Failed: ${
                                               u.upload_error || "Upload failed"
                                           }`
-                                        : "Complete"}
+                                        : "Uploaded"}
                             </p>
                         </div>
                         {u.upload_status === 1 ? (
@@ -84,12 +102,25 @@ const Uploads = (params) => {
                                 />
                             </div>
                         ) : null}
+                        <span
+                            className="upload-item-edit"
+                            title="Edit video"
+                            onClick={() => setEditingVideo(u)}
+                        >
+                            <svg
+                                viewBox="0 0 24 24"
+                                width="16"
+                                height="16"
+                                fill="currentColor"
+                            >
+                                <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34a.996.996 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
+                            </svg>
+                        </span>
                     </div>
                 ))
             ) : (
                 <p className="uploads-empty">
-                    No uploads in progress. Click "Upload video" to add a new
-                    one.
+                    No uploads yet. Click "Upload video" to add a new one.
                 </p>
             )}
             {showUpload ? (
@@ -97,6 +128,14 @@ const Uploads = (params) => {
                     user={user}
                     onClose={() => setShowUpload(false)}
                     onUploaded={() => fetchUploads()}
+                />
+            ) : null}
+            {editingVideo ? (
+                <EditVideo
+                    video={editingVideo}
+                    user={user}
+                    onClose={() => setEditingVideo(null)}
+                    onUpdated={() => fetchUploads()}
                 />
             ) : null}
         </div>

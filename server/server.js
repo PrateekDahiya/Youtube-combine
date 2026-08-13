@@ -1064,7 +1064,7 @@ app.get("/api/uploadStatus", (req, res) => {
 
 app.get("/api/uploadingVideos", (req, res) => {
     const channel_id = req.query.channel_id;
-    const query = `SELECT video_id, title, upload_status, upload_progress, upload_error FROM videos WHERE channel_id = ? AND upload_status != 0 ORDER BY upload_time DESC LIMIT 50`;
+    const query = `SELECT video_id, title, upload_status, upload_progress, upload_error, thumbnail_link, link, video_description, tags, category, isShort FROM videos WHERE channel_id = ? AND (upload_status != 0 OR link LIKE 'https://res.cloudinary.com/%' OR link LIKE '/uploads/%') ORDER BY upload_time DESC LIMIT 100`;
     connection.query(query, [channel_id], (error, results) => {
         if (error) {
             console.log("UploadingVideos: " + error);
