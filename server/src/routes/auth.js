@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const { getConnection } = require("../db");
+const { getConnection, acquireConnection } = require("../db");
 const { sendEmail } = require("../email");
 const { generateChannelId } = require("../utils");
 const { syncHandler, asyncHandler } = require("../utils/asyncHandler");
@@ -157,7 +157,7 @@ router.post("/updateChannelDetail", syncHandler((req, res) => {
     });
 }));
 
-router.post("/deleteUser", syncHandler((req, res) => {
+router.post("/deleteUser", asyncHandler(async (req, res) => {
     const channel_id = req.body.channel_id;
     const user_id = req.body.user_id;
 
@@ -175,11 +175,12 @@ router.post("/deleteUser", syncHandler((req, res) => {
         ["DELETE FROM channels WHERE channel_id = ?", [channel_id]],
     ];
 
-    const connection = getConnection();
+    const connection = await acquireConnection();
 
     const rollbackAndFail = (err, label) => {
         console.log(`Error ${label}: ` + err);
         connection.rollback(() => {
+            connection.release();
             sendResponse(res, errorResponse("Failed to delete user"));
         });
     };
@@ -187,6 +188,7 @@ router.post("/deleteUser", syncHandler((req, res) => {
     connection.beginTransaction((err) => {
         if (err) {
             console.log("Error starting transaction: " + err);
+            connection.release();
             return sendResponse(res, errorResponse("Failed to delete user"));
         }
 
@@ -197,6 +199,7 @@ router.post("/deleteUser", syncHandler((req, res) => {
                         return rollbackAndFail(commitErr, "committing transaction");
                     }
                     console.log("Transaction successfully completed.");
+                    connection.release();
                     sendResponse(res, successResponse(null, "User and channel deleted successfully"));
                 });
             }

@@ -7,47 +7,34 @@ const config = {
     host: process.env.DB_HOST,
     database: process.env.DB_NAME,
     port: process.env.DB_PORT,
+    waitForConnections: true,
+    connectionLimit: 10,
+    queueLimit: 0,
+    enableKeepAlive: true,
+    keepAliveInitialDelay: 10000,
 };
 
-let connection;
-
-function connectDatabase() {
-    connection = mysql.createConnection(config);
-    connection.connect((err) => {
-        if (err) {
-            console.error("Database Connection Failed! Error: ", err);
-            return;
-        }
-        console.log("Database Connection Successful!");
-    });
-    connection.on("error", (err) => {
-        console.error("MySQL connection error:", err.message);
-        if (
-            err.code === "PROTOCOL_CONNECTION_LOST" ||
-            err.code === "ECONNRESET" ||
-            err.code === "ETIMEDOUT" ||
-            err.code === "ER_CON_COUNT_ERROR"
-        ) {
-            console.log("Reconnecting to MySQL in 3 seconds...");
-            setTimeout(connectDatabase, 3000);
-        } else {
-            console.error("Unhandled MySQL error:", err);
-        }
-    });
-}
+const pool = mysql.createPool(config);
 
 function getConnection() {
-    return connection;
+    return pool;
+}
+
+function acquireConnection() {
+    return pool.getConnection();
 }
 
 function createNewConnection() {
     return mysql.createConnection(config);
 }
 
-connectDatabase();
+function connectDatabase() {
+    console.log("Database pool created");
+}
 
 module.exports = {
     getConnection,
+    acquireConnection,
     createNewConnection,
     connectDatabase,
 };
