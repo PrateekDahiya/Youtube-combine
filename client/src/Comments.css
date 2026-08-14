@@ -3,32 +3,11 @@
     padding-top: 16px;
 }
 
-.comments-tabs {
-    display: flex;
-    gap: 24px;
-    border-bottom: 1px solid var(--alt-color);
-    margin-bottom: 16px;
-}
-
-.comments-tab {
-    background: none;
-    border: none;
-    padding: 10px 2px;
-    font-size: 15px;
-    font-weight: 600;
-    color: var(--text2-color);
-    cursor: pointer;
-    border-bottom: 2px solid transparent;
-    transition: color 0.2s ease, border-color 0.2s ease;
-}
-
-.comments-tab:hover {
+.comments-heading {
+    margin: 0 0 16px;
+    font-size: 16px;
+    font-weight: 700;
     color: var(--text-color);
-}
-
-.comments-tab.active {
-    color: var(--text-color);
-    border-bottom-color: var(--highlight-color);
 }
 
 .comment-composer {

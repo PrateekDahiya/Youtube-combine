@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState } from "react";
 import { commentApi } from "./api";
 import { useToast } from "./ToastContext";
 import "./Comments.css";
@@ -31,73 +31,104 @@ const formatCount = (num) => {
     return String(num);
 };
 
+const normalizeNative = (c) => ({
+    key: `native-${c.comment_id}`,
+    commentId: c.comment_id,
+    source: "native",
+    userId: c.user_id,
+    author: c.channel_name || "Unknown",
+    avatar: c.channel_icon,
+    text: c.comment_text,
+    time: c.comment_time,
+    edited: !!c.updated_at,
+    likeCount: 0,
+});
+
+const normalizeYoutube = (c) => ({
+    key: `youtube-${c.id}`,
+    commentId: c.id,
+    source: "youtube",
+    userId: null,
+    author: c.author,
+    avatar: c.authorAvatar,
+    text: c.text,
+    time: c.publishedAt,
+    edited: false,
+    likeCount: c.likeCount || 0,
+});
+
+const sortByTimeDesc = (list) =>
+    [...list].sort((a, b) => new Date(b.time) - new Date(a.time));
+
 const Comments = (params) => {
     const videoId = params.videoId;
     const user = params.user;
     const isGuest = !user || user === "Guest";
     const toast = useToast();
 
-    const [tab, setTab] = useState("native");
-
     const [comments, setComments] = useState([]);
     const [loading, setLoading] = useState(true);
     const [newText, setNewText] = useState("");
     const [posting, setPosting] = useState(false);
-    const [editingId, setEditingId] = useState(null);
+    const [editingKey, setEditingKey] = useState(null);
     const [editingText, setEditingText] = useState("");
     const [savingEdit, setSavingEdit] = useState(false);
-
-    const [ytComments, setYtComments] = useState(null);
-    const [ytLoading, setYtLoading] = useState(false);
-    const [ytError, setYtError] = useState("");
-    const [ytDisabled, setYtDisabled] = useState(false);
     const [ytNextPageToken, setYtNextPageToken] = useState(null);
-    const [ytLoadingMore, setYtLoadingMore] = useState(false);
-
-    const fetchComments = useCallback(async () => {
-        if (!videoId) return;
-        try {
-            const response = await commentApi.getComments(videoId);
-            setComments(response.comments || []);
-        } catch (error) {
-            console.error("Error fetching comments:", error.message);
-        } finally {
-            setLoading(false);
-        }
-    }, [videoId]);
+    const [loadingMore, setLoadingMore] = useState(false);
 
     useEffect(() => {
-        fetchComments();
-    }, [fetchComments]);
+        if (!videoId) return;
+        let cancelled = false;
 
-    const fetchYoutubeComments = useCallback(
-        async (pageToken) => {
-            if (!videoId) return;
-            if (pageToken) setYtLoadingMore(true);
-            else setYtLoading(true);
-            setYtError("");
-            try {
-                const response = await commentApi.getYoutubeComments(videoId, pageToken);
-                setYtDisabled(!!response.disabled);
-                setYtNextPageToken(response.nextPageToken || null);
-                setYtComments((prev) =>
-                    pageToken ? [...(prev || []), ...(response.comments || [])] : response.comments || []
-                );
-            } catch (error) {
-                console.error("Error fetching YouTube comments:", error.message);
-                setYtError(error.message || "Failed to load YouTube comments.");
-            } finally {
-                setYtLoading(false);
-                setYtLoadingMore(false);
+        const load = async () => {
+            setLoading(true);
+            const [nativeResult, youtubeResult] = await Promise.allSettled([
+                commentApi.getComments(videoId),
+                commentApi.getYoutubeComments(videoId),
+            ]);
+            if (cancelled) return;
+
+            const native =
+                nativeResult.status === "fulfilled"
+                    ? (nativeResult.value.comments || []).map(normalizeNative)
+                    : [];
+            const youtube =
+                youtubeResult.status === "fulfilled" && !youtubeResult.value.disabled
+                    ? (youtubeResult.value.comments || []).map(normalizeYoutube)
+                    : [];
+
+            if (nativeResult.status === "rejected") {
+                console.error("Error fetching comments:", nativeResult.reason.message);
             }
-        },
-        [videoId]
-    );
+            if (youtubeResult.status === "rejected") {
+                console.error("Error fetching YouTube comments:", youtubeResult.reason.message);
+            }
 
-    const handleTabChange = (nextTab) => {
-        setTab(nextTab);
-        if (nextTab === "youtube" && ytComments === null && !ytLoading) {
-            fetchYoutubeComments(null);
+            setComments(sortByTimeDesc([...native, ...youtube]));
+            setYtNextPageToken(
+                youtubeResult.status === "fulfilled" ? youtubeResult.value.nextPageToken || null : null
+            );
+            setLoading(false);
+        };
+
+        load();
+        return () => {
+            cancelled = true;
+        };
+    }, [videoId]);
+
+    const loadMoreYoutube = async () => {
+        if (!ytNextPageToken) return;
+        setLoadingMore(true);
+        try {
+            const response = await commentApi.getYoutubeComments(videoId, ytNextPageToken);
+            const more = (response.comments || []).map(normalizeYoutube);
+            setComments((prev) => sortByTimeDesc([...prev, ...more]));
+            setYtNextPageToken(response.nextPageToken || null);
+        } catch (error) {
+            console.error("Error fetching more YouTube comments:", error.message);
+        } finally {
+            setLoadingMore(false);
         }
     };
 
@@ -108,9 +139,7 @@ const Comments = (params) => {
         try {
             const response = await commentApi.addComment(videoId, user.channel_id, text);
             if (response.comment) {
-                setComments((prev) => [response.comment, ...prev]);
-            } else {
-                fetchComments();
+                setComments((prev) => [normalizeNative(response.comment), ...prev]);
             }
             setNewText("");
             if (toast) toast.showToast("Comment posted!", "success");
@@ -123,12 +152,12 @@ const Comments = (params) => {
     };
 
     const startEdit = (comment) => {
-        setEditingId(comment.comment_id);
-        setEditingText(comment.comment_text);
+        setEditingKey(comment.key);
+        setEditingText(comment.text);
     };
 
     const cancelEdit = () => {
-        setEditingId(null);
+        setEditingKey(null);
         setEditingText("");
     };
 
@@ -137,13 +166,9 @@ const Comments = (params) => {
         if (!text) return;
         setSavingEdit(true);
         try {
-            await commentApi.editComment(comment.comment_id, user.channel_id, text);
+            await commentApi.editComment(comment.commentId, user.channel_id, text);
             setComments((prev) =>
-                prev.map((c) =>
-                    c.comment_id === comment.comment_id
-                        ? { ...c, comment_text: text, updated_at: new Date().toISOString() }
-                        : c
-                )
+                prev.map((c) => (c.key === comment.key ? { ...c, text, edited: true } : c))
             );
             cancelEdit();
             if (toast) toast.showToast("Comment updated!", "success");
@@ -157,8 +182,8 @@ const Comments = (params) => {
 
     const deleteComment = async (comment) => {
         try {
-            await commentApi.deleteComment(comment.comment_id, user.channel_id);
-            setComments((prev) => prev.filter((c) => c.comment_id !== comment.comment_id));
+            await commentApi.deleteComment(comment.commentId, user.channel_id);
+            setComments((prev) => prev.filter((c) => c.key !== comment.key));
             if (toast) toast.showToast("Comment deleted.", "success");
         } catch (error) {
             console.error("Error deleting comment:", error.message);
@@ -168,190 +193,139 @@ const Comments = (params) => {
 
     return (
         <div className="comments-section">
-            <div className="comments-tabs">
-                <button
-                    className={"comments-tab" + (tab === "native" ? " active" : "")}
-                    onClick={() => handleTabChange("native")}
-                >
-                    Comments {comments.length ? `(${comments.length})` : ""}
-                </button>
-                <button
-                    className={"comments-tab" + (tab === "youtube" ? " active" : "")}
-                    onClick={() => handleTabChange("youtube")}
-                >
-                    YouTube comments
-                </button>
-            </div>
+            <h3 className="comments-heading">
+                Comments {comments.length ? `(${comments.length})` : ""}
+            </h3>
 
-            {tab === "native" ? (
-                <div className="comments-native">
-                    {!isGuest ? (
-                        <div className="comment-composer">
-                            <img
-                                className="comment-avatar"
-                                src={user.channel_icon || defaultAvatar}
-                                alt=""
-                            />
-                            <div className="comment-composer-input">
-                                <textarea
-                                    value={newText}
-                                    onChange={(e) => setNewText(e.target.value)}
-                                    placeholder="Add a comment…"
-                                    rows="2"
-                                />
-                                {newText.trim() ? (
-                                    <div className="comment-composer-actions">
-                                        <button
-                                            className="comment-btn comment-btn-cancel"
-                                            onClick={() => setNewText("")}
-                                            disabled={posting}
-                                        >
-                                            Cancel
-                                        </button>
-                                        <button
-                                            className="comment-btn comment-btn-submit"
-                                            onClick={handlePost}
-                                            disabled={posting}
-                                        >
-                                            {posting ? "Posting…" : "Comment"}
-                                        </button>
-                                    </div>
-                                ) : null}
+            {!isGuest ? (
+                <div className="comment-composer">
+                    <img className="comment-avatar" src={user.channel_icon || defaultAvatar} alt="" />
+                    <div className="comment-composer-input">
+                        <textarea
+                            value={newText}
+                            onChange={(e) => setNewText(e.target.value)}
+                            placeholder="Add a comment…"
+                            rows="2"
+                        />
+                        {newText.trim() ? (
+                            <div className="comment-composer-actions">
+                                <button
+                                    className="comment-btn comment-btn-cancel"
+                                    onClick={() => setNewText("")}
+                                    disabled={posting}
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    className="comment-btn comment-btn-submit"
+                                    onClick={handlePost}
+                                    disabled={posting}
+                                >
+                                    {posting ? "Posting…" : "Comment"}
+                                </button>
                             </div>
-                        </div>
-                    ) : (
-                        <p className="comments-guest-hint">Sign in to add a comment.</p>
-                    )}
-
-                    {loading ? (
-                        <p className="comments-empty">Loading comments…</p>
-                    ) : comments.length === 0 ? (
-                        <p className="comments-empty">No comments yet. Be the first to comment.</p>
-                    ) : (
-                        <div className="comments-list">
-                            {comments.map((comment) => (
-                                <div className="comment-item" key={comment.comment_id}>
-                                    <img
-                                        className="comment-avatar"
-                                        src={comment.channel_icon || defaultAvatar}
-                                        alt=""
-                                    />
-                                    <div className="comment-body">
-                                        <div className="comment-meta">
-                                            <span className="comment-author">
-                                                {comment.channel_name || "Unknown"}
-                                            </span>
-                                            <span className="comment-time">
-                                                {getDateDifference(new Date(), new Date(comment.comment_time))}
-                                                {comment.updated_at ? " (edited)" : ""}
-                                            </span>
-                                        </div>
-                                        {editingId === comment.comment_id ? (
-                                            <div className="comment-edit">
-                                                <textarea
-                                                    value={editingText}
-                                                    onChange={(e) => setEditingText(e.target.value)}
-                                                    rows="2"
-                                                />
-                                                <div className="comment-composer-actions">
-                                                    <button
-                                                        className="comment-btn comment-btn-cancel"
-                                                        onClick={cancelEdit}
-                                                        disabled={savingEdit}
-                                                    >
-                                                        Cancel
-                                                    </button>
-                                                    <button
-                                                        className="comment-btn comment-btn-submit"
-                                                        onClick={() => saveEdit(comment)}
-                                                        disabled={savingEdit}
-                                                    >
-                                                        {savingEdit ? "Saving…" : "Save"}
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        ) : (
-                                            <p className="comment-text">{comment.comment_text}</p>
-                                        )}
-                                    </div>
-                                    {!isGuest &&
-                                    user.channel_id === comment.user_id &&
-                                    editingId !== comment.comment_id ? (
-                                        <div className="comment-actions">
-                                            <button
-                                                className="comment-action"
-                                                title="Edit comment"
-                                                onClick={() => startEdit(comment)}
-                                            >
-                                                <svg viewBox="0 0 24 24" fill="currentColor">
-                                                    <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34a.996.996 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
-                                                </svg>
-                                            </button>
-                                            <button
-                                                className="comment-action comment-action-delete"
-                                                title="Delete comment"
-                                                onClick={() => deleteComment(comment)}
-                                            >
-                                                <svg viewBox="0 0 24 24" fill="currentColor">
-                                                    <path d="M6 7h12l-1 13.01A2 2 0 0 1 15.01 22H8.99a2 2 0 0 1-1.99-1.99L6 7zm3-3h6l1 2H8l1-2zM4 6h16v2H4V6z" />
-                                                </svg>
-                                            </button>
-                                        </div>
-                                    ) : null}
-                                </div>
-                            ))}
-                        </div>
-                    )}
+                        ) : null}
+                    </div>
                 </div>
             ) : (
-                <div className="comments-youtube">
-                    {ytLoading ? (
-                        <p className="comments-empty">Loading YouTube comments…</p>
-                    ) : ytError ? (
-                        <p className="comments-empty">{ytError}</p>
-                    ) : ytDisabled || !ytComments || ytComments.length === 0 ? (
-                        <p className="comments-empty">
-                            No YouTube comments available for this video.
-                        </p>
-                    ) : (
-                        <>
-                            <div className="comments-list">
-                                {ytComments.map((comment) => (
-                                    <div className="comment-item" key={comment.id}>
-                                        <img
-                                            className="comment-avatar"
-                                            src={comment.authorAvatar || defaultAvatar}
-                                            alt=""
-                                        />
-                                        <div className="comment-body">
-                                            <div className="comment-meta">
-                                                <span className="comment-author">{comment.author}</span>
-                                                <span className="comment-time">
-                                                    {getDateDifference(new Date(), new Date(comment.publishedAt))}
-                                                </span>
+                <p className="comments-guest-hint">Sign in to add a comment.</p>
+            )}
+
+            {loading ? (
+                <p className="comments-empty">Loading comments…</p>
+            ) : comments.length === 0 ? (
+                <p className="comments-empty">No comments yet. Be the first to comment.</p>
+            ) : (
+                <>
+                    <div className="comments-list">
+                        {comments.map((comment) => (
+                            <div className="comment-item" key={comment.key}>
+                                <img
+                                    className="comment-avatar"
+                                    src={comment.avatar || defaultAvatar}
+                                    alt=""
+                                />
+                                <div className="comment-body">
+                                    <div className="comment-meta">
+                                        <span className="comment-author">{comment.author}</span>
+                                        <span className="comment-time">
+                                            {getDateDifference(new Date(), new Date(comment.time))}
+                                            {comment.edited ? " (edited)" : ""}
+                                        </span>
+                                    </div>
+                                    {editingKey === comment.key ? (
+                                        <div className="comment-edit">
+                                            <textarea
+                                                value={editingText}
+                                                onChange={(e) => setEditingText(e.target.value)}
+                                                rows="2"
+                                            />
+                                            <div className="comment-composer-actions">
+                                                <button
+                                                    className="comment-btn comment-btn-cancel"
+                                                    onClick={cancelEdit}
+                                                    disabled={savingEdit}
+                                                >
+                                                    Cancel
+                                                </button>
+                                                <button
+                                                    className="comment-btn comment-btn-submit"
+                                                    onClick={() => saveEdit(comment)}
+                                                    disabled={savingEdit}
+                                                >
+                                                    {savingEdit ? "Saving…" : "Save"}
+                                                </button>
                                             </div>
+                                        </div>
+                                    ) : (
+                                        <>
                                             <p className="comment-text">{comment.text}</p>
                                             {comment.likeCount ? (
                                                 <span className="comment-likes">
                                                     👍 {formatCount(comment.likeCount)}
                                                 </span>
                                             ) : null}
-                                        </div>
+                                        </>
+                                    )}
+                                </div>
+                                {!isGuest &&
+                                comment.source === "native" &&
+                                user.channel_id === comment.userId &&
+                                editingKey !== comment.key ? (
+                                    <div className="comment-actions">
+                                        <button
+                                            className="comment-action"
+                                            title="Edit comment"
+                                            onClick={() => startEdit(comment)}
+                                        >
+                                            <svg viewBox="0 0 24 24" fill="currentColor">
+                                                <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34a.996.996 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
+                                            </svg>
+                                        </button>
+                                        <button
+                                            className="comment-action comment-action-delete"
+                                            title="Delete comment"
+                                            onClick={() => deleteComment(comment)}
+                                        >
+                                            <svg viewBox="0 0 24 24" fill="currentColor">
+                                                <path d="M6 7h12l-1 13.01A2 2 0 0 1 15.01 22H8.99a2 2 0 0 1-1.99-1.99L6 7zm3-3h6l1 2H8l1-2zM4 6h16v2H4V6z" />
+                                            </svg>
+                                        </button>
                                     </div>
-                                ))}
+                                ) : null}
                             </div>
-                            {ytNextPageToken ? (
-                                <button
-                                    className="comments-load-more"
-                                    onClick={() => fetchYoutubeComments(ytNextPageToken)}
-                                    disabled={ytLoadingMore}
-                                >
-                                    {ytLoadingMore ? "Loading…" : "Load more"}
-                                </button>
-                            ) : null}
-                        </>
-                    )}
-                </div>
+                        ))}
+                    </div>
+                    {ytNextPageToken ? (
+                        <button
+                            className="comments-load-more"
+                            onClick={loadMoreYoutube}
+                            disabled={loadingMore}
+                        >
+                            {loadingMore ? "Loading…" : "Load more"}
+                        </button>
+                    ) : null}
+                </>
             )}
         </div>
     );
