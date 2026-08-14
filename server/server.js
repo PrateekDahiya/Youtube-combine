@@ -139,15 +139,34 @@ var config = {
     port: process.env.DB_PORT,
 };
 
-const connection = mysql.createConnection(config);
+let connection;
 
-connection.connect((err) => {
-    if (err) {
-        console.error("Database Connection Failed! Error: ", err);
-        return;
-    }
-    console.log("Database Connection Successful!");
-});
+function connectDatabase() {
+    connection = mysql.createConnection(config);
+    connection.connect((err) => {
+        if (err) {
+            console.error("Database Connection Failed! Error: ", err);
+            return;
+        }
+        console.log("Database Connection Successful!");
+    });
+    connection.on("error", (err) => {
+        console.error("MySQL connection error:", err.message);
+        if (
+            err.code === "PROTOCOL_CONNECTION_LOST" ||
+            err.code === "ECONNRESET" ||
+            err.code === "ETIMEDOUT" ||
+            err.code === "ER_CON_COUNT_ERROR"
+        ) {
+            console.log("Reconnecting to MySQL in 3 seconds...");
+            setTimeout(connectDatabase, 3000);
+        } else {
+            console.error("Unhandled MySQL error:", err);
+        }
+    });
+}
+
+connectDatabase();
 
 // Functions
 const { v4: uuidv4 } = require("uuid");
@@ -1467,7 +1486,7 @@ const getNewChannelId = async () => {
     );
     const data = await response.json();
 
-    if (data.items.length > 0) {
+    if (data.items && data.items.length > 0) {
         return data.items[0].snippet.channelId;
     } else {
         console.error("No popular videos found.");
@@ -1478,7 +1497,7 @@ const getNewChannelId = async () => {
 const addNewChannel = async (channelId) => {
     const totalResults = 50;
     const startingPageToken = null;
-    if (channelId.length > 20) {
+    if (channelId && channelId.length > 20) {
         fetchAndStoreVideos(channelId, totalResults, startingPageToken).catch(
             (error) => {
                 return "False";
