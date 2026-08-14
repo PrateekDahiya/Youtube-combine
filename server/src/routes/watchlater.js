@@ -3,7 +3,7 @@ const router = express.Router();
 const { getConnection } = require("../db");
 const { syncHandler } = require("../utils/asyncHandler");
 
-router.get("/api/watchlater", syncHandler((req, res) => {
+router.get("/watchlater", syncHandler((req, res) => {
     const user_id = req.query.user_id;
     const query = `SELECT v.*, c.* FROM watchlater lv JOIN videos v ON lv.video_id = v.video_id JOIN channels c ON v.channel_id = c.channel_id WHERE lv.user_id = ? order by added_time desc limit 100`;
 
@@ -20,7 +20,7 @@ router.get("/api/watchlater", syncHandler((req, res) => {
     });
 }));
 
-router.post("/api/addtowatchlater", syncHandler((req, res) => {
+router.post("/addtowatchlater", syncHandler((req, res) => {
     const user_id = req.body.user_id;
     const video_id = req.body.video_id;
 
@@ -46,7 +46,7 @@ router.post("/api/addtowatchlater", syncHandler((req, res) => {
     });
 }));
 
-router.post("/api/removefromwatchlater", syncHandler((req, res) => {
+router.post("/removefromwatchlater", syncHandler((req, res) => {
     const user_id = req.body.user_id;
     const video_id = req.body.video_id;
 
@@ -76,7 +76,7 @@ router.post("/api/removefromwatchlater", syncHandler((req, res) => {
     });
 }));
 
-router.get("/api/iswatchlater", syncHandler((req, res) => {
+router.get("/iswatchlater", syncHandler((req, res) => {
     const user_id = req.query.user_id;
     const video_id = req.query.video_id;
 

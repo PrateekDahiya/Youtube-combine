@@ -4,7 +4,7 @@ const { sendEmail } = require("../email");
 const { fetchAndStoreVideos } = require("../youtube");
 const { asyncHandler } = require("../utils/asyncHandler");
 
-router.post("/api/feedback", asyncHandler(async (req, res) => {
+router.post("/feedback", asyncHandler(async (req, res) => {
     const feedback = req.body.feedback;
     const reqchannelid = req.body.reqchannelid;
     const name = req.body.name;

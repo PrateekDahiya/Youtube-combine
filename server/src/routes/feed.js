@@ -11,7 +11,7 @@ const {
 } = require("../utils");
 const { syncHandler, asyncHandler } = require("../utils/asyncHandler");
 
-router.get("/api/home", syncHandler((req, res) => {
+router.get("/home", syncHandler((req, res) => {
     const page_no = Number(req.query.page || 1);
     const query = `SELECT * FROM channels c join videos v on c.channel_id=v.channel_id where isShort = 0 and v.upload_status = 0 order by upload_time desc limit 24 offset ?`;
     const connection = getConnection();
@@ -24,7 +24,7 @@ router.get("/api/home", syncHandler((req, res) => {
     });
 }));
 
-router.get("/api/feed-by-tag", syncHandler((req, res) => {
+router.get("/feed-by-tag", syncHandler((req, res) => {
     const tag = req.query.tag || "";
     const type = req.query.type || "";
     const page_no = Number(req.query.page || 1);
@@ -52,7 +52,7 @@ router.get("/api/feed-by-tag", syncHandler((req, res) => {
     );
 }));
 
-router.get("/api/home-tags", asyncHandler(async (req, res) => {
+router.get("/home-tags", asyncHandler(async (req, res) => {
     const user_id = req.query.user_id;
 
     if (!user_id) {
@@ -80,7 +80,7 @@ router.get("/api/home-tags", asyncHandler(async (req, res) => {
     res.status(200).json({ tags });
 }));
 
-router.get("/api/shorts", syncHandler((req, res) => {
+router.get("/shorts", syncHandler((req, res) => {
     const video_id = req.query.video_id;
     const needmore = req.query.needmore || 0;
 
@@ -124,7 +124,7 @@ router.get("/api/shorts", syncHandler((req, res) => {
     });
 }));
 
-router.get("/api/subscriptions", syncHandler((req, res) => {
+router.get("/subscriptions", syncHandler((req, res) => {
     const user_id = req.query.user_id;
     const isShort = req.query.isShort;
     const page_no = Number(req.query.page || 1);
@@ -140,7 +140,7 @@ router.get("/api/subscriptions", syncHandler((req, res) => {
     });
 }));
 
-router.get("/api/category", syncHandler((req, res) => {
+router.get("/category", syncHandler((req, res) => {
     const category = req.query.category;
     const type = req.query.type;
     const page_no = Number(req.query.page || 1);
@@ -165,7 +165,7 @@ router.get("/api/category", syncHandler((req, res) => {
     );
 }));
 
-router.get("/api/trendings", syncHandler((req, res) => {
+router.get("/trendings", syncHandler((req, res) => {
     const type = req.query.type;
     const page_no = Number(req.query.page || 1);
 
@@ -192,7 +192,7 @@ router.get("/api/trendings", syncHandler((req, res) => {
     });
 }));
 
-router.get("/api/search", syncHandler((req, res) => {
+router.get("/search", syncHandler((req, res) => {
     const query = req.query.query;
     const searchQuery = `%${query}%`;
     const page_no = Number(req.query.page || 1);

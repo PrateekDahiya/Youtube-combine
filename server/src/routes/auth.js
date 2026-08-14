@@ -7,7 +7,7 @@ const { syncHandler, asyncHandler } = require("../utils/asyncHandler");
 
 const userDetailFields = ["username", "email", "DOB"];
 
-router.get("/api/login", syncHandler((req, res) => {
+router.get("/login", syncHandler((req, res) => {
     const username = req.query.username;
     const email = req.query.email;
     const hashpass = req.query.hashpass;
@@ -26,7 +26,7 @@ router.get("/api/login", syncHandler((req, res) => {
     });
 }));
 
-router.post("/api/register", syncHandler((req, res) => {
+router.post("/register", syncHandler((req, res) => {
     const values = {
         fname: req.body.fnamefix,
         lname: req.body.lnamefix,
@@ -101,7 +101,7 @@ router.post("/api/register", syncHandler((req, res) => {
     );
 }));
 
-router.post("/api/getUser", syncHandler((req, res) => {
+router.post("/getUser", syncHandler((req, res) => {
     const user_id = req.body.user_id;
     const query = `select * from user u join channels c on u.channel_id=c.channel_id where user_id= ?`;
 
@@ -115,7 +115,7 @@ router.post("/api/getUser", syncHandler((req, res) => {
     });
 }));
 
-router.post("/api/updateUserDetail", syncHandler((req, res) => {
+router.post("/updateUserDetail", syncHandler((req, res) => {
     const field = req.body.field;
     const value = req.body.value;
     const user_id = req.body.user_id;
@@ -145,7 +145,7 @@ const channelDetailFields = [
     "keywords",
 ];
 
-router.post("/api/updateChannelDetail", syncHandler((req, res) => {
+router.post("/updateChannelDetail", syncHandler((req, res) => {
     const field = req.body.field;
     const value = req.body.value;
     const channel_id = req.body.channel_id;
@@ -166,7 +166,7 @@ router.post("/api/updateChannelDetail", syncHandler((req, res) => {
     });
 }));
 
-router.post("/api/deleteUser", syncHandler((req, res) => {
+router.post("/deleteUser", syncHandler((req, res) => {
     const channel_id = req.body.channel_id;
     const user_id = req.body.user_id;
 

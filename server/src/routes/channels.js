@@ -4,7 +4,7 @@ const { getConnection } = require("../db");
 const { getChannelIds, processChannels, getNewChannelId, addNewChannel } = require("../youtube");
 const { syncHandler, asyncHandler } = require("../utils/asyncHandler");
 
-router.get("/api/yourchannel", syncHandler((req, res) => {
+router.get("/yourchannel", syncHandler((req, res) => {
     const channel_id = req.query.channel_id;
     const query = `select * from channels where channel_id=?`;
 
@@ -18,7 +18,7 @@ router.get("/api/yourchannel", syncHandler((req, res) => {
     });
 }));
 
-router.get("/api/channel", syncHandler((req, res) => {
+router.get("/channel", syncHandler((req, res) => {
     const channel_id = req.query.channel_id;
     const query = `select * from channels where channel_id=?`;
 
@@ -32,7 +32,7 @@ router.get("/api/channel", syncHandler((req, res) => {
     });
 }));
 
-router.get("/api/getallchannels", syncHandler((req, res) => {
+router.get("/getallchannels", syncHandler((req, res) => {
     const query = `select channel_id from channels`;
 
     const connection = getConnection();
@@ -44,7 +44,7 @@ router.get("/api/getallchannels", syncHandler((req, res) => {
     });
 }));
 
-router.get("/api/get-channel-ids", syncHandler((req, res) => {
+router.get("/get-channel-ids", syncHandler((req, res) => {
     const query = `SELECT channel_id FROM channels`;
 
     const connection = getConnection();
@@ -60,7 +60,7 @@ let offset = 0;
 let batchSize = 5;
 let totalResults = 5;
 
-router.get("/api/update_channels", asyncHandler(async (req, res) => {
+router.get("/update_channels", asyncHandler(async (req, res) => {
     const channelIds = await getChannelIds(offset, batchSize);
     if (channelIds.length === 0) {
         offset = 0;
@@ -72,7 +72,7 @@ router.get("/api/update_channels", asyncHandler(async (req, res) => {
     res.status(200).json({ Channels_updated_successfully: channelIds });
 }));
 
-router.get("/api/addnewchannel", asyncHandler(async (req, res) => {
+router.get("/addnewchannel", asyncHandler(async (req, res) => {
     const channelId = await getNewChannelId();
     const success = await addNewChannel(channelId);
     res.status(200).json({

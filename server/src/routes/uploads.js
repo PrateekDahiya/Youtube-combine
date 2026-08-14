@@ -5,7 +5,7 @@ const { generateVideoId } = require("../utils");
 const { upload, videoUpload, processVideoUpload, isCloudinaryConfigured } = require("../uploads");
 const { syncHandler } = require("../utils/asyncHandler");
 
-router.post("/api/upload", syncHandler((req, res) => {
+router.post("/upload", syncHandler((req, res) => {
     upload.single("file")(req, res, async (err) => {
         if (err) {
             return res
@@ -32,7 +32,7 @@ router.post("/api/upload", syncHandler((req, res) => {
     });
 }));
 
-router.post("/api/uploadVideo", syncHandler((req, res) => {
+router.post("/uploadVideo", syncHandler((req, res) => {
     videoUpload.fields([
         { name: "video", maxCount: 1 },
         { name: "thumbnail", maxCount: 1 },

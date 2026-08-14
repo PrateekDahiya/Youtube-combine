@@ -3,7 +3,7 @@ const router = express.Router();
 const { getConnection } = require("../db");
 const { syncHandler } = require("../utils/asyncHandler");
 
-router.get("/api/likedvideos", syncHandler((req, res) => {
+router.get("/likedvideos", syncHandler((req, res) => {
     const user_id = req.query.user_id;
     const query = `SELECT v.*, c.* FROM likedvideos lv JOIN videos v ON lv.video_id = v.video_id JOIN channels c ON v.channel_id = c.channel_id WHERE lv.user_id = ? order by liked_time desc limit 100`;
 
@@ -20,7 +20,7 @@ router.get("/api/likedvideos", syncHandler((req, res) => {
     });
 }));
 
-router.post("/api/addtoliked", syncHandler((req, res) => {
+router.post("/addtoliked", syncHandler((req, res) => {
     const user_id = req.body.user_id;
     const video_id = req.body.video_id;
 
@@ -46,7 +46,7 @@ router.post("/api/addtoliked", syncHandler((req, res) => {
     });
 }));
 
-router.post("/api/removefromliked", syncHandler((req, res) => {
+router.post("/removefromliked", syncHandler((req, res) => {
     const user_id = req.body.user_id;
     const video_id = req.body.video_id;
 
@@ -76,7 +76,7 @@ router.post("/api/removefromliked", syncHandler((req, res) => {
     });
 }));
 
-router.get("/api/isliked", syncHandler((req, res) => {
+router.get("/isliked", syncHandler((req, res) => {
     const user_id = req.query.user_id;
     const video_id = req.query.video_id;
 

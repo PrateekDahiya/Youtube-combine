@@ -3,7 +3,7 @@ const router = express.Router();
 const { getConnection } = require("../db");
 const { syncHandler } = require("../utils/asyncHandler");
 
-router.get("/api/history", syncHandler((req, res) => {
+router.get("/history", syncHandler((req, res) => {
     const user_id = req.query.user_id;
     const query = `SELECT v.*, c.*,h.watched_time FROM history h JOIN videos v ON h.video_id = v.video_id JOIN channels c ON v.channel_id = c.channel_id WHERE h.user_id = ? ORDER BY h.watched_time DESC LIMIT 100`;
 
@@ -16,7 +16,7 @@ router.get("/api/history", syncHandler((req, res) => {
     });
 }));
 
-router.post("/api/addtohistory", syncHandler((req, res) => {
+router.post("/addtohistory", syncHandler((req, res) => {
     const user_id = req.body.user_id;
     const video_id = req.body.video_id;
 
@@ -42,7 +42,7 @@ router.post("/api/addtohistory", syncHandler((req, res) => {
     });
 }));
 
-router.post("/api/removefromhistory", syncHandler((req, res) => {
+router.post("/removefromhistory", syncHandler((req, res) => {
     const user_id = req.body.user_id;
     const video_id = req.body.video_id;
 

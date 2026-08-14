@@ -8,7 +8,7 @@ const {
 } = require("../youtube");
 const { syncHandler, asyncHandler } = require("../utils/asyncHandler");
 
-router.get("/api/watch", syncHandler((req, res) => {
+router.get("/watch", syncHandler((req, res) => {
     const videoId = req.query.video_id;
     const query = `select * from videos v join channels c on v.channel_id=c.channel_id where v.video_id= ?`;
 
@@ -21,7 +21,7 @@ router.get("/api/watch", syncHandler((req, res) => {
     });
 }));
 
-router.get("/api/related-videos", syncHandler((req, res) => {
+router.get("/related-videos", syncHandler((req, res) => {
     const video_id = req.query.video_id;
 
     if (!video_id) {
@@ -31,7 +31,7 @@ router.get("/api/related-videos", syncHandler((req, res) => {
     fetchRelatedVideos(video_id, res);
 }));
 
-router.get("/api/personalized-feed", asyncHandler(async (req, res) => {
+router.get("/personalized-feed", asyncHandler(async (req, res) => {
     const user_chl_id = req.query.user_id;
     const page_no = req.query.page || 1;
 
@@ -73,7 +73,7 @@ router.get("/api/personalized-feed", asyncHandler(async (req, res) => {
     });
 }));
 
-router.get("/api/getvideobyid", syncHandler((req, res) => {
+router.get("/getvideobyid", syncHandler((req, res) => {
     const video_id = req.query.video_id;
     const query = `select * from videos v join channels c on v.channel_id=c.channel_id where v.video_id= ?`;
 
@@ -87,7 +87,7 @@ router.get("/api/getvideobyid", syncHandler((req, res) => {
     });
 }));
 
-router.get("/api/getvideosofchannel", syncHandler((req, res) => {
+router.get("/getvideosofchannel", syncHandler((req, res) => {
     const channel_id = req.query.channel_id;
     const searchTerm = req.query.query || "";
     const type = req.query.type;
@@ -139,7 +139,7 @@ router.get("/api/getvideosofchannel", syncHandler((req, res) => {
     }
 }));
 
-router.get("/api/uploadStatus", syncHandler((req, res) => {
+router.get("/uploadStatus", syncHandler((req, res) => {
     const video_id = req.query.video_id;
     const query = `SELECT video_id, upload_status, upload_progress, link, upload_error FROM videos WHERE video_id = ?`;
 
@@ -153,7 +153,7 @@ router.get("/api/uploadStatus", syncHandler((req, res) => {
     });
 }));
 
-router.get("/api/uploadingVideos", syncHandler((req, res) => {
+router.get("/uploadingVideos", syncHandler((req, res) => {
     const channel_id = req.query.channel_id;
     const query = `SELECT video_id, title, upload_status, upload_progress, upload_error, thumbnail_link, link, video_description, tags, category, isShort FROM videos WHERE channel_id = ? AND (upload_status != 0 OR link LIKE 'https://res.cloudinary.com/%' OR link LIKE '/uploads/%') ORDER BY upload_time DESC LIMIT 100`;
 
@@ -167,7 +167,7 @@ router.get("/api/uploadingVideos", syncHandler((req, res) => {
     });
 }));
 
-router.post("/api/updateVideo", syncHandler((req, res) => {
+router.post("/updateVideo", syncHandler((req, res) => {
     const video_id = req.body.video_id;
     const user_id = req.body.user_id;
     const title = (req.body.title || "").trim() || "Untitled";

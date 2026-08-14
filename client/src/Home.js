@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import Card from "./Card";
-import axios from "axios";
+import { feedApi } from "./api";
 import "./Home.css";
 import Cardloading from "./Cardloading";
 import CardGrid from "./CardGrid";
@@ -11,7 +11,6 @@ const Home = (params) => {
     const [topTags, setTopTags] = useState([]);
     const [selectedTag, setSelectedTag] = useState("All");
     const [selectedType, setSelectedType] = useState("All");
-    const serverurl = process.env.REACT_APP_SERVER_URL;
     const [page_no, setpage_no] = useState(1);
     const [loadingMore, setLoadingMore] = useState(false);
     const [hasMore, setHasMore] = useState(true);
@@ -44,9 +43,7 @@ const Home = (params) => {
             }
 
             try {
-                const response = await axios.get(
-                    `${serverurl}/home-tags?user_id=${user.channel_id}`
-                );
+                const response = await feedApi.getHomeTags(user.channel_id);
                 setTopTags(response.data.tags || []);
             } catch (error) {
                 console.log("Error in fetching home tags: ", error.message);
@@ -54,7 +51,7 @@ const Home = (params) => {
         };
 
         fetchHomeTags();
-    }, [serverurl, user]);
+    }, [user]);
 
     useEffect(() => {
         if (loadingMore || !hasMore) return;
@@ -63,28 +60,16 @@ const Home = (params) => {
             try {
                 let response;
                 if (selectedTag !== "All") {
-                    response = await axios.get(
-                        `${serverurl}/feed-by-tag?tag=${encodeURIComponent(
-                            selectedTag
-                        )}&page=${page_no}`
-                    );
+                    response = await feedApi.getFeedByTag(selectedTag, page_no);
                     mergeVideos(response.data.videos || []);
                 } else if (selectedType !== "All") {
-                    response = await axios.get(
-                        `${serverurl}/feed-by-tag?type=${encodeURIComponent(
-                            selectedType
-                        )}&page=${page_no}`
-                    );
+                    response = await feedApi.getFeedByType(selectedType, page_no);
                     mergeVideos(response.data.videos || []);
                 } else if (user !== "Guest" && user.channel_id) {
-                    response = await axios.get(
-                        `${serverurl}/personalized-feed?page=${page_no}&user_id=${user.channel_id}`
-                    );
+                    response = await feedApi.getPersonalizedFeed(user.channel_id, page_no);
                     mergeVideos(response.data.videos || []);
                 } else {
-                    response = await axios.get(
-                        `${serverurl}/home?page=${page_no}`
-                    );
+                    response = await feedApi.getHome(page_no);
                     mergeVideos(response.data.videos || []);
                 }
             } catch (error) {
@@ -94,7 +79,7 @@ const Home = (params) => {
             }
         };
         fetchData();
-    }, [page_no, user.channel_id, selectedTag, selectedType, serverurl, user]);
+    }, [page_no, user.channel_id, selectedTag, selectedType, user]);
 
     const loadMore = () => {
         if (loadingMore || !hasMore) return;
