@@ -98,7 +98,7 @@ const Channel = (params) => {
         setLoadingMore(true);
         const fetchVideos = async () => {
             try {
-                const response = await videoApi.getVideosOfChannel(channel_id, typeShort, query, page_no);
+                const response = await videoApi.getVideosOfChannel(channel_id, typeShort, query, page_no, user.channel_id);
                 mergeVideos(response.videos || []);
             } catch (error) {
                 console.log("Error fetching videos:", error.message);

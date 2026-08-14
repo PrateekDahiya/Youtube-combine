@@ -51,19 +51,6 @@ const Card = React.memo((params) => {
         setWatchlater(false);
     };
 
-    useEffect(() => {
-        const checkWatchlater = async () => {
-            if (!user_chl_id || !video_id || !isHovered) return;
-            try {
-                const response = await watchlaterApi.isWatchlater(user_chl_id, video_id);
-                setWatchlater(response.watchlater);
-            } catch (error) {
-                console.log("Error checking watchlater:", error.message);
-            }
-        };
-        checkWatchlater();
-    }, [user_chl_id, video_id, isHovered]);
-
     const handleWatchlater = useCallback(() => {
         if (watchlater === true) {
             removewatchlater();
@@ -77,7 +64,8 @@ const Card = React.memo((params) => {
         setForTrending(params.forTrending || false);
         setForrelated(params.forrelated || false);
         setUser_chl_id(user.channel_id);
-    }, [params.data.video_id, user, params.forTrending, params.forrelated]);
+        setWatchlater(Boolean(params.data.is_watchlater));
+    }, [params.data.video_id, user, params.forTrending, params.forrelated, params.data.is_watchlater]);
 
     const getDateDifference = (date1, date2) => {
         if (!date1 || !date2) return "";

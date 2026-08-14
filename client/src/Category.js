@@ -66,7 +66,7 @@ const Category = (params) => {
         setLoadingMore(true);
         const fetchData = async () => {
             try {
-                const response = await categoryApi.getCategory(category, typeShort, page_no, cursorRef.current);
+                const response = await categoryApi.getCategory(category, typeShort, page_no, cursorRef.current, user.channel_id);
                 mergeVideos(response.videos || [], response.nextCursor);
                 setdata((prev) => ({ ...prev, caticon: response.caticon, category: response.category }));
             } catch (error) {

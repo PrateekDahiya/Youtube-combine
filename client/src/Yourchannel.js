@@ -30,7 +30,7 @@ const Yourchannel = (params) => {
     useEffect(() => {
         const fetchVideos = async () => {
             try {
-                const response = await videoApi.getVideosOfChannel(user.channel_id, typeShort);
+                const response = await videoApi.getVideosOfChannel(user.channel_id, typeShort, "", 1, user.channel_id);
                 setVideos(response);
             } catch (error) {
                 console.log("Error fetching videos:", error.message);

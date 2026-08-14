@@ -1,10 +1,9 @@
-import api from "./client";
+import { videosApi } from "./videos";
 
 export const shortsApi = {
     getShorts: (videoId = null, needmore = 0) => {
-        const params = {};
-        if (videoId) params.video_id = videoId;
-        if (needmore) params.needmore = needmore;
-        return api.get("/shorts", { params });
+        const body = { type: "shorts", needmore };
+        if (videoId) body.video_id = videoId;
+        return videosApi.getVideos(body);
     },
 };

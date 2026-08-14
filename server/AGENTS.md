@@ -11,6 +11,7 @@ This guide is for AI agents (and humans pairing with them) editing the **VidVaul
   - `src/youtube/` — YouTube Data API v3 fetching logic.
   - `src/uploads/` — Multer + Cloudinary upload helpers.
   - `src/utils/` — ID generators, feed SQL builder, date/duration helpers, category mappings.
+  - `src/feed/` — one handler file per video feed `type` (home, tag, category, trending, subscriptions, personalized, watchlater, liked, history, channel, search, related, watch, videobyid, shorts) + `index.js` registry + `helpers.js` shared plumbing. Add a new type by adding a new file here.
   - `src/db/` — MySQL connection (singleton + reconnection logic).
   - `src/config/` — Cloudinary config, `API_KEYS` parsing.
   - `src/email/` — Resend email helper.

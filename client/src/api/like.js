@@ -1,8 +1,9 @@
 import api from "./client";
+import { videosApi } from "./videos";
 
 export const likeApi = {
     getLikedVideos: (userId) =>
-        api.get("/likedvideos", { params: { user_id: userId } }),
+        videosApi.getVideos({ type: "liked", user_id: userId }),
 
     addLike: (userId, videoId) =>
         api.post("/addtoliked", { user_id: userId, video_id: videoId }),

@@ -10,7 +10,7 @@ import InfiniteScroll from "./InfiniteScroll";
 
 const defaultAvatar = "https://cdn-icons-png.flaticon.com/128/1077/1077063.png";
 
-const Search = () => {
+const Search = (params) => {
     const locationHook = useLocation();
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -19,6 +19,7 @@ const Search = () => {
     const [hasMore, setHasMore] = useState(true);
     const queryString = locationHook.search;
     const searchQuery = new URLSearchParams(queryString).get("query") || "";
+    const user = params.user;
 
     const mergeVideos = (videos) => {
         setData((prev) => {
@@ -48,7 +49,7 @@ const Search = () => {
         setLoadingMore(true);
         const fetchData = async () => {
             try {
-                const response = await searchApi.search(searchQuery, page_no);
+                const response = await searchApi.search(searchQuery, page_no, user.channel_id);
                 mergeVideos(response.videos || []);
                 setData((prev) => ({
                     ...(prev || {}),
