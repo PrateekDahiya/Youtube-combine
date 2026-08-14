@@ -3,6 +3,59 @@ import { uploadApi } from "./api";
 import { useNavigate } from "react-router-dom";
 import "./UploadVideo.css";
 
+const CHUNK_SIZE = 5 * 1024 * 1024;
+
+async function cloudinaryChunkedUpload(file, resourceType, onProgress) {
+    const uniqueId =
+        "vidvault-" + Math.random().toString(36).slice(2) + "-" + Date.now();
+    const total = file.size;
+    const totalChunks = Math.max(1, Math.ceil(total / CHUNK_SIZE));
+    let result = null;
+    for (let i = 0; i < totalChunks; i++) {
+        const start = i * CHUNK_SIZE;
+        const end = Math.min(start + CHUNK_SIZE, total);
+        const piece = file.slice(start, end);
+        const sig = await uploadApi.getUploadSignature(resourceType);
+        const formData = new FormData();
+        formData.append("file", piece);
+        formData.append("api_key", sig.api_key);
+        formData.append("timestamp", String(sig.timestamp));
+        formData.append("signature", sig.signature);
+        formData.append("folder", sig.folder);
+        const response = await fetch(
+            `https://api.cloudinary.com/v1_1/${sig.cloud_name}/${resourceType}/upload`,
+            {
+                method: "POST",
+                body: formData,
+                headers: {
+                    "X-Unique-Upload-Id": uniqueId,
+                    "Content-Range": `bytes ${start}-${end - 1}/${total}`,
+                },
+            }
+        );
+        if (!response.ok) {
+            const errText = await response.text();
+            throw new Error(
+                "Chunk upload failed: " + String(errText).slice(0, 120)
+            );
+        }
+        if (onProgress) onProgress(Math.round((end / total) * 100));
+        if (i === totalChunks - 1) {
+            result = await response.json();
+        }
+    }
+    return result;
+}
+
+async function cloudinaryIsAvailable() {
+    try {
+        await uploadApi.getUploadSignature("video");
+        return true;
+    } catch (err) {
+        return false;
+    }
+}
+
 const UploadVideo = (params) => {
     const [title, setTitle] = useState("");
     const [description, setDescription] = useState("");
@@ -14,6 +67,7 @@ const UploadVideo = (params) => {
     const [videoPreview, setVideoPreview] = useState("");
     const [thumbPreview, setThumbPreview] = useState("");
     const [uploading, setUploading] = useState(false);
+    const [progress, setProgress] = useState(0);
     const [error, setError] = useState("");
     const [success, setSuccess] = useState("");
     const videoInputRef = useRef(null);
@@ -70,27 +124,43 @@ const UploadVideo = (params) => {
         setUploading(true);
         setError("");
         setSuccess("");
-        const formData = new FormData();
-        formData.append("video", videoFile);
-        if (thumbFile) formData.append("thumbnail", thumbFile);
-        formData.append("title", title);
-        formData.append("description", description);
-        formData.append("tags", tags);
-        formData.append("category", category);
-        formData.append("type", type);
-        formData.append("user_id", user.channel_id);
-        formData.append("duration", 0);
+        setProgress(0);
+        const metadata = {
+            title,
+            description,
+            tags,
+            category,
+            type,
+            user_id: user.channel_id,
+            duration: 0,
+        };
 
         try {
-            await uploadApi.uploadVideo(videoFile, thumbFile, {
-                title,
-                description,
-                tags,
-                category,
-                type,
-                user_id: user.channel_id,
-                duration: 0,
-            });
+            if (await cloudinaryIsAvailable()) {
+                const videoResult = await cloudinaryChunkedUpload(
+                    videoFile,
+                    "video",
+                    setProgress
+                );
+                setProgress(100);
+                let thumbnail_link = "";
+                if (thumbFile) {
+                    const thumbResult = await cloudinaryChunkedUpload(
+                        thumbFile,
+                        "image",
+                        () => {}
+                    );
+                    thumbnail_link =
+                        (thumbResult && thumbResult.secure_url) || "";
+                }
+                await uploadApi.completeVideoUpload({
+                    ...metadata,
+                    link: (videoResult && videoResult.secure_url) || "",
+                    thumbnail_link,
+                });
+            } else {
+                await uploadApi.uploadVideo(videoFile, thumbFile, metadata);
+            }
             setSuccess("Upload started! Track progress in Your channel.");
             setTimeout(() => {
                 if (params.onClose) params.onClose();
@@ -207,6 +277,19 @@ const UploadVideo = (params) => {
                         ) : null}
                     </div>
                     {error ? <p className="upload-error">{error}</p> : null}
+                    {uploading ? (
+                        <div className="upload-progress-block">
+                            <div className="upload-progress-bar">
+                                <div
+                                    className="upload-progress-fill"
+                                    style={{ width: `${progress}%` }}
+                                />
+                            </div>
+                            <p className="upload-progress-text">
+                                Uploading… {progress}%
+                            </p>
+                        </div>
+                    ) : null}
                     {success ? (
                         <p className="upload-success">{success}</p>
                     ) : null}
