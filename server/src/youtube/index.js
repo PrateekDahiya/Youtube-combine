@@ -184,19 +184,25 @@ const fetchAndStoreVideos = async (
 
                 await Promise.all(videoPromises);
 
-                const commentPromises = videoIds.map((id) =>
-                    fetchAndCacheYoutubeComments(id).catch((commentError) => {
+                // Only videos that were actually just inserted have a row to
+                // FK against; videoIds can include ones videos.list dropped
+                // (private/deleted/restricted). Sequential, not Promise.all,
+                // to keep concurrent writes to `comments` low and avoid
+                // InnoDB deadlocks under parallel channel processing.
+                for (const video of videos) {
+                    try {
+                        await fetchAndCacheYoutubeComments(video.videoId);
+                    } catch (commentError) {
                         console.log(
                             "Error caching comments for video " +
-                                id +
+                                video.videoId +
                                 ": " +
                                 (commentError.response
                                     ? JSON.stringify(commentError.response.data)
                                     : commentError.message)
                         );
-                    })
-                );
-                await Promise.all(commentPromises);
+                    }
+                }
 
                 fetchedResults += videos.length;
                 nextPageToken = searchResponse.data.nextPageToken;
@@ -419,8 +425,10 @@ const fetchYoutubeComments = async (videoId, pageToken = null) => {
     }
 };
 
-const upsertYoutubeComments = (videoId, comments) => {
-    if (!comments || comments.length === 0) return Promise.resolve();
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const upsertYoutubeComments = async (videoId, comments, attempt = 0) => {
+    if (!comments || comments.length === 0) return;
 
     const connection = getConnection();
     const query = `INSERT INTO comments (video_id, source, external_id, author_name, author_avatar, like_count, comment_text, comment_time)
@@ -437,12 +445,21 @@ const upsertYoutubeComments = (videoId, comments) => {
         c.publishedAt ? convertToMySQLDatetime(c.publishedAt) : null,
     ]);
 
-    return new Promise((resolve, reject) => {
-        connection.query(query, [values], (error) => {
-            if (error) return reject(error);
-            resolve();
+    try {
+        await new Promise((resolve, reject) => {
+            connection.query(query, [values], (error) => {
+                if (error) return reject(error);
+                resolve();
+            });
         });
-    });
+    } catch (error) {
+        const isDeadlock = error.code === "ER_LOCK_DEADLOCK" || error.errno === 1213;
+        if (isDeadlock && attempt < 2) {
+            await sleep(150 * (attempt + 1));
+            return upsertYoutubeComments(videoId, comments, attempt + 1);
+        }
+        throw error;
+    }
 };
 
 const fetchAndCacheYoutubeComments = async (videoId, pageToken = null) => {
