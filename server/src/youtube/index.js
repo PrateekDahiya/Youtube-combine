@@ -1,5 +1,5 @@
 const axios = require("axios");
-const { createNewConnection } = require("../db");
+const { createNewConnection, getConnection } = require("../db");
 const { API_KEYS } = require("../config");
 const {
     convertToMySQLDatetime,
@@ -300,6 +300,19 @@ function getRandomCategory() {
     return youtubeCategories[randomIndex];
 }
 
+const fetchVideoHistory = async (user_id) => {
+    const connection = getConnection();
+    return new Promise((resolve, reject) => {
+        const query = `SELECT v.*, c.*, h.watched_time FROM history h JOIN videos v ON h.video_id = v.video_id JOIN channels c ON v.channel_id = c.channel_id WHERE h.user_id = ? ORDER BY h.watched_time DESC LIMIT 100`;
+        connection.query(query, [user_id], (error, results) => {
+            if (error) {
+                return reject(error);
+            }
+            resolve(results);
+        });
+    });
+};
+
 module.exports = {
     fetchAndStoreVideos,
     getChannelIds,
@@ -307,6 +320,7 @@ module.exports = {
     getNewChannelId,
     addNewChannel,
     getRandomCategory,
+    fetchVideoHistory,
     getCurrentApiKeyIndex: () => currentApiKeyIndex,
     setCurrentApiKeyIndex: (val) => { currentApiKeyIndex = val; },
 };
