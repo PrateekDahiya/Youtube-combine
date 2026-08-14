@@ -393,7 +393,7 @@ router.get("/search", syncHandler((req, res) => {
 
         if (isFullTextAvailable() && query && query.trim().length >= 3) {
             const ftQuery = buildFullTextQuery("title", query);
-            videoQuery = `select * from channels c join videos v on c.channel_id=v.channel_id where v.upload_status = 0 and (match(v.title, v.tags) against (? in boolean mode) or c.channel_name like ?) order by v.upload_time desc limit 24 offset ?`;
+            videoQuery = `select * from channels c join videos v on c.channel_id=v.channel_id where v.upload_status = 0 and (match(v.title, v.tags, v.video_description) against (? in boolean mode) or c.channel_name like ?) order by v.upload_time desc limit 24 offset ?`;
             videoParams = [ftQuery, searchQuery, 24 * (page_no - 1)];
             channelQuery = `select * from channels where match(channel_name, keywords, short_desc) against (? in boolean mode) order by subscribers desc limit 20`;
             channelParams = [ftQuery];

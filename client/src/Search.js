@@ -18,6 +18,7 @@ const Search = () => {
     const [loadingMore, setLoadingMore] = useState(false);
     const [hasMore, setHasMore] = useState(true);
     const queryString = locationHook.search;
+    const searchQuery = new URLSearchParams(queryString).get("query") || "";
 
     const mergeVideos = (videos) => {
         setData((prev) => {
@@ -47,7 +48,7 @@ const Search = () => {
         setLoadingMore(true);
         const fetchData = async () => {
             try {
-                const response = await searchApi.search(queryString.replace("?", ""), page_no);
+                const response = await searchApi.search(searchQuery, page_no);
                 mergeVideos(response.videos || []);
                 setData((prev) => ({
                     ...(prev || {}),
