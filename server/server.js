@@ -12,6 +12,14 @@ const multer = require("multer");
 const cloudinary = require("cloudinary").v2;
 const API_KEYS = JSON.parse(process.env.API_KEYS);
 
+process.on("unhandledRejection", (reason) => {
+    console.error("Unhandled Promise Rejection:", reason);
+});
+
+process.on("uncaughtException", (err) => {
+    console.error("Uncaught Exception:", err);
+});
+
 cloudinary.config({
     cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
     api_key: process.env.CLOUDINARY_API_KEY,
@@ -221,6 +229,7 @@ app.get("/api/home", (req, res) => {
     connection.query(query, [24 * (page_no - 1)], (error, results) => {
         if (error) {
             console.log(error);
+            return res.status(500).json({ error: "Database query failed" });
         }
         res.status(200).json({ page: "home", videos: results });
     });
@@ -353,6 +362,7 @@ app.get("/api/yourchannel", (req, res) => {
     connection.query(query, [channel_id], (error, results) => {
         if (error) {
             console.log(error);
+            return res.status(500).json({ error: "Database query failed" });
         }
         res.status(200).json({ page: "yourchannel", channel: results });
     });
@@ -367,6 +377,7 @@ app.get("/api/subscriptions", (req, res) => {
     connection.query(query, [user_id, isShort, 24 * (page_no - 1)], (error, results) => {
         if (error) {
             console.log(error);
+            return res.status(500).json({ error: "Database query failed" });
         }
         res.status(200).json({ page: "subscription", data: results });
     });
@@ -391,6 +402,7 @@ app.get("/api/channel", (req, res) => {
     connection.query(query, [channel_id], (error, results) => {
         if (error) {
             console.log(error);
+            return res.status(500).json({ error: "Database query failed" });
         }
         res.status(200).json({ page: "channel", channel: results });
     });
@@ -445,6 +457,7 @@ app.get("/api/category", (req, res) => {
         (error, results) => {
             if (error) {
                 console.log(error);
+                return res.status(500).json({ error: "Database query failed" });
             }
             res.status(200).json({
                 page: "category",
@@ -556,7 +569,8 @@ function fetchRelatedVideos(video_id, res) {
         }
 
         // Split and trim the tags, and ensure they are valid
-        const tags = results[0].tags
+        const rawTags = results[0].tags || "";
+        const tags = rawTags
             .split(",")
             .map((tag) => tag.trim())
             .filter((tag) => tag); // Remove any empty tags
@@ -748,6 +762,7 @@ app.get("/api/likedvideos", (req, res) => {
     connection.query(query, [user_id], (error, results) => {
         if (error) {
             console.log(error);
+            return res.status(500).json({ error: "Database query failed" });
         }
         res.status(200).json({
             page: "likedvideos",
@@ -762,6 +777,7 @@ app.get("/api/watchlater", (req, res) => {
     connection.query(query, [user_id], (error, results) => {
         if (error) {
             console.log(error);
+            return res.status(500).json({ error: "Database query failed" });
         }
         res.status(200).json({
             page: "watchlater",
@@ -770,14 +786,17 @@ app.get("/api/watchlater", (req, res) => {
     });
 });
 
-app.get("/api/login", async (req, res) => {
+app.get("/api/login", (req, res) => {
     const username = req.query.username;
     const email = req.query.email;
     const hashpass = req.query.hashpass;
     const query = `select * from channels c join user u on u.channel_id=c.channel_id where (u.email=? or u.user_id=?) and u.pass=?`;
     connection.query(query, [email, username, hashpass], (error, results) => {
         if (error) {
-            console.log("User Not Found: " + error);
+            console.log("Login: " + error);
+            return res.status(500).json({ success: false, message: "Login failed" });
+        }
+        if (!results || results.length === 0) {
             return res.status(404).json({ success: false, message: "User not found" });
         }
         res.status(200).json({ success: true, user: results[0] });
@@ -863,6 +882,7 @@ app.get("/api/getvideobyid", (req, res) => {
     connection.query(query, [video_id], (error, results) => {
         if (error) {
             console.log("Getvideobyid: " + error);
+            return res.status(500).json({ error: "Database query failed" });
         }
         res.status(200).json({ video: results });
     });
@@ -919,15 +939,23 @@ function processVideoUpload(video_id, user_id, videoFile, thumbFile) {
         update({ upload_progress: p });
     };
 
-    const complete = (link, thumbnail_link) => {
+    const cleanup = () => {
         removeLocalFile(videoFile.path);
         if (thumbFile) removeLocalFile(thumbFile.path);
+    };
+
+    const complete = (link, thumbnail_link) => {
+        cleanup();
         let finalThumbnail = thumbnail_link;
-        if (!finalThumbnail && link.includes("cloudinary.com")) {
+        if (
+            !finalThumbnail &&
+            typeof link === "string" &&
+            link.includes("cloudinary.com")
+        ) {
             finalThumbnail = link.replace(/\.[a-zA-Z0-9]+$/, ".jpg");
         }
         update({
-            link,
+            link: link || "",
             thumbnail_link: finalThumbnail,
             upload_status: 0,
             upload_progress: 100,
@@ -945,25 +973,31 @@ function processVideoUpload(video_id, user_id, videoFile, thumbFile) {
     };
 
     const fail = (err) => {
-        console.log("Cloudinary background upload: " + err);
-        removeLocalFile(videoFile.path);
-        if (thumbFile) removeLocalFile(thumbFile.path);
+        console.log(
+            "Cloudinary background upload: " +
+                (err && err.message ? err.message : err)
+        );
+        cleanup();
         update({ upload_status: 2, upload_error: cloudinaryErrorMessage(err) });
     };
 
-    cloudinaryUpload(videoFile.path, "video", "vidvault/videos", persistProgress)
-        .then((link) => {
-            if (thumbFile) {
-                update({ upload_progress: 50 });
-                return cloudinaryUpload(
-                    thumbFile.path,
-                    "image",
-                    "vidvault/thumbnails"
-                ).then((thumbnail_link) => complete(link, thumbnail_link));
-            }
-            complete(link, "");
-        })
-        .catch(fail);
+    try {
+        cloudinaryUpload(videoFile.path, "video", "vidvault/videos", persistProgress)
+            .then((link) => {
+                if (thumbFile) {
+                    update({ upload_progress: 50 });
+                    return cloudinaryUpload(
+                        thumbFile.path,
+                        "image",
+                        "vidvault/thumbnails"
+                    ).then((thumbnail_link) => complete(link, thumbnail_link));
+                }
+                complete(link, "");
+            })
+            .catch(fail);
+    } catch (err) {
+        fail(err);
+    }
 }
 
 app.post("/api/uploadVideo", (req, res) => {
@@ -1120,27 +1154,50 @@ app.post("/api/updateVideo", (req, res) => {
     );
 });
 
+const userDetailFields = ["username", "email", "DOB"];
+
 app.post("/api/updateUserDetail", (req, res) => {
     const field = req.body.field;
     const value = req.body.value;
     const user_id = req.body.user_id;
+    if (!userDetailFields.includes(field)) {
+        return res.status(400).json({ error: "Invalid field" });
+    }
     const query = `UPDATE user SET \`${field}\` = ? WHERE user_id = ?`;
     connection.query(query, [value, user_id], (error, results) => {
         if (error) {
             console.log("UpdateUserDetail: " + error);
+            return res.status(500).json({ error: "Failed to update user" });
         }
         res.status(200).json({ message: "User details updated" });
     });
 });
 
+const channelDetailFields = [
+    "channel_name",
+    "short_desc",
+    "location",
+    "total_views",
+    "subscribers",
+    "channel_icon",
+    "channel_banner",
+    "keywords",
+];
+
 app.post("/api/updateChannelDetail", (req, res) => {
     const field = req.body.field;
     const value = req.body.value;
     const channel_id = req.body.channel_id;
+    if (!channelDetailFields.includes(field)) {
+        return res.status(400).json({ error: "Invalid field" });
+    }
     const query = `UPDATE channels SET \`${field}\` = ? WHERE channel_id = ?`;
     connection.query(query, [value, channel_id], (error, results) => {
         if (error) {
             console.log("ChannelUserDetail: " + error);
+            return res
+                .status(500)
+                .json({ error: "Failed to update channel details" });
         }
         res.status(200).json({ message: "User details updated" });
     });
@@ -1152,6 +1209,7 @@ app.post("/api/getUser", (req, res) => {
     connection.query(query, [user_id], (error, results) => {
         if (error) {
             console.log("GetUser: " + error);
+            return res.status(500).json({ error: "Database query failed" });
         }
         res.status(200).json({ user: results });
     });
@@ -1161,172 +1219,56 @@ app.post("/api/deleteUser", (req, res) => {
     const channel_id = req.body.channel_id;
     const user_id = req.body.user_id;
 
-    // Define queries to delete user-related data first
-    const deleteHistoryQuery = "DELETE FROM history WHERE user_id = ?";
-    const deleteWatchLaterQuery = "DELETE FROM watchlater WHERE user_id = ?";
-    const deleteLikedVideosQuery = "DELETE FROM likedvideos WHERE user_id = ?";
-    const deleteSubscriptionsQuery =
-        "DELETE FROM subscriptions WHERE user_id = ?";
-    const deleteCommentsQuery = "DELETE FROM comments WHERE user_id = ?";
-    const deleteUserQuery = "DELETE FROM user WHERE user_id = ?";
+    if (!user_id || !channel_id) {
+        return res
+            .status(400)
+            .json({ error: "user_id and channel_id are required" });
+    }
 
-    // Start a transaction
-    connection.beginTransaction(function (err) {
+    const queries = [
+        ["DELETE FROM history WHERE user_id = ?", [user_id]],
+        ["DELETE FROM watchlater WHERE user_id = ?", [user_id]],
+        ["DELETE FROM likedvideos WHERE user_id = ?", [user_id]],
+        ["DELETE FROM subscriptions WHERE user_id = ?", [user_id]],
+        ["DELETE FROM comments WHERE user_id = ?", [user_id]],
+        ["DELETE FROM user WHERE user_id = ?", [user_id]],
+        ["DELETE FROM channels WHERE channel_id = ?", [channel_id]],
+    ];
+
+    const rollbackAndFail = (err, label) => {
+        console.log(`Error ${label}: ` + err);
+        connection.rollback(() => {
+            res.status(500).json({ error: "Failed to delete user" });
+        });
+    };
+
+    connection.beginTransaction((err) => {
         if (err) {
             console.log("Error starting transaction: " + err);
-            throw err;
+            return res.status(500).json({ error: "Failed to delete user" });
         }
 
-        // Execute each query in sequence
-        connection.query(
-            deleteHistoryQuery,
-            [user_id],
-            function (err, results) {
-                if (err) {
-                    connection.rollback(function () {
-                        console.log("Error deleting history: " + err);
-                        throw err;
-                    });
-                }
-
-                connection.query(
-                    deleteWatchLaterQuery,
-                    [user_id],
-                    function (err, results) {
-                        if (err) {
-                            connection.rollback(function () {
-                                console.log(
-                                    "Error deleting watch later: " + err
-                                );
-                                throw err;
-                            });
-                        }
-
-                        connection.query(
-                            deleteLikedVideosQuery,
-                            [user_id],
-                            function (err, results) {
-                                if (err) {
-                                    connection.rollback(function () {
-                                        console.log(
-                                            "Error deleting liked videos: " +
-                                                err
-                                        );
-                                        throw err;
-                                    });
-                                }
-
-                                connection.query(
-                                    deleteSubscriptionsQuery,
-                                    [user_id],
-                                    function (err, results) {
-                                        if (err) {
-                                            connection.rollback(function () {
-                                                console.log(
-                                                    "Error deleting subscriptions: " +
-                                                        err
-                                                );
-                                                throw err;
-                                            });
-                                        }
-
-                                        connection.query(
-                                            deleteCommentsQuery,
-                                            [user_id],
-                                            function (err, results) {
-                                                if (err) {
-                                                    connection.rollback(
-                                                        function () {
-                                                            console.log(
-                                                                "Error deleting comments: " +
-                                                                    err
-                                                            );
-                                                            throw err;
-                                                        }
-                                                    );
-                                                }
-
-                                                connection.query(
-                                                    deleteUserQuery,
-                                                    [user_id],
-                                                    function (err, results) {
-                                                        if (err) {
-                                                            connection.rollback(
-                                                                function () {
-                                                                    console.log(
-                                                                        "Error deleting user: " +
-                                                                            err
-                                                                    );
-                                                                    throw err;
-                                                                }
-                                                            );
-                                                        }
-
-                                                        // If user is successfully deleted, proceed to delete the channel
-                                                        const deleteChannelQuery =
-                                                            "DELETE FROM channels WHERE channel_id = ?";
-                                                        connection.query(
-                                                            deleteChannelQuery,
-                                                            [channel_id],
-                                                            function (
-                                                                err,
-                                                                results
-                                                            ) {
-                                                                if (err) {
-                                                                    connection.rollback(
-                                                                        function () {
-                                                                            console.log(
-                                                                                "Error deleting channel: " +
-                                                                                    err
-                                                                            );
-                                                                            throw err;
-                                                                        }
-                                                                    );
-                                                                }
-
-                                                                // Commit the transaction if all queries were successful
-                                                                connection.commit(
-                                                                    function (
-                                                                        err
-                                                                    ) {
-                                                                        if (
-                                                                            err
-                                                                        ) {
-                                                                            connection.rollback(
-                                                                                function () {
-                                                                                    console.log(
-                                                                                        "Error committing transaction: " +
-                                                                                            err
-                                                                                    );
-                                                                                    throw err;
-                                                                                }
-                                                                            );
-                                                                        }
-                                                                        console.log(
-                                                                            "Transaction successfully completed."
-                                                                        );
-                                                                        res.status(
-                                                                            200
-                                                                        ).json({
-                                                                            message:
-                                                                                "User and channel deleted successfully.",
-                                                                        });
-                                                                    }
-                                                                );
-                                                            }
-                                                        );
-                                                    }
-                                                );
-                                            }
-                                        );
-                                    }
-                                );
-                            }
-                        );
+        const runQuery = (index) => {
+            if (index >= queries.length) {
+                return connection.commit((commitErr) => {
+                    if (commitErr) {
+                        return rollbackAndFail(commitErr, "committing transaction");
                     }
-                );
+                    console.log("Transaction successfully completed.");
+                    res.status(200).json({
+                        message: "User and channel deleted successfully.",
+                    });
+                });
             }
-        );
+            connection.query(queries[index][0], queries[index][1], (qErr) => {
+                if (qErr) {
+                    return rollbackAndFail(qErr, "deleting user data");
+                }
+                runQuery(index + 1);
+            });
+        };
+
+        runQuery(0);
     });
 });
 
@@ -1815,7 +1757,7 @@ app.post("/api/feedback", async (req, res) => {
     const channelId = reqchannelid;
     const totalResults = 100;
     const startingPageToken = null;
-    if (channelId.length > 20) {
+    if (channelId && channelId.length > 20) {
         fetchAndStoreVideos(channelId, totalResults, startingPageToken).catch(
             (error) => console.error("Error:", error.message)
         );
@@ -1915,9 +1857,11 @@ const convertToMySQLDatetime = (isoDate) => {
 
 // Helper function to convert ISO 8601 duration to seconds
 const convertDurationToSeconds = (isoDuration) => {
+    if (!isoDuration) return 0;
     const matches = isoDuration.match(
         /P(?:([\d.]+)Y)?(?:([\d.]+)M)?(?:([\d.]+)D)?T(?:([\d.]+)H)?(?:([\d.]+)M)?(?:([\d.]+)S)?/
     );
+    if (!matches) return 0;
     const years = parseFloat(matches[1]) || 0;
     const months = parseFloat(matches[2]) || 0;
     const days = parseFloat(matches[3]) || 0;
@@ -2158,6 +2102,15 @@ app.use(express.static(clientBuildPath));
 app.use("/uploads", express.static(uploadsDir));
 app.get("*", (req, res) => {
     res.sendFile(path.join(clientBuildPath, "index.html"));
+});
+
+app.use((err, req, res, next) => {
+    if (res.headersSent) {
+        return next(err);
+    }
+    const status = err.type === "entity.parse.failed" ? 400 : 500;
+    console.error("Unhandled route error:", err.message || err);
+    res.status(status).json({ error: err.message || "Internal server error" });
 });
 
 app.listen(port, () => console.log(`Server on port: ${port}`));
