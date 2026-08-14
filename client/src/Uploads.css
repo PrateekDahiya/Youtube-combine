@@ -1,12 +1,12 @@
 /* Uploads page – scrollable, status-badged video cards */
 .uploads-page {
+    width: 100%;
     height: calc(100vh - 60px);
-    overflow-y: auto;
+    overflow-y: scroll;
     overflow-x: hidden;
+    scrollbar-gutter: stable;
     background-color: var(--background-color);
     padding: 24px 28px 40px;
-    max-width: 1300px;
-    margin: 0 auto;
 }
 
 /* Custom scrollbar */
@@ -38,6 +38,7 @@
 .uploads-head {
     display: flex;
     align-items: flex-start;
+    justify-content: space-between;
     gap: 20px;
     flex-wrap: wrap;
     padding-bottom: 12px;
@@ -70,6 +71,7 @@
     color: var(--background-color);
     font-size: 14px;
     font-weight: 600;
+    margin-left: auto;
     cursor: pointer;
     transition: all 0.2s ease;
     white-space: nowrap;
@@ -331,6 +333,11 @@
 .upload-item-action:hover {
     background-color: var(--text2-color);
     color: var(--background-color);
+}
+
+.upload-item-action-delete:hover {
+    background-color: #e74c3c;
+    color: #fff;
 }
 
 .upload-item-action svg {

@@ -4,6 +4,7 @@ import "./Uploads.css";
 import { videoApi } from "./api";
 import UploadVideo from "./UploadVideo";
 import EditVideo from "./EditVideo";
+import DeleteVideoModal from "./DeleteVideoModal";
 
 const STATUS = {
     UPLOADING: "uploading",
@@ -40,6 +41,7 @@ const Uploads = (params) => {
     const [loading, setLoading] = useState(true);
     const [showUpload, setShowUpload] = useState(false);
     const [editingVideo, setEditingVideo] = useState(null);
+    const [deletingVideo, setDeletingVideo] = useState(null);
     const [filter, setFilter] = useState("all");
     const user = params.user;
 
@@ -61,7 +63,7 @@ const Uploads = (params) => {
 
     useEffect(() => {
         if (!uploads.some((u) => u.upload_status === 1)) return;
-        const timer = setInterval(fetchUploads, 2000);
+        const timer = setInterval(fetchUploads, 8000);
         return () => clearInterval(timer);
     }, [uploads, fetchUploads]);
 
@@ -296,6 +298,20 @@ const Uploads = (params) => {
                                             />
                                         </svg>
                                     </button>
+                                    <button
+                                        className="upload-item-action upload-item-action-delete"
+                                        title="Delete video"
+                                        onClick={() => setDeletingVideo(u)}
+                                    >
+                                        <svg
+                                            viewBox="0 0 24 24"
+                                            fill="currentColor"
+                                        >
+                                            <path
+                                                d="M6 7h12l-1 13.01A2 2 0 0 1 15.01 22H8.99a2 2 0 0 1-1.99-1.99L6 7zm3-3h6l1 2H8l1-2zM4 6h16v2H4V6z"
+                                            />
+                                        </svg>
+                                    </button>
                                     </div>
                             </div>
                         ))}
@@ -315,6 +331,14 @@ const Uploads = (params) => {
                     user={user}
                     onClose={() => setEditingVideo(null)}
                     onUpdated={() => fetchUploads()}
+                />
+            ) : null}
+            {deletingVideo ? (
+                <DeleteVideoModal
+                    video={deletingVideo}
+                    user={user}
+                    onClose={() => setDeletingVideo(null)}
+                    onDeleted={() => fetchUploads()}
                 />
             ) : null}
         </div>

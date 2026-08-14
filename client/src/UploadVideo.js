@@ -1,61 +1,12 @@
-import React, { useState, useRef } from "react";
-import { uploadApi } from "./api";
+import React, { useRef, useState } from "react";
+import { uploadApi, videoApi } from "./api";
 import { useNavigate } from "react-router-dom";
+import { useToast } from "./ToastContext";
 import Modal from "./Modal";
 import "./UploadVideo.css";
 
-const CHUNK_SIZE = 5 * 1024 * 1024;
-
-async function cloudinaryChunkedUpload(file, resourceType, onProgress) {
-    const uniqueId =
-        "vidvault-" + Math.random().toString(36).slice(2) + "-" + Date.now();
-    const total = file.size;
-    const totalChunks = Math.max(1, Math.ceil(total / CHUNK_SIZE));
-    let result = null;
-    for (let i = 0; i < totalChunks; i++) {
-        const start = i * CHUNK_SIZE;
-        const end = Math.min(start + CHUNK_SIZE, total);
-        const piece = file.slice(start, end);
-        const sig = await uploadApi.getUploadSignature(resourceType);
-        const formData = new FormData();
-        formData.append("file", piece);
-        formData.append("api_key", sig.api_key);
-        formData.append("timestamp", String(sig.timestamp));
-        formData.append("signature", sig.signature);
-        formData.append("folder", sig.folder);
-        const response = await fetch(
-            `https://api.cloudinary.com/v1_1/${sig.cloud_name}/${resourceType}/upload`,
-            {
-                method: "POST",
-                body: formData,
-                headers: {
-                    "X-Unique-Upload-Id": uniqueId,
-                    "Content-Range": `bytes ${start}-${end - 1}/${total}`,
-                },
-            }
-        );
-        if (!response.ok) {
-            const errText = await response.text();
-            throw new Error(
-                "Chunk upload failed: " + String(errText).slice(0, 120)
-            );
-        }
-        if (onProgress) onProgress(Math.round((end / total) * 100));
-        if (i === totalChunks - 1) {
-            result = await response.json();
-        }
-    }
-    return result;
-}
-
-async function cloudinaryIsAvailable() {
-    try {
-        await uploadApi.getUploadSignature("video");
-        return true;
-    } catch (err) {
-        return false;
-    }
-}
+const MAX_VIDEO_SIZE_MB = 100;
+const MAX_VIDEO_SIZE_BYTES = MAX_VIDEO_SIZE_MB * 1024 * 1024;
 
 const UploadVideo = (params) => {
     const [title, setTitle] = useState("");
@@ -67,14 +18,18 @@ const UploadVideo = (params) => {
     const [thumbFile, setThumbFile] = useState(null);
     const [videoPreview, setVideoPreview] = useState("");
     const [thumbPreview, setThumbPreview] = useState("");
-    const [uploading, setUploading] = useState(false);
-    const [progress, setProgress] = useState(0);
+    const [thumbnailLink, setThumbnailLink] = useState("");
+    const [videoId, setVideoId] = useState(null);
+    const [startingVideoUpload, setStartingVideoUpload] = useState(false);
+    const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState("");
-    const [success, setSuccess] = useState("");
     const videoInputRef = useRef(null);
     const thumbInputRef = useRef(null);
+    const videoUploadPromiseRef = useRef(null);
+    const thumbUploadPromiseRef = useRef(null);
     const user = params.user;
     const navigate = useNavigate();
+    const toast = useToast();
 
     const categories = [
         "Music",
@@ -96,8 +51,44 @@ const UploadVideo = (params) => {
             e.target.value = "";
             return;
         }
+        if (file.size > MAX_VIDEO_SIZE_BYTES) {
+            setError(
+                `This video is too large to upload. Please use a file under ${MAX_VIDEO_SIZE_MB}MB.`
+            );
+            e.target.value = "";
+            return;
+        }
         setVideoFile(file);
         setVideoPreview(URL.createObjectURL(file));
+
+        // Start uploading right away — by the time the form is filled in
+        // and submitted, most (or all) of the file is already uploaded.
+        setStartingVideoUpload(true);
+        const promise = (
+            videoId
+                ? uploadApi.replaceVideo(videoId, user.channel_id, file)
+                : uploadApi
+                      .uploadVideo(file, null, {
+                          title: title.trim() || "Untitled",
+                          description,
+                          tags,
+                          category,
+                          type,
+                          user_id: user.channel_id,
+                          duration: 0,
+                      })
+                      .then((res) => {
+                          setVideoId(res.video_id);
+                          return res;
+                      })
+        )
+            .catch((err) => {
+                console.error("Video upload error:", err);
+                setError(err.message || "Video upload failed. Please try again.");
+                throw err;
+            })
+            .finally(() => setStartingVideoUpload(false));
+        videoUploadPromiseRef.current = promise;
     };
 
     const onThumbChange = (e) => {
@@ -111,6 +102,20 @@ const UploadVideo = (params) => {
         }
         setThumbFile(file);
         setThumbPreview(URL.createObjectURL(file));
+
+        const promise = uploadApi
+            .uploadImage(file)
+            .then((res) => {
+                setThumbnailLink(res.url);
+                if (toast) toast.showToast("Thumbnail uploaded!", "success");
+                return res;
+            })
+            .catch((err) => {
+                console.error("Thumbnail upload error:", err);
+                setError(err.message || "Failed to upload thumbnail.");
+                throw err;
+            });
+        thumbUploadPromiseRef.current = promise;
     };
 
     const handleUpload = async () => {
@@ -122,57 +127,39 @@ const UploadVideo = (params) => {
             setError("Please enter a title.");
             return;
         }
-        setUploading(true);
         setError("");
-        setSuccess("");
-        setProgress(0);
-        const metadata = {
-            title,
-            description,
-            tags,
-            category,
-            type,
-            user_id: user.channel_id,
-            duration: 0,
-        };
-
+        setSubmitting(true);
         try {
-            if (await cloudinaryIsAvailable()) {
-                const videoResult = await cloudinaryChunkedUpload(
-                    videoFile,
-                    "video",
-                    setProgress
-                );
-                setProgress(100);
-                let thumbnail_link = "";
-                if (thumbFile) {
-                    const thumbResult = await cloudinaryChunkedUpload(
-                        thumbFile,
-                        "image",
-                        () => {}
-                    );
-                    thumbnail_link =
-                        (thumbResult && thumbResult.secure_url) || "";
-                }
-                await uploadApi.completeVideoUpload({
-                    ...metadata,
-                    link: (videoResult && videoResult.secure_url) || "",
-                    thumbnail_link,
-                });
-            } else {
-                await uploadApi.uploadVideo(videoFile, thumbFile, metadata);
+            let id = videoId;
+            if (!id && videoUploadPromiseRef.current) {
+                const res = await videoUploadPromiseRef.current;
+                id = res && res.video_id;
             }
-            setSuccess("Upload started! Track its progress on the Uploads page.");
-            setTimeout(() => {
-                if (params.onClose) params.onClose();
-                if (params.onUploaded) params.onUploaded();
-                navigate(`/uploads`);
-            }, 800);
+            if (!id) {
+                throw new Error("Video is still preparing to upload. Please try again in a moment.");
+            }
+            if (thumbUploadPromiseRef.current) {
+                await thumbUploadPromiseRef.current.catch(() => {});
+            }
+            await videoApi.updateVideo({
+                video_id: id,
+                user_id: user.channel_id,
+                title,
+                description,
+                tags,
+                category,
+                isShort: type,
+                thumbnail_link: thumbnailLink,
+            });
+            if (toast) toast.showToast("Video uploaded successfully!", "success");
+            if (params.onUploaded) params.onUploaded();
+            if (params.onClose) params.onClose();
+            navigate(`/uploads`);
         } catch (err) {
             console.error("Upload error:", err);
             setError(err.message || "Upload failed. Please try again.");
         } finally {
-            setUploading(false);
+            setSubmitting(false);
         }
     };
 
@@ -181,16 +168,16 @@ const UploadVideo = (params) => {
             <button
                 className="upload-btn upload-cancel"
                 onClick={params.onClose}
-                disabled={uploading}
+                disabled={submitting}
             >
                 Cancel
             </button>
             <button
                 className="upload-btn upload-submit"
                 onClick={handleUpload}
-                disabled={uploading}
+                disabled={submitting}
             >
-                {uploading ? "Uploading…" : "Upload"}
+                {submitting ? "Uploading…" : "Upload"}
             </button>
         </>
     );
@@ -201,8 +188,6 @@ const UploadVideo = (params) => {
             onClose={params.onClose}
             title="Upload video"
             size="large"
-            closeOnBackdrop={!uploading}
-            closeOnEscape={!uploading}
             footer={footer}
         >
             <div className="upload-form">
@@ -210,7 +195,9 @@ const UploadVideo = (params) => {
                     <label>Video file</label>
                     <div
                         className="dropzone"
-                        onClick={() => videoInputRef.current?.click()}
+                        onClick={() =>
+                            !startingVideoUpload && videoInputRef.current?.click()
+                        }
                     >
                         <input
                             ref={videoInputRef}
@@ -229,7 +216,9 @@ const UploadVideo = (params) => {
                                 : "Click to select a video file"}
                         </span>
                         <span className="dropzone-hint">
-                            MP4, WebM or MOV
+                            {startingVideoUpload
+                                ? "Starting upload…"
+                                : "MP4, WebM or MOV"}
                         </span>
                     </div>
                     {videoPreview ? (
@@ -334,27 +323,6 @@ const UploadVideo = (params) => {
                 </div>
 
                 {error ? <p className="upload-error">{error}</p> : null}
-                {uploading ? (
-                    <div className="upload-progress-block">
-                        <div className="upload-progress-top">
-                            <span className="upload-progress-label">
-                                Uploading{progress < 100 ? "…" : " and preparing…"}
-                            </span>
-                            <span className="upload-progress-value">
-                                {progress}%
-                            </span>
-                        </div>
-                        <div className="upload-progress-bar">
-                            <div
-                                className="upload-progress-fill"
-                                style={{ width: `${progress}%` }}
-                            />
-                        </div>
-                    </div>
-                ) : null}
-                {success ? (
-                    <p className="upload-success">{success}</p>
-                ) : null}
             </div>
         </Modal>
     );

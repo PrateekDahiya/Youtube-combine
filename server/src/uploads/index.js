@@ -1,7 +1,7 @@
 const path = require("path");
 const fs = require("fs");
 const multer = require("multer");
-const { cloudinary, isCloudinaryConfigured, cloudinaryErrorMessage } = require("../config");
+const { cloudinary, isCloudinaryConfigured, cloudinaryErrorMessage, MAX_VIDEO_SIZE_MB } = require("../config");
 const { getConnection } = require("../db");
 
 const uploadsDir = path.join(__dirname, "../../uploads");
@@ -41,7 +41,7 @@ const videoStorage = multer.diskStorage({
 
 const videoUpload = multer({
     storage: videoStorage,
-    limits: { fileSize: 500 * 1024 * 1024 },
+    limits: { fileSize: MAX_VIDEO_SIZE_MB * 1024 * 1024 },
     fileFilter: (req, file, cb) => {
         if (/^video\//.test(file.mimetype)) {
             cb(null, true);
@@ -80,7 +80,9 @@ function removeLocalFile(filePath) {
     fs.unlink(filePath, () => {});
 }
 
-function processVideoUpload(video_id, user_id, videoFile, thumbFile) {
+function processVideoUpload(video_id, user_id, videoFile, thumbFile, options = {}) {
+    const incrementCount = options.incrementCount !== false;
+    const keepThumbnail = !!options.keepThumbnail;
     const connection = getConnection();
 
     const update = (fields) => {
@@ -115,30 +117,35 @@ function processVideoUpload(video_id, user_id, videoFile, thumbFile) {
 
     const complete = (link, thumbnail_link) => {
         cleanup();
-        let finalThumbnail = thumbnail_link;
-        if (
-            !finalThumbnail &&
-            typeof link === "string" &&
-            link.includes("cloudinary.com")
-        ) {
-            finalThumbnail = link.replace(/\.[a-zA-Z0-9]+$/, ".jpg");
-        }
-        update({
+        const fields = {
             link: link || "",
-            thumbnail_link: finalThumbnail,
             upload_status: 0,
             upload_progress: 100,
             upload_error: "",
-        });
-        connection.query(
-            `UPDATE channels SET video_count = video_count + 1 WHERE channel_id = ?`,
-            [user_id],
-            (updateErr) => {
-                if (updateErr) {
-                    console.log("UploadVideo count update: " + updateErr);
-                }
+        };
+        if (!keepThumbnail) {
+            let finalThumbnail = thumbnail_link;
+            if (
+                !finalThumbnail &&
+                typeof link === "string" &&
+                link.includes("cloudinary.com")
+            ) {
+                finalThumbnail = link.replace(/\.[a-zA-Z0-9]+$/, ".jpg");
             }
-        );
+            fields.thumbnail_link = finalThumbnail;
+        }
+        update(fields);
+        if (incrementCount) {
+            connection.query(
+                `UPDATE channels SET video_count = video_count + 1 WHERE channel_id = ?`,
+                [user_id],
+                (updateErr) => {
+                    if (updateErr) {
+                        console.log("UploadVideo count update: " + updateErr);
+                    }
+                }
+            );
+        }
     };
 
     const fail = (err) => {
@@ -178,4 +185,5 @@ module.exports = {
     processVideoUpload,
     isCloudinaryConfigured,
     cloudinaryErrorMessage,
+    MAX_VIDEO_SIZE_MB,
 };

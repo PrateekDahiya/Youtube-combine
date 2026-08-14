@@ -17,6 +17,9 @@ export const videoApi = {
     updateVideo: (data) =>
         api.post("/updateVideo", data),
 
+    deleteVideo: (videoId, userId) =>
+        api.post("/deleteVideo", { video_id: videoId, user_id: userId }),
+
     getUploadStatus: (videoId) =>
         api.get("/uploadStatus", { params: { video_id: videoId } }),
 

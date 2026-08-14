@@ -16,15 +16,22 @@ function isCloudinaryConfigured() {
     );
 }
 
+const MAX_VIDEO_SIZE_MB = 100;
+
 function cloudinaryErrorMessage(err) {
     if (!err) return "Cloudinary upload failed";
-    if (err.message) return err.message;
-    return String(err);
+    const httpCode = err.http_code || err.statusCode || err.status;
+    const message = (err.message || String(err));
+    if (httpCode === 413 || /413/.test(message)) {
+        return `This video is too large to upload. Please use a file under ${MAX_VIDEO_SIZE_MB}MB.`;
+    }
+    return message;
 }
 
 module.exports = {
     cloudinary,
     isCloudinaryConfigured,
     cloudinaryErrorMessage,
+    MAX_VIDEO_SIZE_MB,
     API_KEYS,
 };

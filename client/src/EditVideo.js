@@ -1,7 +1,11 @@
-import React, { useState, useRef } from "react";
+import React, { useRef, useState } from "react";
 import { videoApi, uploadApi } from "./api";
+import { useToast } from "./ToastContext";
 import Modal from "./Modal";
 import "./UploadVideo.css";
+
+const MAX_VIDEO_SIZE_MB = 100;
+const MAX_VIDEO_SIZE_BYTES = MAX_VIDEO_SIZE_MB * 1024 * 1024;
 
 const EditVideo = (params) => {
     const video = params.video;
@@ -20,10 +24,16 @@ const EditVideo = (params) => {
             : "");
     const [thumbnail, setThumbnail] = useState(initialThumb);
     const [thumbPreview, setThumbPreview] = useState(initialThumb);
+    const [videoFile, setVideoFile] = useState(null);
+    const [videoPreview, setVideoPreview] = useState("");
+    const [startingVideoUpload, setStartingVideoUpload] = useState(false);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState("");
-    const [success, setSuccess] = useState("");
     const thumbInputRef = useRef(null);
+    const videoInputRef = useRef(null);
+    const thumbUploadPromiseRef = useRef(null);
+    const videoUploadPromiseRef = useRef(null);
+    const toast = useToast();
 
     const categories = [
         "Music",
@@ -36,7 +46,7 @@ const EditVideo = (params) => {
         "Other",
     ];
 
-    const onThumbChange = async (e) => {
+    const onThumbChange = (e) => {
         const file = e.target.files && e.target.files[0];
         if (!file) return;
         setError("");
@@ -46,13 +56,65 @@ const EditVideo = (params) => {
             return;
         }
         setThumbPreview(URL.createObjectURL(file));
-        try {
-            const response = await uploadApi.uploadImage(file);
-            setThumbnail(response.url);
-        } catch (uploadErr) {
-            console.error("Thumbnail upload error:", uploadErr);
-            setError(uploadErr.message || "Failed to upload thumbnail.");
+
+        // Starts right away in the background — Save waits for it only if
+        // it hasn't finished yet by the time the user clicks it.
+        const promise = uploadApi
+            .uploadImage(file)
+            .then((response) => {
+                setThumbnail(response.url);
+                if (toast) toast.showToast("Thumbnail uploaded!", "success");
+                return response;
+            })
+            .catch((uploadErr) => {
+                console.error("Thumbnail upload error:", uploadErr);
+                setError(uploadErr.message || "Failed to upload thumbnail.");
+                throw uploadErr;
+            });
+        thumbUploadPromiseRef.current = promise;
+    };
+
+    const onVideoChange = (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (!file) return;
+        setError("");
+        if (!/^video\//.test(file.type)) {
+            setError("Please select a valid video file.");
+            e.target.value = "";
+            return;
         }
+        if (file.size > MAX_VIDEO_SIZE_BYTES) {
+            setError(
+                `This video is too large to upload. Please use a file under ${MAX_VIDEO_SIZE_MB}MB.`
+            );
+            e.target.value = "";
+            return;
+        }
+        setVideoFile(file);
+        setVideoPreview(URL.createObjectURL(file));
+
+        // Start replacing the video right away — by the time the user
+        // reviews the other fields and clicks Save, it's already underway.
+        setStartingVideoUpload(true);
+        const promise = uploadApi
+            .replaceVideo(video.video_id, user.channel_id, file)
+            .then((res) => {
+                if (toast) {
+                    toast.showToast(
+                        "New video uploading — track progress in the Uploads tab.",
+                        "info"
+                    );
+                }
+                if (params.onUpdated) params.onUpdated();
+                return res;
+            })
+            .catch((err) => {
+                console.error("Replace video error:", err);
+                setError(err.message || "Video upload failed. Please try again.");
+                throw err;
+            })
+            .finally(() => setStartingVideoUpload(false));
+        videoUploadPromiseRef.current = promise;
     };
 
     const handleSave = async () => {
@@ -62,8 +124,10 @@ const EditVideo = (params) => {
         }
         setSaving(true);
         setError("");
-        setSuccess("");
         try {
+            if (thumbUploadPromiseRef.current) {
+                await thumbUploadPromiseRef.current.catch(() => {});
+            }
             await videoApi.updateVideo({
                 video_id: video.video_id,
                 user_id: user.channel_id,
@@ -74,11 +138,9 @@ const EditVideo = (params) => {
                 isShort: type,
                 thumbnail_link: thumbnail,
             });
-            setSuccess("Video updated!");
-            setTimeout(() => {
-                if (params.onClose) params.onClose();
-                if (params.onUpdated) params.onUpdated();
-            }, 800);
+            if (toast) toast.showToast("Video updated!", "success");
+            if (params.onUpdated) params.onUpdated();
+            if (params.onClose) params.onClose();
         } catch (err) {
             console.error("Update error:", err);
             setError(err.message || "Update failed. Please try again.");
@@ -207,10 +269,52 @@ const EditVideo = (params) => {
                     ) : null}
                 </div>
 
+                <div className="upload-field">
+                    <label>Video file</label>
+                    <div
+                        className="dropzone"
+                        onClick={() =>
+                            !startingVideoUpload && videoInputRef.current?.click()
+                        }
+                    >
+                        <input
+                            ref={videoInputRef}
+                            type="file"
+                            accept="video/*"
+                            onChange={onVideoChange}
+                        />
+                        <span className="dropzone-icon">
+                            <svg viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M17 10.5V7a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-3.5l4 4v-11l-4 4z" />
+                            </svg>
+                        </span>
+                        <span className="dropzone-text">
+                            {videoFile
+                                ? videoFile.name
+                                : "Click to replace the video file"}
+                        </span>
+                        <span className="dropzone-hint">
+                            {startingVideoUpload
+                                ? "Starting upload…"
+                                : "MP4, WebM or MOV"}
+                        </span>
+                    </div>
+                    {videoPreview ? (
+                        <video
+                            className="upload-preview upload-video-preview"
+                            src={videoPreview}
+                            controls
+                        />
+                    ) : null}
+                    {videoFile ? (
+                        <p className="upload-item-hint">
+                            The new video is uploading in the background —
+                            track its progress on the Uploads tab.
+                        </p>
+                    ) : null}
+                </div>
+
                 {error ? <p className="upload-error">{error}</p> : null}
-                {success ? (
-                    <p className="upload-success">{success}</p>
-                ) : null}
             </div>
         </Modal>
     );

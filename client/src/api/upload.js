@@ -9,7 +9,7 @@ export const uploadApi = {
         });
     },
 
-    uploadVideo: (videoFile, thumbnailFile, metadata) => {
+    uploadVideo: (videoFile, thumbnailFile, metadata, onUploadProgress) => {
         const formData = new FormData();
         formData.append("video", videoFile);
         if (thumbnailFile) formData.append("thumbnail", thumbnailFile);
@@ -18,14 +18,18 @@ export const uploadApi = {
         });
         return api.post("/uploadVideo", formData, {
             headers: { "Content-Type": "multipart/form-data" },
+            onUploadProgress,
         });
     },
 
-    getUploadSignature: (resourceType) => {
-        return api.post("/uploadSignature", { resource_type: resourceType });
-    },
-
-    completeVideoUpload: (metadata) => {
-        return api.post("/completeVideoUpload", metadata);
+    replaceVideo: (videoId, userId, videoFile, onUploadProgress) => {
+        const formData = new FormData();
+        formData.append("video", videoFile);
+        formData.append("video_id", videoId);
+        formData.append("user_id", userId);
+        return api.post("/replaceVideo", formData, {
+            headers: { "Content-Type": "multipart/form-data" },
+            onUploadProgress,
+        });
     },
 };

@@ -229,6 +229,15 @@
     opacity: 0.85;
 }
 
+.upload-delete {
+    background-color: #e74c3c;
+    color: #fff;
+}
+
+.upload-delete:hover:not(:disabled) {
+    opacity: 0.85;
+}
+
 @media (max-width: 575px) {
     .upload-field-2col {
         grid-template-columns: 1fr;

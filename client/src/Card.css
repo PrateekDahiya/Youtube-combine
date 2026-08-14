@@ -171,7 +171,29 @@
     transition: opacity 0.2s;
 }
 
-.card:hover .card-edit {
+.card-delete {
+    position: absolute;
+    top: 8px;
+    left: 48px;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0,0,0,0.6);
+    border-radius: 50%;
+    z-index: 2;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.2s, background 0.2s;
+}
+
+.card-delete:hover {
+    background: #e74c3c;
+}
+
+.card:hover .card-edit,
+.card:hover .card-delete {
     opacity: 1;
 }
 
