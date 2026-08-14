@@ -14,6 +14,11 @@ const {
 const { syncHandler, asyncHandler } = require("../utils/asyncHandler");
 const { successResponse, errorResponse, validationErrorResponse, sendResponse } = require("../utils/responseWrapper");
 const { cacheFetch } = require("../utils/cache");
+const {
+    checkFullTextAvailability,
+    isFullTextAvailable,
+    buildFullTextQuery,
+} = require("../utils/fulltext");
 
 const HOME_TTL = 30;
 
@@ -379,38 +384,60 @@ router.get("/search", syncHandler((req, res) => {
     const query = req.query.query;
     const searchQuery = `%${query}%`;
     const page_no = Number(req.query.page || 1);
-    const videoQuery = `select * from channels c join videos v on c.channel_id=v.channel_id where v.upload_status = 0 and (v.title like ? or v.tags like ? or c.channel_name like ?) order by v.upload_time desc limit 24 offset ?`;
-    const channelQuery = `select * from channels where channel_name like ? or short_desc like ? or custom_url like ? or keywords like ? order by subscribers desc limit 20`;
 
-    const connection = getConnection();
-    connection.query(
-        videoQuery,
-        [searchQuery, searchQuery, searchQuery, 24 * (page_no - 1)],
-        (videoError, videoResults) => {
-            if (videoError) {
-                console.log(videoError);
-                return sendResponse(res, errorResponse("Internal Server Error"));
-            }
+    const runSearch = () => {
+        let videoQuery;
+        let videoParams;
+        let channelQuery;
+        let channelParams;
 
-            connection.query(
-                channelQuery,
-                [searchQuery, searchQuery, searchQuery, searchQuery],
-                (channelError, channelResults) => {
-                    if (channelError) {
-                        console.log(channelError);
-                        return sendResponse(res, errorResponse("Internal Server Error"));
-                    }
-
-                    sendResponse(res, successResponse({
-                        page: "search",
-                        videos: videoResults,
-                        channels: channelResults,
-                        query: query,
-                    }, "Search results retrieved successfully"));
-                }
-            );
+        if (isFullTextAvailable() && query && query.trim().length >= 3) {
+            const ftQuery = buildFullTextQuery("title", query);
+            videoQuery = `select * from channels c join videos v on c.channel_id=v.channel_id where v.upload_status = 0 and (match(v.title, v.tags) against (? in boolean mode) or c.channel_name like ?) order by v.upload_time desc limit 24 offset ?`;
+            videoParams = [ftQuery, searchQuery, 24 * (page_no - 1)];
+            channelQuery = `select * from channels where match(channel_name, keywords, short_desc) against (? in boolean mode) order by subscribers desc limit 20`;
+            channelParams = [ftQuery];
+        } else {
+            videoQuery = `select * from channels c join videos v on c.channel_id=v.channel_id where v.upload_status = 0 and (v.title like ? or v.tags like ? or c.channel_name like ?) order by v.upload_time desc limit 24 offset ?`;
+            videoParams = [searchQuery, searchQuery, searchQuery, 24 * (page_no - 1)];
+            channelQuery = `select * from channels where channel_name like ? or short_desc like ? or custom_url like ? or keywords like ? order by subscribers desc limit 20`;
+            channelParams = [searchQuery, searchQuery, searchQuery, searchQuery];
         }
-    );
+
+        const connection = getConnection();
+        connection.query(
+            videoQuery,
+            videoParams,
+            (videoError, videoResults) => {
+                if (videoError) {
+                    console.log(videoError);
+                    return sendResponse(res, errorResponse("Internal Server Error"));
+                }
+
+                connection.query(
+                    channelQuery,
+                    channelParams,
+                    (channelError, channelResults) => {
+                        if (channelError) {
+                            console.log(channelError);
+                            return sendResponse(res, errorResponse("Internal Server Error"));
+                        }
+
+                        sendResponse(res, successResponse({
+                            page: "search",
+                            videos: videoResults,
+                            channels: channelResults,
+                            query: query,
+                        }, "Search results retrieved successfully"));
+                    }
+                );
+            }
+        );
+    };
+
+    checkFullTextAvailability(() => {
+        runSearch();
+    });
 }));
 
 module.exports = router;

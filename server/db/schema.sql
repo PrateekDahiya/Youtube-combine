@@ -23,7 +23,8 @@ CREATE TABLE IF NOT EXISTS channels (
     total_views     BIGINT        NOT NULL DEFAULT 0,
     keywords        TEXT          NULL,
     PRIMARY KEY (channel_id),
-    KEY idx_channel_name (channel_name)
+    KEY idx_channel_name (channel_name),
+    FULLTEXT KEY ft_channels_search (channel_name, keywords, short_desc)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ---------------------------------------------------------------------------
@@ -71,6 +72,7 @@ CREATE TABLE IF NOT EXISTS videos (
     KEY idx_video_category (category),
     KEY idx_video_upload_time (upload_time),
     KEY idx_video_isshort (isShort),
+    FULLTEXT KEY ft_videos_search (title, tags, video_description),
     CONSTRAINT fk_video_channel FOREIGN KEY (channel_id)
         REFERENCES channels (channel_id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
