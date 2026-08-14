@@ -4,6 +4,7 @@ require("dotenv").config();
 const express = require("express");
 const path = require("path");
 const cors = require("cors");
+const compression = require("compression");
 
 const { getConnection } = require("./src/db");
 const { uploadsDir } = require("./src/uploads");
@@ -22,6 +23,7 @@ const feedbackRoutes = require("./src/routes/feedback");
 const app = express();
 const port = process.env.PORT || 5000;
 
+app.use(compression());
 app.use(express.json());
 app.use(cors());
 
