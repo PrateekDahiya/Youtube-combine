@@ -117,6 +117,8 @@ const Shortbox = (params) => {
                             alt="short-btn"
                             title={shortdata.channel_name}
                             src={shortdata.channel_icon || defaultAvatar}
+                            loading="lazy"
+                            decoding="async"
                         />
                     ) : (
                         ""
