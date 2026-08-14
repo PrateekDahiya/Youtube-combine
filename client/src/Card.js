@@ -210,6 +210,25 @@ const Card = React.memo((params) => {
                     </svg>
                 </span>
             ) : null}
+            {params.onDelete ? (
+                <span
+                    className="card-delete"
+                    title="Delete video"
+                    onClick={(e) => {
+                        e.preventDefault();
+                        params.onDelete(params.data);
+                    }}
+                >
+                    <svg
+                        viewBox="0 0 24 24"
+                        width="16"
+                        height="16"
+                        fill="white"
+                    >
+                        <path d="M6 7h12l-1 13.01A2 2 0 0 1 15.01 22H8.99a2 2 0 0 1-1.99-1.99L6 7zm3-3h6l1 2H8l1-2zM4 6h16v2H4V6z" />
+                    </svg>
+                </span>
+            ) : null}
             <img
                 className={
                     forrelated ? "thumbnail forrelated-thumbnail" : "thumbnail"

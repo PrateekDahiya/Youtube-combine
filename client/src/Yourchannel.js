@@ -4,6 +4,7 @@ import { channelApi, videoApi } from "./api";
 import Cardloading from "./Cardloading";
 import Card from "./Card";
 import EditVideo from "./EditVideo";
+import DeleteVideoModal from "./DeleteVideoModal";
 import Modal from "./Modal";
 
 const defaultAvatar = "https://cdn-icons-png.flaticon.com/128/1077/1077063.png";
@@ -15,6 +16,7 @@ const Yourchannel = (params) => {
     const [refresh, setRefresh] = useState(0);
     const [showAbout, setShowAbout] = useState(false);
     const [editingVideo, setEditingVideo] = useState(null);
+    const [deletingVideo, setDeletingVideo] = useState(null);
     const user = params.user;
 
     useEffect(() => {
@@ -150,6 +152,7 @@ const Yourchannel = (params) => {
                                     key={item.video_id}
                                     data={item}
                                     onEdit={(video) => setEditingVideo(video)}
+                                    onDelete={(video) => setDeletingVideo(video)}
                                 />
                             ))}
                         </div>
@@ -162,6 +165,14 @@ const Yourchannel = (params) => {
                             user={user}
                             onClose={() => setEditingVideo(null)}
                             onUpdated={() => setRefresh((r) => r + 1)}
+                        />
+                    ) : null}
+                    {deletingVideo ? (
+                        <DeleteVideoModal
+                            video={deletingVideo}
+                            user={user}
+                            onClose={() => setDeletingVideo(null)}
+                            onDeleted={() => setRefresh((r) => r + 1)}
                         />
                     ) : null}
                 </div>

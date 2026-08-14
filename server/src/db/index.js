@@ -21,7 +21,12 @@ function getConnection() {
 }
 
 function acquireConnection() {
-    return pool.getConnection();
+    return new Promise((resolve, reject) => {
+        pool.getConnection((err, connection) => {
+            if (err) reject(err);
+            else resolve(connection);
+        });
+    });
 }
 
 function createNewConnection() {
