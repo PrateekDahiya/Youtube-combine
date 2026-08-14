@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 const { getConnection } = require("../db");
 const { syncHandler, asyncHandler } = require("../utils/asyncHandler");
-const { fetchAndCacheYoutubeComments } = require("../youtube");
+const { fetchAndCacheYoutubeComments, fetchYoutubeComments } = require("../youtube");
 const {
     successResponse,
     errorResponse,
@@ -153,7 +153,25 @@ router.get("/youtubeComments", asyncHandler(async (req, res) => {
             }
         }
 
-        const result = await fetchAndCacheYoutubeComments(video_id, page_token);
+        // Caching requires video_id to exist locally (comments.video_id FKs
+        // to videos.video_id) — a client can request any video_id, and one
+        // that's never been synced by the channel jobs would otherwise fail
+        // that FK check on every attempt. Still fetch-and-return live for
+        // display, just skip the cache write.
+        const videoExists = await new Promise((resolve, reject) => {
+            getConnection().query(
+                `SELECT 1 FROM videos WHERE video_id = ? LIMIT 1`,
+                [video_id],
+                (error, rows) => {
+                    if (error) return reject(error);
+                    resolve(rows.length > 0);
+                }
+            );
+        });
+
+        const result = videoExists
+            ? await fetchAndCacheYoutubeComments(video_id, page_token)
+            : await fetchYoutubeComments(video_id, page_token);
         sendResponse(res, successResponse(result, "YouTube comments retrieved successfully"));
     } catch (error) {
         console.log(

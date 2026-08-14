@@ -11,6 +11,19 @@ const {
 
 let currentApiKeyIndex = 0;
 
+// mysql2's raw (non-pooled) Connection emits connection-level failures (auth
+// errors, "too many connections", dropped sockets) as an 'error' event that
+// is separate from any query callback. With no listener, Node treats that as
+// an uncaught exception and crashes the whole process — this attaches a
+// no-op logger so those failures are handled like any other connection error
+// instead of taking the server down.
+function guardConnection(connection, label) {
+    connection.on("error", (err) => {
+        console.log(`MySQL connection error (${label}):`, err.message);
+    });
+    return connection;
+}
+
 const fetchAndStoreVideos = async (
     channelId,
     totalResults,
@@ -19,7 +32,7 @@ const fetchAndStoreVideos = async (
     let connection;
     const syncedVideos = [];
     try {
-        connection = await createNewConnection();
+        connection = guardConnection(await createNewConnection(), "fetchAndStoreVideos");
         let nextPageToken = startingPageToken;
         let fetchedResults = 0;
 
@@ -261,17 +274,30 @@ const fetchAndStoreVideos = async (
     }
 };
 
-async function getChannelIds(offset, limit) {
-    const connection = await createNewConnection();
+// Only channels whose most-recently-synced video is stale (or that have no
+// videos at all yet) are worth re-syncing — skips channels update_channels
+// already refreshed recently.
+async function getChannelIdsNeedingUpdate(offset, limit, staleDays = 3) {
+    const connection = guardConnection(await createNewConnection(), "getChannelIdsNeedingUpdate");
     return new Promise((resolve, reject) => {
-        const query = `SELECT channel_id FROM channels LIMIT ? OFFSET ?`;
-        connection.query(query, [limit, offset], (error, results) => {
+        const query = `
+            SELECT c.channel_id
+            FROM channels c
+            LEFT JOIN (
+                SELECT channel_id, MAX(upload_time) AS last_upload
+                FROM videos
+                GROUP BY channel_id
+            ) v ON v.channel_id = c.channel_id
+            WHERE v.last_upload IS NULL OR v.last_upload < (NOW() - INTERVAL ? DAY)
+            ORDER BY c.channel_id
+            LIMIT ? OFFSET ?
+        `;
+        connection.query(query, [staleDays, limit, offset], (error, results) => {
             connection.end();
             if (error) {
                 return reject(error);
             }
-            const channelIds = results.map((row) => row.channel_id);
-            resolve(channelIds);
+            resolve(results.map((row) => row.channel_id));
         });
     });
 }
@@ -286,31 +312,59 @@ async function processChannels(channelIds, totalResults = 5) {
 }
 
 const getNewChannelId = async () => {
-    const apiKey = API_KEYS[currentApiKeyIndex];
-    const category = getRandomCategory();
-    const response = await fetch(
-        `https://www.googleapis.com/youtube/v3/videos?part=snippet&chart=mostPopular&regionCode=US&videoCategoryId=${category}&maxResults=1&key=${apiKey}`
-    );
-    const data = await response.json();
+    try {
+        const apiKey = API_KEYS[currentApiKeyIndex];
+        const category = getRandomCategory();
+        const response = await fetch(
+            `https://www.googleapis.com/youtube/v3/videos?part=snippet&chart=mostPopular&regionCode=US&videoCategoryId=${category}&maxResults=1&key=${apiKey}`
+        );
+        const data = await response.json();
 
-    if (data.items && data.items.length > 0) {
-        return data.items[0].snippet.channelId;
-    } else {
-        console.error("No popular videos found.");
+        if (data.items && data.items.length > 0) {
+            return data.items[0].snippet.channelId;
+        }
+        console.error("No popular videos found:", data.error ? data.error.message : data);
+        return null;
+    } catch (error) {
+        console.error("Error fetching a new channel id:", error.message);
         return null;
     }
 };
 
+async function channelExists(channelId) {
+    const connection = getConnection();
+    return new Promise((resolve, reject) => {
+        connection.query(
+            `SELECT 1 FROM channels WHERE channel_id = ? LIMIT 1`,
+            [channelId],
+            (error, rows) => {
+                if (error) return reject(error);
+                resolve(rows.length > 0);
+            }
+        );
+    });
+}
+
 const addNewChannel = async (channelId) => {
     const totalResults = 50;
     const startingPageToken = null;
-    if (channelId && channelId.length > 20) {
-        fetchAndStoreVideos(channelId, totalResults, startingPageToken).catch(
-            (error) => {
-                return "False";
-            }
-        );
+    if (!channelId || channelId.length <= 20) {
+        return "False";
     }
+
+    let exists = false;
+    try {
+        exists = await channelExists(channelId);
+    } catch (error) {
+        console.log("Error checking channel existence:", error.message);
+    }
+    if (exists) {
+        return "AlreadyExists";
+    }
+
+    fetchAndStoreVideos(channelId, totalResults, startingPageToken).catch((error) => {
+        console.log("Error adding new channel " + channelId + ": " + error.message);
+    });
     return "True";
 };
 
@@ -490,7 +544,7 @@ const fetchAndCacheYoutubeComments = async (videoId, pageToken = null) => {
 
 module.exports = {
     fetchAndStoreVideos,
-    getChannelIds,
+    getChannelIdsNeedingUpdate,
     processChannels,
     getNewChannelId,
     addNewChannel,

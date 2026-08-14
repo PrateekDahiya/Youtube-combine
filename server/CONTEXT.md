@@ -122,15 +122,19 @@ See the route module table above for the full list. All endpoints retain their e
   1. `channels.list` for channel details → upsert into `channels`.
   2. Loop `search.list` (50 per page) by `date`, collecting video IDs.
   3. `videos.list` (`snippet,statistics,contentDetails`) → upsert into `videos`. Sets `isShort = duration <= 61` seconds.
+  4. After its raw connection is released, sequentially (not `Promise.all`, to avoid InnoDB deadlocks under concurrent channel processing) caches a page of YouTube comments per just-synced video — see Comments below.
 - Helpers: `getCategoryName`, `convertImageUrl`, `convertToMySQLDatetime`, `convertDurationToSeconds`.
+- `fetchAndStoreVideos` uses a raw (non-pooled) `createNewConnection()` per call, wrapped with `guardConnection()` (attaches an `'error'` listener — mysql2 emits connection-level failures like "too many connections" as an event separate from any query callback, and an unhandled one crashes the process) and always released via `finally`, even on error.
+- `/api/update_channels` calls `getChannelIdsNeedingUpdate(offset, batchSize, staleDays=3)` instead of scanning every channel — only channels with no videos yet, or whose most-recently-synced video's `upload_time` is older than `staleDays`, are re-processed. `offset` still round-robins through that (shrinking) filtered set and resets to 0 once it's exhausted.
+- `/api/addnewchannel` calls `channelExists(channelId)` before syncing a newly-discovered popular channel — if it's already in `channels`, `addNewChannel` returns `"AlreadyExists"` and skips the fetch instead of redundantly re-processing a channel we already have.
 
 ## Comments (`src/routes/comments.js`)
 
 One `comments` table holds both kinds of comment, discriminated by `source`:
 - **Native** (`source = 'native'`): app users. `video_id`, `user_id` = commenter's `channel_id` (FK to `channels`), `comment_text`, `comment_time`, `updated_at` (NULL until edited). `GET /api/comments?video_id=` lists them newest-first joined with `channels` for the commenter's name/icon; `/api/addComment`, `/api/editComment`, `/api/deleteComment` are ownership-checked (`WHERE ... AND user_id = ?`, `affectedRows === 0` → 403/404).
-- **YouTube** (`source = 'youtube'`): cached real YouTube commentThreads, `user_id` NULL, `external_id` (YouTube's own comment id, unique), `author_name`, `author_avatar`, `like_count` filled in instead. Two ways they get populated:
+- **YouTube** (`source = 'youtube'`): cached real YouTube commentThreads (`maxResults: 10`), `user_id` NULL, `external_id` (YouTube's own comment id, unique), `author_name`, `author_avatar`, `like_count` filled in instead. Two ways they get populated:
   1. In bulk — `fetchAndStoreVideos` (`src/youtube/index.js`) fetches and upserts (`ON DUPLICATE KEY UPDATE` by `external_id`) a page of comments for each video it just synced, so `/api/update_channels` and `/api/addnewchannel` warm the cache as a side effect of importing videos.
-  2. On demand — `GET /api/youtubeComments?video_id=&page_token=` reads the cache first; if a video has no cached rows yet (not synced through a channel job, or every prior page was empty), it live-fetches via `commentThreads.list` (same `API_KEYS` rotation as video import) and upserts what it gets before returning.
+  2. On demand — `GET /api/youtubeComments?video_id=&page_token=` reads the cache first (`LIMIT 10`); if a video has no cached rows yet, it checks whether `video_id` exists in `videos` first — `comments.video_id` FKs to `videos.video_id`, so caching a comment for a video we've never synced would fail that constraint on every request. If the video exists locally, it live-fetches via `commentThreads.list` (same `API_KEYS` rotation as video import) and upserts (with deadlock retry) before returning; if not, it still live-fetches for display but skips the cache write.
   Only meaningful for videos whose `video_id` is a real YouTube video ID (imported videos, not user-uploaded ones); returns `{ comments: [], disabled: true }` on a 403/404 (comments disabled or video not found upstream) rather than erroring. Read-only — there is no way to post to real YouTube from this API key.
 
 ## Personalized feed algorithm

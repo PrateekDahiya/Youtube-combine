@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const { getConnection } = require("../db");
-const { getChannelIds, processChannels, getNewChannelId, addNewChannel } = require("../youtube");
+const { getChannelIdsNeedingUpdate, processChannels, getNewChannelId, addNewChannel } = require("../youtube");
 const { syncHandler, asyncHandler } = require("../utils/asyncHandler");
 const { successResponse, errorResponse, validationErrorResponse, sendResponse } = require("../utils/responseWrapper");
 
@@ -62,7 +62,10 @@ let batchSize = 5;
 let totalResults = 5;
 
 router.get("/update_channels", asyncHandler(async (req, res) => {
-    const channelIds = await getChannelIds(offset, batchSize);
+    // Only channels whose most recently synced video is >3 days old (or
+    // that have no videos yet) are re-processed — skips channels that were
+    // already refreshed recently, instead of blindly re-syncing every batch.
+    const channelIds = await getChannelIdsNeedingUpdate(offset, batchSize, 3);
     if (channelIds.length === 0) {
         offset = 0;
     } else {
@@ -79,7 +82,7 @@ router.get("/addnewchannel", asyncHandler(async (req, res) => {
     sendResponse(res, successResponse({
         success: success,
         Channel_id: channelId,
-    }, "New channel added successfully"));
+    }, success === "AlreadyExists" ? "Channel already exists, skipped" : "New channel added successfully"));
 }));
 
 module.exports = router;
