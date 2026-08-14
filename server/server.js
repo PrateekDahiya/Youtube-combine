@@ -50,7 +50,11 @@ app.use((err, req, res, next) => {
     }
     const status = err.type === "entity.parse.failed" ? 400 : 500;
     console.error("Unhandled route error:", err.message || err);
-    res.status(status).json({ error: err.message || "Internal server error" });
+    res.status(status).json({
+        success: false,
+        data: null,
+        message: "Internal server error",
+    });
 });
 
 const server = app.listen(port, () => {

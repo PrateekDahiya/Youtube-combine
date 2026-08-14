@@ -3,21 +3,26 @@ const router = express.Router();
 const { sendEmail } = require("../email");
 const { fetchAndStoreVideos } = require("../youtube");
 const { asyncHandler } = require("../utils/asyncHandler");
+const { successResponse, errorResponse, validationErrorResponse, sendResponse } = require("../utils/responseWrapper");
 
 router.post("/feedback", asyncHandler(async (req, res) => {
     const feedback = req.body.feedback;
     const reqchannelid = req.body.reqchannelid;
     const name = req.body.name;
 
+    if (!feedback) {
+        return sendResponse(res, validationErrorResponse("Feedback content is required"));
+    }
+    if (!name) {
+        return sendResponse(res, validationErrorResponse("Name is required"));
+    }
+
     await sendEmail({
         to: process.env.NOTIFY_EMAIL,
         subject: "Website Feedback",
         text: `Name: ${name}\nMessage: ${feedback}`,
     });
-    res.status(200).json({
-        sent: true,
-        message: "Feedback sent successfully",
-    });
+    sendResponse(res, successResponse(null, "Feedback sent successfully"));
 
     const channelId = reqchannelid;
     const totalResults = 100;

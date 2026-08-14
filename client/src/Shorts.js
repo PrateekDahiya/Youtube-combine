@@ -146,9 +146,9 @@ const Shorts = (params) => {
                 const response = await shortsApi.getShorts(null, needmore);
                 setShortdata((prev) =>
                     prev.length === 0
-                        ? response.data.shorts_vIds
-                        : prev[0]?.video_id !== response.data.shorts_vIds[0]?.video_id
-                        ? [...prev, ...response.data.shorts_vIds]
+                        ? response.shorts_vIds
+                        : prev[0]?.video_id !== response.shorts_vIds[0]?.video_id
+                        ? [...prev, ...response.shorts_vIds]
                         : prev
                 );
             } catch (error) {

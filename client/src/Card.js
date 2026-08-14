@@ -56,7 +56,7 @@ const Card = (params) => {
             if (!user_chl_id || !video_id || !isHovered) return;
             try {
                 const response = await watchlaterApi.isWatchlater(user_chl_id, video_id);
-                setWatchlater(response.data.watchlater);
+                setWatchlater(response.watchlater);
             } catch (error) {
                 console.log("Error checking watchlater:", error.message);
             }

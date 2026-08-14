@@ -124,8 +124,8 @@ const Watch = (params) => {
                     subscriptionApi.isSubscribed(user_chl_id, channel_id),
                     likeApi.isLiked(user_chl_id, video_id),
                 ]);
-                setissubed(subRes.data.sub);
-                setisliked(likeRes.data.liked);
+                setissubed(subRes.sub);
+                setisliked(likeRes.liked);
             } catch (error) {
                 console.log("Error checking sub/like:", error.message);
             }
@@ -138,7 +138,7 @@ const Watch = (params) => {
             if (!video_id) return;
             try {
                 const response = await videoApi.getRelatedVideos(video_id);
-                setRelateddata(response.data);
+                setRelateddata(response);
             } catch (error) {
                 console.log("Error fetching related videos:", error.message);
             }
@@ -178,7 +178,7 @@ const Watch = (params) => {
             try {
                 const searchParams = new URLSearchParams(window.location.search);
                 const response = await videoApi.getWatch(Object.fromEntries(searchParams).video_id);
-                const row = response.data.data[0];
+                const row = response.data[0];
                 setwatchdata(row || {});
                 if (row && row.link && isUploadedLink(row.link)) {
                     setIsUploaded(true);

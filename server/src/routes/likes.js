@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const { getConnection } = require("../db");
 const { syncHandler } = require("../utils/asyncHandler");
+const { successResponse, errorResponse, validationErrorResponse, notFoundResponse, sendResponse } = require("../utils/responseWrapper");
 
 router.get("/likedvideos", syncHandler((req, res) => {
     const user_id = req.query.user_id;
@@ -11,12 +12,12 @@ router.get("/likedvideos", syncHandler((req, res) => {
     connection.query(query, [user_id], (error, results) => {
         if (error) {
             console.log(error);
-            return res.status(500).json({ error: "Database query failed" });
+            return sendResponse(res, errorResponse("Database query failed"));
         }
-        res.status(200).json({
+        sendResponse(res, successResponse({
             page: "likedvideos",
             videos: results,
-        });
+        }, "Liked videos retrieved successfully"));
     });
 }));
 
@@ -25,9 +26,7 @@ router.post("/addtoliked", syncHandler((req, res) => {
     const video_id = req.body.video_id;
 
     if (!user_id || !video_id) {
-        return res
-            .status(400)
-            .json({ error: "user_id and video_id are required" });
+        return sendResponse(res, validationErrorResponse("user_id and video_id are required"));
     }
 
     const query = `INSERT INTO likedvideos (user_id, video_id) VALUES (?, ?)`;
@@ -36,13 +35,10 @@ router.post("/addtoliked", syncHandler((req, res) => {
     connection.query(query, [user_id, video_id], (error, results) => {
         if (error) {
             console.error(error);
-            return res.status(500).json({ error: "Database query failed" });
+            return sendResponse(res, errorResponse("Database query failed"));
         }
 
-        res.status(200).json({
-            success: true,
-            comment: "Video liked successfully",
-        });
+        sendResponse(res, successResponse(null, "Video liked successfully"));
     });
 }));
 
@@ -51,9 +47,7 @@ router.post("/removefromliked", syncHandler((req, res) => {
     const video_id = req.body.video_id;
 
     if (!user_id || !video_id) {
-        return res
-            .status(400)
-            .json({ error: "user_id and video_id are required" });
+        return sendResponse(res, validationErrorResponse("user_id and video_id are required"));
     }
 
     const query = `DELETE FROM likedvideos WHERE user_id = ? AND video_id = ?`;
@@ -62,17 +56,14 @@ router.post("/removefromliked", syncHandler((req, res) => {
     connection.query(query, [user_id, video_id], (error, results) => {
         if (error) {
             console.error(error);
-            return res.status(500).json({ error: "Database query failed" });
+            return sendResponse(res, errorResponse("Database query failed"));
         }
 
         if (results.affectedRows === 0) {
-            return res.status(404).json({ error: "Like not found" });
+            return sendResponse(res, notFoundResponse("Like not found"));
         }
 
-        res.status(200).json({
-            success: true,
-            comment: "Like removed successfully",
-        });
+        sendResponse(res, successResponse(null, "Like removed successfully"));
     });
 }));
 
@@ -81,9 +72,7 @@ router.get("/isliked", syncHandler((req, res) => {
     const video_id = req.query.video_id;
 
     if (!user_id || !video_id) {
-        return res
-            .status(400)
-            .json({ error: "user_id and video_id are required" });
+        return sendResponse(res, validationErrorResponse("user_id and video_id are required"));
     }
 
     const query = `SELECT * FROM likedvideos WHERE user_id = ? AND video_id = ?`;
@@ -92,13 +81,13 @@ router.get("/isliked", syncHandler((req, res) => {
     connection.query(query, [user_id, video_id], (error, results) => {
         if (error) {
             console.error(error);
-            return res.status(500).json({ error: "Database query failed" });
+            return sendResponse(res, errorResponse("Database query failed"));
         }
 
         if (results.length > 0) {
-            return res.status(200).json({ liked: true });
+            return sendResponse(res, successResponse({ liked: true }, "Like status retrieved"));
         } else {
-            return res.status(200).json({ liked: false });
+            return sendResponse(res, successResponse({ liked: false }, "Like status retrieved"));
         }
     });
 }));

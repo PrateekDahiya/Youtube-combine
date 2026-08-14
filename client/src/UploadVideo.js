@@ -82,7 +82,7 @@ const UploadVideo = (params) => {
         formData.append("duration", 0);
 
         try {
-            const response = await uploadApi.uploadVideo(videoFile, thumbFile, {
+            await uploadApi.uploadVideo(videoFile, thumbFile, {
                 title,
                 description,
                 tags,
@@ -91,20 +91,15 @@ const UploadVideo = (params) => {
                 user_id: user.channel_id,
                 duration: 0,
             });
-            if (response.status === 200) {
-                setSuccess("Upload started! Track progress in Your channel.");
-                setTimeout(() => {
-                    if (params.onClose) params.onClose();
-                    if (params.onUploaded) params.onUploaded();
-                    navigate(`/uploads`);
-                }, 800);
-            }
+            setSuccess("Upload started! Track progress in Your channel.");
+            setTimeout(() => {
+                if (params.onClose) params.onClose();
+                if (params.onUploaded) params.onUploaded();
+                navigate(`/uploads`);
+            }, 800);
         } catch (err) {
             console.error("Upload error:", err);
-            setError(
-                (err.response && err.response.data && err.response.data.error) ||
-                    "Upload failed. Please try again."
-            );
+            setError(err.message || "Upload failed. Please try again.");
         } finally {
             setUploading(false);
         }

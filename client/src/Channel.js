@@ -40,7 +40,7 @@ const Channel = (params) => {
         const issubscribed = async () => {
             try {
                 const response = await subscriptionApi.isSubscribed(user_chl_id, channel_id);
-                setissubed(response.data.sub);
+                setissubed(response.sub);
             } catch (error) {
                 console.log("Error checking subscription:", error.message);
             }
@@ -61,7 +61,7 @@ const Channel = (params) => {
         const fetchData = async () => {
             try {
                 const response = await channelApi.getChannel(channel_id);
-                setData(response.data.channel[0]);
+                setData(response.channel[0]);
             } catch (error) {
                 console.log("Error fetching channel:", error.message);
             }
@@ -99,7 +99,7 @@ const Channel = (params) => {
         const fetchVideos = async () => {
             try {
                 const response = await videoApi.getVideosOfChannel(channel_id, typeShort, query, page_no);
-                mergeVideos(response.data.videos || []);
+                mergeVideos(response.videos || []);
             } catch (error) {
                 console.log("Error fetching videos:", error.message);
             } finally {

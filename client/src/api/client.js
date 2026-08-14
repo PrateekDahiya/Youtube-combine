@@ -9,11 +9,30 @@ const api = axios.create({
     },
 });
 
+function toApiError(error) {
+    const data = error.response && error.response.data;
+    if (data && data.message) {
+        const wrapped = new Error(data.message);
+        wrapped.response = error.response;
+        wrapped.data = data;
+        return wrapped;
+    }
+    return error;
+}
+
 api.interceptors.response.use(
-    (response) => response,
+    (response) => {
+        const wrapper = response.data;
+        if (wrapper && typeof wrapper.success === "boolean") {
+            if (wrapper.success) {
+                return wrapper.data;
+            }
+            return Promise.reject(toApiError({ response }));
+        }
+        return response.data;
+    },
     (error) => {
-        console.error("API Error:", error.message);
-        return Promise.reject(error);
+        return Promise.reject(toApiError(error));
     }
 );
 

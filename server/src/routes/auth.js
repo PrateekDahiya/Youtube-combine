@@ -4,6 +4,7 @@ const { getConnection } = require("../db");
 const { sendEmail } = require("../email");
 const { generateChannelId } = require("../utils");
 const { syncHandler, asyncHandler } = require("../utils/asyncHandler");
+const { successResponse, errorResponse, validationErrorResponse, notFoundResponse, forbiddenResponse, sendResponse } = require("../utils/responseWrapper");
 
 const userDetailFields = ["username", "email", "DOB"];
 
@@ -17,12 +18,12 @@ router.get("/login", syncHandler((req, res) => {
     connection.query(query, [email, username, hashpass], (error, results) => {
         if (error) {
             console.log("Login: " + error);
-            return res.status(500).json({ success: false, message: "Login failed" });
+            return sendResponse(res, errorResponse("Login failed"));
         }
         if (!results || results.length === 0) {
-            return res.status(404).json({ success: false, message: "User not found" });
+            return sendResponse(res, notFoundResponse("User not found"));
         }
-        res.status(200).json({ success: true, user: results[0] });
+        sendResponse(res, successResponse({ user: results[0] }, "Login successful"));
     });
 }));
 
@@ -55,9 +56,7 @@ router.post("/register", syncHandler((req, res) => {
         (error, results) => {
             if (error) {
                 console.log("Error creating channel: ", error);
-                return res
-                    .status(500)
-                    .json({ error: "Failed to create channel" });
+                return sendResponse(res, errorResponse("Failed to create channel"));
             }
             const userQuery = `INSERT INTO user (user_id, username, email, pass, DOB, channel_id) 
                                 VALUES (?, ?, ?, ?, ?, ?)
@@ -75,10 +74,7 @@ router.post("/register", syncHandler((req, res) => {
                 async (error, results) => {
                     if (error) {
                         console.log("Error registering user: ", error);
-                        return res.status(500).json({
-                            success: false,
-                            message: "Failed to register user",
-                        });
+                        return sendResponse(res, errorResponse("Failed to register user"));
                     }
                     sendEmail({
                         to: process.env.NOTIFY_EMAIL,
@@ -91,10 +87,7 @@ router.post("/register", syncHandler((req, res) => {
                     }).catch((error) =>
                         console.error("Error sending new-user notification:", error)
                     );
-                    return res.status(200).json({
-                        success: true,
-                        message: "Registration successful",
-                    });
+                    return sendResponse(res, successResponse(null, "Registration successful"));
                 }
             );
         }
@@ -109,9 +102,9 @@ router.post("/getUser", syncHandler((req, res) => {
     connection.query(query, [user_id], (error, results) => {
         if (error) {
             console.log("GetUser: " + error);
-            return res.status(500).json({ error: "Database query failed" });
+            return sendResponse(res, errorResponse("Database query failed"));
         }
-        res.status(200).json({ user: results });
+        sendResponse(res, successResponse({ user: results }, "User retrieved successfully"));
     });
 }));
 
@@ -120,7 +113,7 @@ router.post("/updateUserDetail", syncHandler((req, res) => {
     const value = req.body.value;
     const user_id = req.body.user_id;
     if (!userDetailFields.includes(field)) {
-        return res.status(400).json({ error: "Invalid field" });
+        return sendResponse(res, validationErrorResponse("Invalid field"));
     }
     const query = `UPDATE user SET \`${field}\` = ? WHERE user_id = ?`;
 
@@ -128,9 +121,9 @@ router.post("/updateUserDetail", syncHandler((req, res) => {
     connection.query(query, [value, user_id], (error, results) => {
         if (error) {
             console.log("UpdateUserDetail: " + error);
-            return res.status(500).json({ error: "Failed to update user" });
+            return sendResponse(res, errorResponse("Failed to update user"));
         }
-        res.status(200).json({ message: "User details updated" });
+        sendResponse(res, successResponse(null, "User details updated successfully"));
     });
 }));
 
@@ -150,7 +143,7 @@ router.post("/updateChannelDetail", syncHandler((req, res) => {
     const value = req.body.value;
     const channel_id = req.body.channel_id;
     if (!channelDetailFields.includes(field)) {
-        return res.status(400).json({ error: "Invalid field" });
+        return sendResponse(res, validationErrorResponse("Invalid field"));
     }
     const query = `UPDATE channels SET \`${field}\` = ? WHERE channel_id = ?`;
 
@@ -158,11 +151,9 @@ router.post("/updateChannelDetail", syncHandler((req, res) => {
     connection.query(query, [value, channel_id], (error, results) => {
         if (error) {
             console.log("ChannelUserDetail: " + error);
-            return res
-                .status(500)
-                .json({ error: "Failed to update channel details" });
+            return sendResponse(res, errorResponse("Failed to update channel details"));
         }
-        res.status(200).json({ message: "User details updated" });
+        sendResponse(res, successResponse(null, "Channel details updated successfully"));
     });
 }));
 
@@ -171,9 +162,7 @@ router.post("/deleteUser", syncHandler((req, res) => {
     const user_id = req.body.user_id;
 
     if (!user_id || !channel_id) {
-        return res
-            .status(400)
-            .json({ error: "user_id and channel_id are required" });
+        return sendResponse(res, validationErrorResponse("user_id and channel_id are required"));
     }
 
     const queries = [
@@ -191,14 +180,14 @@ router.post("/deleteUser", syncHandler((req, res) => {
     const rollbackAndFail = (err, label) => {
         console.log(`Error ${label}: ` + err);
         connection.rollback(() => {
-            res.status(500).json({ error: "Failed to delete user" });
+            sendResponse(res, errorResponse("Failed to delete user"));
         });
     };
 
     connection.beginTransaction((err) => {
         if (err) {
             console.log("Error starting transaction: " + err);
-            return res.status(500).json({ error: "Failed to delete user" });
+            return sendResponse(res, errorResponse("Failed to delete user"));
         }
 
         const runQuery = (index) => {
@@ -208,9 +197,7 @@ router.post("/deleteUser", syncHandler((req, res) => {
                         return rollbackAndFail(commitErr, "committing transaction");
                     }
                     console.log("Transaction successfully completed.");
-                    res.status(200).json({
-                        message: "User and channel deleted successfully.",
-                    });
+                    sendResponse(res, successResponse(null, "User and channel deleted successfully"));
                 });
             }
             connection.query(queries[index][0], queries[index][1], (qErr) => {

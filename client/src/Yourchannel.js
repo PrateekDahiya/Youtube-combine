@@ -19,7 +19,7 @@ const Yourchannel = (params) => {
         const fetchData = async () => {
             try {
                 const response = await channelApi.getYourChannel(user.channel_id);
-                setData(response.data.channel[0]);
+                setData(response.channel[0]);
             } catch (error) {
                 console.error("Error fetching data:", error);
             }
@@ -31,7 +31,7 @@ const Yourchannel = (params) => {
         const fetchVideos = async () => {
             try {
                 const response = await videoApi.getVideosOfChannel(user.channel_id, typeShort);
-                setVideos(response.data);
+                setVideos(response);
             } catch (error) {
                 console.log("Error fetching videos:", error.message);
             }

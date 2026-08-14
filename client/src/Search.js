@@ -48,10 +48,10 @@ const Search = () => {
         const fetchData = async () => {
             try {
                 const response = await searchApi.search(queryString.replace("?", ""), page_no);
-                mergeVideos(response.data.videos || []);
+                mergeVideos(response.videos || []);
                 setData((prev) => ({
                     ...(prev || {}),
-                    channels: response.data.channels || [],
+                    channels: response.channels || [],
                 }));
             } catch (error) {
                 console.log("Error fetching search:", error.message);

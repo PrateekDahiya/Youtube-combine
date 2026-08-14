@@ -6,6 +6,7 @@ const {
     convertImageUrl,
     convertDurationToSeconds,
     getCategoryName,
+    createFeedAndGenerateSQL,
 } = require("../utils");
 
 let currentApiKeyIndex = 0;
@@ -313,6 +314,49 @@ const fetchVideoHistory = async (user_id) => {
     });
 };
 
+const fetchRelatedVideos = async (video_id) => {
+    const connection = getConnection();
+    return new Promise((resolve, reject) => {
+        const fetchTagsQuery = `SELECT tags FROM videos WHERE video_id = ?`;
+        connection.query(fetchTagsQuery, [video_id], (error, results) => {
+            if (error) {
+                return reject(new Error("Database error"));
+            }
+
+            if (results.length === 0) {
+                const notFound = new Error("Video not found");
+                notFound.statusCode = 404;
+                return reject(notFound);
+            }
+
+            const tags = results[0].tags
+                ? results[0].tags
+                      .split(",")
+                      .map((tag) => tag.trim())
+                      .filter((tag) => tag)
+                : [];
+
+            if (tags.length === 0) {
+                const noTags = new Error("No tags available for this video");
+                noTags.statusCode = 400;
+                return reject(noTags);
+            }
+
+            const sqlQuery = createFeedAndGenerateSQL(tags);
+
+            connection.query(sqlQuery, (feedError, relatedVideos) => {
+                if (feedError) {
+                    console.log("Error fetching related videos:", feedError.message);
+                    console.log("Generated SQL Query:", sqlQuery);
+                    return reject(new Error("Database error"));
+                }
+
+                resolve({ page: "related_videos", videos: relatedVideos });
+            });
+        });
+    });
+};
+
 module.exports = {
     fetchAndStoreVideos,
     getChannelIds,
@@ -321,6 +365,7 @@ module.exports = {
     addNewChannel,
     getRandomCategory,
     fetchVideoHistory,
+    fetchRelatedVideos,
     getCurrentApiKeyIndex: () => currentApiKeyIndex,
     setCurrentApiKeyIndex: (val) => { currentApiKeyIndex = val; },
 };

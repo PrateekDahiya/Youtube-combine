@@ -107,7 +107,7 @@ function Menu(params) {
             const fetchsubs = async () => {
                 try {
                     const response = await subscriptionApi.getSubscriptions(user.channel_id);
-                    setsubsData(response.data);
+                    setsubsData(response);
                 } catch (error) {
                     console.log("Error fetching subscriptions:", error.message);
                 }

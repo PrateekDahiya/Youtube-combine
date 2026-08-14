@@ -2,18 +2,19 @@ const express = require("express");
 const router = express.Router();
 const { getConnection } = require("../db");
 const { syncHandler } = require("../utils/asyncHandler");
+const { successResponse, errorResponse, sendResponse } = require("../utils/responseWrapper");
 
 router.get("/keep-active", syncHandler((req, res) => {
-    res.json({ message: "Server is active" });
+    sendResponse(res, successResponse({ active: true }, "Server is active"));
 }));
 
 router.get("/health", syncHandler((req, res) => {
     const connection = getConnection();
     connection.query("SELECT 1", (error) => {
         if (error) {
-            return res.status(503).json({ status: "error", db: "unreachable" });
+            return sendResponse(res, errorResponse("Database unreachable", 503, { db: "unreachable" }));
         }
-        res.status(200).json({ status: "ok", db: "connected" });
+        sendResponse(res, successResponse({ db: "connected" }, "Health check passed"));
     });
 }));
 

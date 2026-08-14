@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const { getConnection } = require("../db");
 const { syncHandler } = require("../utils/asyncHandler");
+const { successResponse, errorResponse, validationErrorResponse, notFoundResponse, sendResponse } = require("../utils/responseWrapper");
 
 router.get("/history", syncHandler((req, res) => {
     const user_id = req.query.user_id;
@@ -10,9 +11,9 @@ router.get("/history", syncHandler((req, res) => {
     const connection = getConnection();
     connection.query(query, [user_id], (error, results) => {
         if (error) {
-            return res.status(500).json({ error: error.message });
+            return sendResponse(res, errorResponse("Database query failed"));
         }
-        res.status(200).json({ videos: results });
+        sendResponse(res, successResponse({ videos: results }, "History retrieved successfully"));
     });
 }));
 
@@ -21,9 +22,7 @@ router.post("/addtohistory", syncHandler((req, res) => {
     const video_id = req.body.video_id;
 
     if (!user_id || !video_id) {
-        return res
-            .status(400)
-            .json({ error: "user_id and video_id are required" });
+        return sendResponse(res, validationErrorResponse("user_id and video_id are required"));
     }
 
     const query = `INSERT INTO history (user_id, video_id, watched_time) VALUES (?, ?, CURRENT_TIMESTAMP) ON DUPLICATE KEY UPDATE watched_time = CURRENT_TIMESTAMP`;
@@ -32,13 +31,10 @@ router.post("/addtohistory", syncHandler((req, res) => {
     connection.query(query, [user_id, video_id], (error, results) => {
         if (error) {
             console.error(error);
-            return res.status(500).json({ error: "Database query failed" });
+            return sendResponse(res, errorResponse("Database query failed"));
         }
 
-        res.status(200).json({
-            success: true,
-            comment: "Video added to history successfully",
-        });
+        sendResponse(res, successResponse(null, "Video added to history successfully"));
     });
 }));
 
@@ -47,9 +43,7 @@ router.post("/removefromhistory", syncHandler((req, res) => {
     const video_id = req.body.video_id;
 
     if (!user_id || !video_id) {
-        return res
-            .status(400)
-            .json({ error: "user_id and video_id are required" });
+        return sendResponse(res, validationErrorResponse("user_id and video_id are required"));
     }
 
     const query = `DELETE FROM history WHERE user_id = ? AND video_id = ?`;
@@ -58,17 +52,14 @@ router.post("/removefromhistory", syncHandler((req, res) => {
     connection.query(query, [user_id, video_id], (error, results) => {
         if (error) {
             console.error(error);
-            return res.status(500).json({ error: "Database query failed" });
+            return sendResponse(res, errorResponse("Database query failed"));
         }
 
         if (results.affectedRows === 0) {
-            return res.status(404).json({ error: "History not found" });
+            return sendResponse(res, notFoundResponse("History not found"));
         }
 
-        res.status(200).json({
-            success: true,
-            comment: "History removed successfully",
-        });
+        sendResponse(res, successResponse(null, "History removed successfully"));
     });
 }));
 

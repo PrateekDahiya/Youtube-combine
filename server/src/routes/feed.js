@@ -10,6 +10,7 @@ const {
     createFeedAndGenerateSQL,
 } = require("../utils");
 const { syncHandler, asyncHandler } = require("../utils/asyncHandler");
+const { successResponse, errorResponse, validationErrorResponse, sendResponse } = require("../utils/responseWrapper");
 
 router.get("/home", syncHandler((req, res) => {
     const page_no = Number(req.query.page || 1);
@@ -18,9 +19,9 @@ router.get("/home", syncHandler((req, res) => {
     connection.query(query, [24 * (page_no - 1)], (error, results) => {
         if (error) {
             console.log(error);
-            return res.status(500).json({ error: "Database query failed" });
+            return sendResponse(res, errorResponse("Database query failed"));
         }
-        res.status(200).json({ page: "home", videos: results });
+        sendResponse(res, successResponse({ page: "home", videos: results }, "Home feed retrieved successfully"));
     });
 }));
 
@@ -45,9 +46,9 @@ router.get("/feed-by-tag", syncHandler((req, res) => {
         (error, results) => {
             if (error) {
                 console.log(error);
-                return res.status(500).json({ error: "Database query failed" });
+                return sendResponse(res, errorResponse("Database query failed"));
             }
-            res.status(200).json({ page: "home_tag", videos: results, tag, type });
+            sendResponse(res, successResponse({ page: "home_tag", videos: results, tag, type }, "Feed retrieved successfully"));
         }
     );
 }));
@@ -56,7 +57,7 @@ router.get("/home-tags", asyncHandler(async (req, res) => {
     const user_id = req.query.user_id;
 
     if (!user_id) {
-        return res.status(400).json({ error: "Missing user_id parameter" });
+        return sendResponse(res, validationErrorResponse("Missing user_id parameter"));
     }
 
     const videoHistory = await fetchVideoHistory(user_id);
@@ -77,7 +78,7 @@ router.get("/home-tags", asyncHandler(async (req, res) => {
         .slice(0, 5)
         .map(([tag]) => tag);
 
-    res.status(200).json({ tags });
+    sendResponse(res, successResponse({ tags }, "Home tags retrieved successfully"));
 }));
 
 router.get("/shorts", syncHandler((req, res) => {
@@ -118,9 +119,9 @@ router.get("/shorts", syncHandler((req, res) => {
     connection.query(query, queryParams, (error, results) => {
         if (error) {
             console.error(error);
-            return res.status(500).json({ error: "Internal server error" });
+            return sendResponse(res, errorResponse("Internal server error"));
         }
-        res.status(200).json({ page: "shorts", shorts_vIds: results });
+        sendResponse(res, successResponse({ page: "shorts", shorts_vIds: results }, "Shorts retrieved successfully"));
     });
 }));
 
@@ -134,9 +135,9 @@ router.get("/subscriptions", syncHandler((req, res) => {
     connection.query(query, [user_id, isShort, 24 * (page_no - 1)], (error, results) => {
         if (error) {
             console.log(error);
-            return res.status(500).json({ error: "Database query failed" });
+            return sendResponse(res, errorResponse("Database query failed"));
         }
-        res.status(200).json({ page: "subscription", data: results });
+        sendResponse(res, successResponse({ page: "subscription", data: results }, "Subscriptions retrieved successfully"));
     });
 }));
 
@@ -153,14 +154,14 @@ router.get("/category", syncHandler((req, res) => {
         (error, results) => {
             if (error) {
                 console.log(error);
-                return res.status(500).json({ error: "Database query failed" });
+                return sendResponse(res, errorResponse("Database query failed"));
             }
-            res.status(200).json({
+            sendResponse(res, successResponse({
                 page: "category",
                 caticon: caticon[category],
                 videos: results,
                 category: category,
-            });
+            }, "Category feed retrieved successfully"));
         }
     );
 }));
@@ -186,9 +187,9 @@ router.get("/trendings", syncHandler((req, res) => {
     connection.query(query, queryParams, (error, results) => {
         if (error) {
             console.log(error);
-            return res.status(500).json({ error: "Internal Server Error" });
+            return sendResponse(res, errorResponse("Internal Server Error"));
         }
-        res.status(200).json({ page: "trendings", videos: results });
+        sendResponse(res, successResponse({ page: "trendings", videos: results }, "Trending videos retrieved successfully"));
     });
 }));
 
@@ -206,7 +207,7 @@ router.get("/search", syncHandler((req, res) => {
         (videoError, videoResults) => {
             if (videoError) {
                 console.log(videoError);
-                return res.status(500).json({ error: "Internal Server Error" });
+                return sendResponse(res, errorResponse("Internal Server Error"));
             }
 
             connection.query(
@@ -215,17 +216,15 @@ router.get("/search", syncHandler((req, res) => {
                 (channelError, channelResults) => {
                     if (channelError) {
                         console.log(channelError);
-                        return res
-                            .status(500)
-                            .json({ error: "Internal Server Error" });
+                        return sendResponse(res, errorResponse("Internal Server Error"));
                     }
 
-                    res.status(200).json({
+                    sendResponse(res, successResponse({
                         page: "search",
                         videos: videoResults,
                         channels: channelResults,
                         query: query,
-                    });
+                    }, "Search results retrieved successfully"));
                 }
             );
         }

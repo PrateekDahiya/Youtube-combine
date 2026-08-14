@@ -52,7 +52,7 @@ const Settings = (params) => {
 
     const uploadImage = async (file) => {
         const response = await uploadApi.uploadImage(file);
-        return response.data.url;
+        return response.url;
     };
 
     const handleFileChange = async (e, type) => {
@@ -87,10 +87,8 @@ const Settings = (params) => {
     const updateCookies = async () => {
         try {
             const response = await authApi.getUser(user.user_id);
-            if (response.status === 200) {
-                const user = response.data.user[0];
-                params.setUser(user);
-            }
+            const user = response.user[0];
+            params.setUser(user);
         } catch (error) {
             console.error("Error updating cookies:", error);
         }
@@ -125,14 +123,10 @@ const Settings = (params) => {
             };
 
             try {
-                const response = await authApi.updateUserDetail(userfieldName, value, user.user_id);
-                if (response.status === 200) {
-                    setEditIndex(-1);
-                } else {
-                    console.log("Update failed");
-                }
+                await authApi.updateUserDetail(userfieldName, value, user.user_id);
+                setEditIndex(-1);
             } catch (error) {
-                console.error("Error updating data:", error);
+                console.error("Error updating data:", error.message);
             }
         }
         if (channelfieldName !== undefined) {
@@ -143,27 +137,19 @@ const Settings = (params) => {
             };
 
             try {
-                const response = await authApi.updateChannelDetail(channelfieldName, value, user.channel_id);
-                if (response.status === 200) {
-                    setEditIndex(-1);
-                } else {
-                    console.log("Update failed");
-                }
+                await authApi.updateChannelDetail(channelfieldName, value, user.channel_id);
+                setEditIndex(-1);
             } catch (error) {
-                console.error("Error updating data:", error);
+                console.error("Error updating data:", error.message);
             }
         }
         if (label === "Delete Channel" && value === "Delete Channel") {
             try {
-                const response = await authApi.deleteUser(user.user_id, user.channel_id);
-                if (response.status === 200) {
-                    await updateCookies();
-                    window.location.href = "/";
-                } else {
-                    console.log("Update failed");
-                }
+                await authApi.deleteUser(user.user_id, user.channel_id);
+                await updateCookies();
+                window.location.href = "/";
             } catch (error) {
-                console.error("Error updating data:", error);
+                console.error("Error updating data:", error.message);
             }
         }
         updateCookies();

@@ -16,7 +16,7 @@ const Likedvideos = (params) => {
             if (!user_chl_id) return;
             try {
                 const response = await likeApi.getLikedVideos(user_chl_id);
-                setData(response.data);
+                setData(response);
             } catch (error) {
                 console.log("Error fetching liked videos:", error.message);
             } finally {

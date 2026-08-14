@@ -17,7 +17,7 @@ const You = (params) => {
         const fetchData = async () => {
             try {
                 const response = await channelApi.getYourChannel(user.channel_id);
-                setData(response.data.channel[0]);
+                setData(response.channel[0]);
             } catch (error) {
                 console.log("Error fetching channel:", error.message);
             } finally {

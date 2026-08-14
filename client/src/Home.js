@@ -44,7 +44,7 @@ const Home = (params) => {
 
             try {
                 const response = await feedApi.getHomeTags(user.channel_id);
-                setTopTags(response.data.tags || []);
+                setTopTags(response.tags || []);
             } catch (error) {
                 console.log("Error in fetching home tags: ", error.message);
             }
@@ -61,16 +61,16 @@ const Home = (params) => {
                 let response;
                 if (selectedTag !== "All") {
                     response = await feedApi.getFeedByTag(selectedTag, page_no);
-                    mergeVideos(response.data.videos || []);
+                    mergeVideos(response.videos || []);
                 } else if (selectedType !== "All") {
                     response = await feedApi.getFeedByType(selectedType, page_no);
-                    mergeVideos(response.data.videos || []);
+                    mergeVideos(response.videos || []);
                 } else if (user !== "Guest" && user.channel_id) {
                     response = await feedApi.getPersonalizedFeed(user.channel_id, page_no);
-                    mergeVideos(response.data.videos || []);
+                    mergeVideos(response.videos || []);
                 } else {
                     response = await feedApi.getHome(page_no);
-                    mergeVideos(response.data.videos || []);
+                    mergeVideos(response.videos || []);
                 }
             } catch (error) {
                 console.log("Error in fetching: ", error.message);

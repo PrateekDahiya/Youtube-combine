@@ -46,15 +46,10 @@ const EditVideo = (params) => {
         setThumbPreview(URL.createObjectURL(file));
         try {
             const response = await uploadApi.uploadImage(file);
-            setThumbnail(response.data.url);
+            setThumbnail(response.url);
         } catch (uploadErr) {
             console.error("Thumbnail upload error:", uploadErr);
-            setError(
-                (uploadErr.response &&
-                    uploadErr.response.data &&
-                    uploadErr.response.data.error) ||
-                    "Failed to upload thumbnail."
-            );
+            setError(uploadErr.message || "Failed to upload thumbnail.");
         }
     };
 
@@ -67,7 +62,7 @@ const EditVideo = (params) => {
         setError("");
         setSuccess("");
         try {
-            const response = await videoApi.updateVideo({
+            await videoApi.updateVideo({
                 video_id: video.video_id,
                 user_id: user.channel_id,
                 title,
@@ -77,19 +72,14 @@ const EditVideo = (params) => {
                 isShort: type,
                 thumbnail_link: thumbnail,
             });
-            if (response.status === 200) {
-                setSuccess("Video updated!");
-                setTimeout(() => {
-                    if (params.onClose) params.onClose();
-                    if (params.onUpdated) params.onUpdated();
-                }, 800);
-            }
+            setSuccess("Video updated!");
+            setTimeout(() => {
+                if (params.onClose) params.onClose();
+                if (params.onUpdated) params.onUpdated();
+            }, 800);
         } catch (err) {
             console.error("Update error:", err);
-            setError(
-                (err.response && err.response.data && err.response.data.error) ||
-                    "Update failed. Please try again."
-            );
+            setError(err.message || "Update failed. Please try again.");
         } finally {
             setSaving(false);
         }

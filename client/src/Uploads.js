@@ -15,7 +15,7 @@ const Uploads = (params) => {
         if (user === "Guest") return;
         try {
             const response = await videoApi.getUploadingVideos(user.channel_id);
-            setUploads(response.data.uploads || []);
+            setUploads(response.uploads || []);
         } catch (error) {
             console.log("Error fetching uploads: ", error.message);
         }

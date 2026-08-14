@@ -59,8 +59,8 @@ const Category = (params) => {
         const fetchData = async () => {
             try {
                 const response = await categoryApi.getCategory(category, typeShort, page_no);
-                mergeVideos(response.data.videos || []);
-                setdata((prev) => ({ ...prev, caticon: response.data.caticon, category: response.data.category }));
+                mergeVideos(response.videos || []);
+                setdata((prev) => ({ ...prev, caticon: response.caticon, category: response.category }));
             } catch (error) {
                 console.log("Error fetching category:", error.message);
             } finally {

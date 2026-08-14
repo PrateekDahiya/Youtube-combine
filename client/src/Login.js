@@ -140,15 +140,8 @@ function Login(params) {
         try {
             if (type === "login") {
                 const response = await authApi.login(username, email, hashpass);
-                if (response.data.success) {
-                    setCookie(response.data.user);
-                    return { success: true };
-                } else {
-                    return {
-                        success: false,
-                        message: response.data.message || "Login failed",
-                    };
-                }
+                setCookie(response.user);
+                return { success: true };
             }
 
             if (type === "register") {
@@ -163,15 +156,8 @@ function Login(params) {
                     DOB,
                     location,
                 };
-                const response = await authApi.register(requestData);
-                if (response.data.success) {
-                    return { success: true };
-                } else {
-                    return {
-                        success: false,
-                        message: response.data.message || "Login failed",
-                    };
-                }
+                await authApi.register(requestData);
+                return { success: true };
             }
 
             if (type === "feedback") {
@@ -180,8 +166,8 @@ function Login(params) {
                     feedback: sanitizeForSQL(feedback),
                     reqchannelid,
                 };
-                const response = await authApi.sendFeedback(requestData.feedback, requestData.reqchannelid, requestData.name);
-                return { success: response.data.sent };
+                await authApi.sendFeedback(requestData.feedback, requestData.reqchannelid, requestData.name);
+                return { success: true };
             }
         } catch (error) {
             console.error("Error:", error);

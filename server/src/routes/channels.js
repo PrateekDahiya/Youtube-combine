@@ -3,6 +3,7 @@ const router = express.Router();
 const { getConnection } = require("../db");
 const { getChannelIds, processChannels, getNewChannelId, addNewChannel } = require("../youtube");
 const { syncHandler, asyncHandler } = require("../utils/asyncHandler");
+const { successResponse, errorResponse, validationErrorResponse, sendResponse } = require("../utils/responseWrapper");
 
 router.get("/yourchannel", syncHandler((req, res) => {
     const channel_id = req.query.channel_id;
@@ -12,9 +13,9 @@ router.get("/yourchannel", syncHandler((req, res) => {
     connection.query(query, [channel_id], (error, results) => {
         if (error) {
             console.log(error);
-            return res.status(500).json({ error: "Database query failed" });
+            return sendResponse(res, errorResponse("Database query failed"));
         }
-        res.status(200).json({ page: "yourchannel", channel: results });
+        sendResponse(res, successResponse({ page: "yourchannel", channel: results }, "Channel retrieved successfully"));
     });
 }));
 
@@ -26,9 +27,9 @@ router.get("/channel", syncHandler((req, res) => {
     connection.query(query, [channel_id], (error, results) => {
         if (error) {
             console.log(error);
-            return res.status(500).json({ error: "Database query failed" });
+            return sendResponse(res, errorResponse("Database query failed"));
         }
-        res.status(200).json({ page: "channel", channel: results });
+        sendResponse(res, successResponse({ page: "channel", channel: results }, "Channel retrieved successfully"));
     });
 }));
 
@@ -38,9 +39,9 @@ router.get("/getallchannels", syncHandler((req, res) => {
     const connection = getConnection();
     connection.query(query, (error, results) => {
         if (error) {
-            return res.status(500).json({ error: error.message });
+            return sendResponse(res, errorResponse("Database query failed"));
         }
-        res.status(200).json({ data: results });
+        sendResponse(res, successResponse({ data: results }, "All channels retrieved successfully"));
     });
 }));
 
@@ -50,9 +51,9 @@ router.get("/get-channel-ids", syncHandler((req, res) => {
     const connection = getConnection();
     connection.query(query, (error, results) => {
         if (error) {
-            return res.status(500).json({ error: error.message });
+            return sendResponse(res, errorResponse("Database query failed"));
         }
-        res.json({ channelIds: results });
+        sendResponse(res, successResponse({ channelIds: results }, "Channel IDs retrieved successfully"));
     });
 }));
 
@@ -69,16 +70,16 @@ router.get("/update_channels", asyncHandler(async (req, res) => {
         offset += batchSize;
     }
 
-    res.status(200).json({ Channels_updated_successfully: channelIds });
+    sendResponse(res, successResponse({ Channels_updated_successfully: channelIds }, "Channels updated successfully"));
 }));
 
 router.get("/addnewchannel", asyncHandler(async (req, res) => {
     const channelId = await getNewChannelId();
     const success = await addNewChannel(channelId);
-    res.status(200).json({
+    sendResponse(res, successResponse({
         success: success,
         Channel_id: channelId,
-    });
+    }, "New channel added successfully"));
 }));
 
 module.exports = router;

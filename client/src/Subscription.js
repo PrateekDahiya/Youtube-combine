@@ -47,7 +47,7 @@ const Subscription = (params) => {
         const fetchData = async () => {
             try {
                 const response = await subscriptionApi.getSubscriptionVideos(user.channel_id, typeShort, page_no);
-                mergeVideos(response.data.data || []);
+                mergeVideos(response.data || []);
             } catch (error) {
                 console.log("Error fetching subscription videos:", error.message);
             } finally {
@@ -62,7 +62,7 @@ const Subscription = (params) => {
         const fetchChannels = async () => {
             try {
                 const response = await subscriptionApi.getSubscriptions(user.channel_id);
-                setChannels(response.data.subscription || []);
+                setChannels(response.subscription || []);
             } catch (error) {
                 console.log("Error fetching subscriptions:", error.message);
             }

@@ -4,30 +4,29 @@ const { getConnection } = require("../db");
 const { generateVideoId } = require("../utils");
 const { upload, videoUpload, processVideoUpload, isCloudinaryConfigured } = require("../uploads");
 const { syncHandler } = require("../utils/asyncHandler");
+const { successResponse, errorResponse, validationErrorResponse, sendResponse } = require("../utils/responseWrapper");
 
 router.post("/upload", syncHandler((req, res) => {
     upload.single("file")(req, res, async (err) => {
         if (err) {
-            return res
-                .status(400)
-                .json({ error: err.message || "Upload failed" });
+            return sendResponse(res, validationErrorResponse(err.message || "Upload failed"));
         }
         if (!req.file) {
-            return res.status(400).json({ error: "No file uploaded" });
+            return sendResponse(res, validationErrorResponse("No file uploaded"));
         }
         if (!isCloudinaryConfigured()) {
-            return res.status(200).json({ url: `/uploads/${req.file.filename}` });
+            return sendResponse(res, successResponse({ url: `/uploads/${req.file.filename}` }, "File uploaded successfully"));
         }
         try {
             const { cloudinaryUpload, removeLocalFile } = require("../uploads");
             const url = await cloudinaryUpload(req.file.path, "image", "vidvault/photos");
             removeLocalFile(req.file.path);
-            res.status(200).json({ url });
+            sendResponse(res, successResponse({ url }, "Image uploaded successfully"));
         } catch (uploadErr) {
             console.log("Cloudinary image upload: " + JSON.stringify(uploadErr));
             const { removeLocalFile, cloudinaryErrorMessage } = require("../uploads");
             removeLocalFile(req.file.path);
-            res.status(500).json({ error: cloudinaryErrorMessage(uploadErr) });
+            sendResponse(res, errorResponse(cloudinaryErrorMessage(uploadErr)));
         }
     });
 }));
@@ -38,12 +37,10 @@ router.post("/uploadVideo", syncHandler((req, res) => {
         { name: "thumbnail", maxCount: 1 },
     ])(req, res, (err) => {
         if (err) {
-            return res
-                .status(400)
-                .json({ error: err.message || "Upload failed" });
+            return sendResponse(res, validationErrorResponse(err.message || "Upload failed"));
         }
         if (!req.files || !req.files.video) {
-            return res.status(400).json({ error: "No video file uploaded" });
+            return sendResponse(res, validationErrorResponse("No video file uploaded"));
         }
         const videoFile = req.files.video[0];
         const thumbFile =
@@ -79,16 +76,13 @@ router.post("/uploadVideo", syncHandler((req, res) => {
         connection.query(insertQuery, params, (error) => {
             if (error) {
                 console.log("UploadVideo insert: " + error);
-                return res
-                    .status(500)
-                    .json({ error: "Failed to save video details" });
+                return sendResponse(res, errorResponse("Failed to save video details"));
             }
             if (isCloudinaryConfigured()) {
-                res.status(200).json({
-                    message: "Video upload started",
+                sendResponse(res, successResponse({
                     video_id,
                     upload_status: 1,
-                });
+                }, "Video upload started"));
                 setTimeout(
                     () =>
                         processVideoUpload(
@@ -122,11 +116,10 @@ router.post("/uploadVideo", syncHandler((req, res) => {
                                         "UploadVideo count update: " + countErr
                                     );
                                 }
-                                res.status(200).json({
-                                    message: "Video uploaded successfully",
+                                sendResponse(res, successResponse({
                                     video_id,
                                     upload_status: 0,
-                                });
+                                }, "Video uploaded successfully"));
                             }
                         );
                     }

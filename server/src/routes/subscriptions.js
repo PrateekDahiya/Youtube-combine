@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const { getConnection } = require("../db");
 const { syncHandler } = require("../utils/asyncHandler");
+const { successResponse, errorResponse, validationErrorResponse, notFoundResponse, sendResponse } = require("../utils/responseWrapper");
 
 router.post("/addtosubs", syncHandler((req, res) => {
     const user_chl_id = req.body.user_chl_id;
@@ -12,13 +13,10 @@ router.post("/addtosubs", syncHandler((req, res) => {
     connection.query(query, [user_chl_id, channel_id], (error, results) => {
         if (error) {
             console.error(error);
-            return res.status(500).json({ error: "Database query failed" });
+            return sendResponse(res, errorResponse("Database query failed"));
         }
 
-        res.status(200).json({
-            success: true,
-            comment: "Subcriber added success",
-        });
+        sendResponse(res, successResponse(null, "Subscription added successfully"));
     });
 }));
 
@@ -27,9 +25,7 @@ router.post("/removefromsubs", syncHandler((req, res) => {
     const channel_id = req.body.channel_id;
 
     if (!user_chl_id || !channel_id) {
-        return res
-            .status(400)
-            .json({ error: "user_chl_id and channel_id are required" });
+        return sendResponse(res, validationErrorResponse("user_chl_id and channel_id are required"));
     }
 
     const query = `DELETE FROM subscriptions WHERE user_id = ? AND channel_id = ?`;
@@ -38,17 +34,14 @@ router.post("/removefromsubs", syncHandler((req, res) => {
     connection.query(query, [user_chl_id, channel_id], (error, results) => {
         if (error) {
             console.error(error);
-            return res.status(500).json({ error: "Database query failed" });
+            return sendResponse(res, errorResponse("Database query failed"));
         }
 
         if (results.affectedRows === 0) {
-            return res.status(404).json({ error: "Subscription not found" });
+            return sendResponse(res, notFoundResponse("Subscription not found"));
         }
 
-        res.status(200).json({
-            success: true,
-            comment: "Subscription removed successfully",
-        });
+        sendResponse(res, successResponse(null, "Subscription removed successfully"));
     });
 }));
 
@@ -57,9 +50,7 @@ router.get("/issub", syncHandler((req, res) => {
     const channel_id = req.query.channel_id;
 
     if (!user_chl || !channel_id) {
-        return res
-            .status(400)
-            .json({ error: "user_id and channel_id are required" });
+        return sendResponse(res, validationErrorResponse("user_id and channel_id are required"));
     }
 
     const query = `SELECT * FROM subscriptions WHERE user_id = ? AND channel_id = ?`;
@@ -67,12 +58,12 @@ router.get("/issub", syncHandler((req, res) => {
     const connection = getConnection();
     connection.query(query, [user_chl, channel_id], (error, results) => {
         if (error) {
-            return res.status(500).json({ error: "Database query error" });
+            return sendResponse(res, errorResponse("Database query error"));
         }
         if (results.length > 0) {
-            return res.status(200).json({ sub: true });
+            return sendResponse(res, successResponse({ sub: true }, "Subscription status retrieved"));
         } else {
-            return res.status(200).json({ sub: false });
+            return sendResponse(res, successResponse({ sub: false }, "Subscription status retrieved"));
         }
     });
 }));
@@ -84,9 +75,9 @@ router.get("/get-subs", syncHandler((req, res) => {
     const connection = getConnection();
     connection.query(query, [user_id], (error, results) => {
         if (error) {
-            return res.status(500).json({ error: error.message });
+            return sendResponse(res, errorResponse("Database query failed"));
         }
-        res.json({ subscription: results });
+        sendResponse(res, successResponse({ subscription: results }, "Subscriptions retrieved successfully"));
     });
 }));
 

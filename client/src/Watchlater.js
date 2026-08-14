@@ -16,7 +16,7 @@ const Watchlater = (params) => {
             if (!user_chl_id) return;
             try {
                 const response = await watchlaterApi.getWatchlater(user_chl_id);
-                setData(response.data);
+                setData(response);
             } catch (error) {
                 console.log("Error fetching watchlater:", error.message);
             } finally {

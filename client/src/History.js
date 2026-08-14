@@ -37,7 +37,7 @@ const History = (params) => {
             if (user_chl_id) {
                 try {
                     const response = await historyApi.getHistory(user_chl_id);
-                    setData(response.data.videos);
+                    setData(response.videos);
                 } catch (error) {
                     console.log("Error fetching history:", error.message);
                 } finally {

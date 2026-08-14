@@ -7,6 +7,7 @@ const {
     fetchVideoHistory,
 } = require("../youtube");
 const { syncHandler, asyncHandler } = require("../utils/asyncHandler");
+const { successResponse, errorResponse, validationErrorResponse, notFoundResponse, forbiddenResponse, sendResponse } = require("../utils/responseWrapper");
 
 router.get("/watch", syncHandler((req, res) => {
     const videoId = req.query.video_id;
@@ -15,20 +16,32 @@ router.get("/watch", syncHandler((req, res) => {
     const connection = getConnection();
     connection.query(query, [videoId], (error, results) => {
         if (error) {
-            return res.status(500).json({ error: error.message });
+            return sendResponse(res, errorResponse("Database query failed"));
         }
-        res.status(200).json({ page: "watch", data: results });
+        sendResponse(res, successResponse({ page: "watch", data: results }, "Video details retrieved successfully"));
     });
 }));
 
-router.get("/related-videos", syncHandler((req, res) => {
+router.get("/related-videos", asyncHandler(async (req, res) => {
     const video_id = req.query.video_id;
 
     if (!video_id) {
-        res.status(400).json({ error: "Missing video_id parameter" });
-        return;
+        return sendResponse(res, validationErrorResponse("Missing video_id parameter"));
     }
-    fetchRelatedVideos(video_id, res);
+    try {
+        const data = await fetchRelatedVideos(video_id);
+        sendResponse(res, successResponse(data, "Related videos retrieved successfully"));
+    } catch (error) {
+        if (error.statusCode) {
+            return sendResponse(res, {
+                success: false,
+                data: null,
+                message: error.message,
+                statusCode: error.statusCode,
+            });
+        }
+        sendResponse(res, errorResponse("Failed to fetch related videos"));
+    }
 }));
 
 router.get("/personalized-feed", asyncHandler(async (req, res) => {
@@ -36,7 +49,7 @@ router.get("/personalized-feed", asyncHandler(async (req, res) => {
     const page_no = req.query.page || 1;
 
     if (!user_chl_id) {
-        return res.status(400).json({ error: "Missing user_id parameter" });
+        return sendResponse(res, validationErrorResponse("Missing user_id parameter"));
     }
 
     const videoHistory = await fetchVideoHistory(user_chl_id);
@@ -62,14 +75,13 @@ router.get("/personalized-feed", asyncHandler(async (req, res) => {
         if (error) {
             console.log("Error fetching related videos:", error.message);
             console.log("Generated SQL Query:", sqlQuery);
-            res.status(500).json({ error: "Database error" });
-            return;
+            return sendResponse(res, errorResponse("Database error"));
         }
 
-        res.status(200).json({
+        sendResponse(res, successResponse({
             page: "personalized_feed",
             videos: feed,
-        });
+        }, "Personalized feed retrieved successfully"));
     });
 }));
 
@@ -81,9 +93,9 @@ router.get("/getvideobyid", syncHandler((req, res) => {
     connection.query(query, [video_id], (error, results) => {
         if (error) {
             console.log("Getvideobyid: " + error);
-            return res.status(500).json({ error: "Database query failed" });
+            return sendResponse(res, errorResponse("Database query failed"));
         }
-        res.status(200).json({ video: results });
+        sendResponse(res, successResponse({ video: results }, "Video retrieved successfully"));
     });
 }));
 
@@ -108,9 +120,9 @@ router.get("/getvideosofchannel", syncHandler((req, res) => {
         connection.query(query, params, (error, results) => {
             if (error) {
                 console.error(error);
-                return res.status(500).json({ error: "Database query failed" });
+                return sendResponse(res, errorResponse("Database query failed"));
             }
-            res.status(200).json({ videos: results });
+            sendResponse(res, successResponse({ videos: results }, "Channel videos retrieved successfully"));
         });
     } else {
         query = `SELECT * FROM videos v 
@@ -128,12 +140,10 @@ router.get("/getvideosofchannel", syncHandler((req, res) => {
             (error, results) => {
                 if (error) {
                     console.error(error);
-                    return res
-                        .status(500)
-                        .json({ error: "Database query failed" });
+                    return sendResponse(res, errorResponse("Database query failed"));
                 }
 
-                res.status(200).json({ videos: results });
+                sendResponse(res, successResponse({ videos: results }, "Channel videos retrieved successfully"));
             }
         );
     }
@@ -147,9 +157,9 @@ router.get("/uploadStatus", syncHandler((req, res) => {
     connection.query(query, [video_id], (error, results) => {
         if (error) {
             console.log("UploadStatus: " + error);
-            return res.status(500).json({ error: "Internal server error" });
+            return sendResponse(res, errorResponse("Internal server error"));
         }
-        res.status(200).json({ upload: results[0] || null });
+        sendResponse(res, successResponse({ upload: results[0] || null }, "Upload status retrieved successfully"));
     });
 }));
 
@@ -161,9 +171,9 @@ router.get("/uploadingVideos", syncHandler((req, res) => {
     connection.query(query, [channel_id], (error, results) => {
         if (error) {
             console.log("UploadingVideos: " + error);
-            return res.status(500).json({ error: "Internal server error" });
+            return sendResponse(res, errorResponse("Internal server error"));
         }
-        res.status(200).json({ uploads: results });
+        sendResponse(res, successResponse({ uploads: results }, "Uploading videos retrieved successfully"));
     });
 }));
 
@@ -186,12 +196,12 @@ router.post("/updateVideo", syncHandler((req, res) => {
         (error, results) => {
             if (error) {
                 console.log("UpdateVideo: " + error);
-                return res.status(500).json({ error: "Failed to update video" });
+                return sendResponse(res, errorResponse("Failed to update video"));
             }
             if (results.affectedRows === 0) {
-                return res.status(403).json({ error: "Video not found or not authorized" });
+                return sendResponse(res, forbiddenResponse("Video not found or not authorized"));
             }
-            res.status(200).json({ message: "Video updated" });
+            sendResponse(res, successResponse(null, "Video updated successfully"));
         }
     );
 }));
