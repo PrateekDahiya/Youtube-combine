@@ -314,14 +314,21 @@ async function processChannels(channelIds, totalResults = 5) {
 const getNewChannelId = async () => {
     try {
         const apiKey = API_KEYS[currentApiKeyIndex];
+        currentApiKeyIndex = (currentApiKeyIndex + 1) % API_KEYS.length;
         const category = getRandomCategory();
+        // maxResults=50 (not 1) + a random pick from the page: the #1 slot
+        // for a category barely changes day to day, so always taking it
+        // meant repeated calls kept re-rolling the same handful of already-
+        // known channels. Sampling across the whole chart page gives many
+        // more distinct candidates to try.
         const response = await fetch(
-            `https://www.googleapis.com/youtube/v3/videos?part=snippet&chart=mostPopular&regionCode=US&videoCategoryId=${category}&maxResults=1&key=${apiKey}`
+            `https://www.googleapis.com/youtube/v3/videos?part=snippet&chart=mostPopular&regionCode=US&videoCategoryId=${category}&maxResults=50&key=${apiKey}`
         );
         const data = await response.json();
 
         if (data.items && data.items.length > 0) {
-            return data.items[0].snippet.channelId;
+            const randomIndex = Math.floor(Math.random() * data.items.length);
+            return data.items[randomIndex].snippet.channelId;
         }
         console.error("No popular videos found:", data.error ? data.error.message : data);
         return null;
@@ -330,6 +337,22 @@ const getNewChannelId = async () => {
         return null;
     }
 };
+
+// Keeps drawing candidate channel ids until one isn't already in `channels`,
+// instead of returning on the first (likely already-known) pick.
+async function findNewChannelId(maxAttempts = 15) {
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+        const channelId = await getNewChannelId();
+        if (!channelId) continue;
+        try {
+            const exists = await channelExists(channelId);
+            if (!exists) return channelId;
+        } catch (error) {
+            console.log("Error checking channel existence:", error.message);
+        }
+    }
+    return null;
+}
 
 async function channelExists(channelId) {
     const connection = getConnection();
@@ -547,6 +570,7 @@ module.exports = {
     getChannelIdsNeedingUpdate,
     processChannels,
     getNewChannelId,
+    findNewChannelId,
     addNewChannel,
     getRandomCategory,
     fetchVideoHistory,

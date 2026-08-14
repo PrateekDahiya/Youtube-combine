@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const { getConnection } = require("../db");
-const { getChannelIdsNeedingUpdate, processChannels, getNewChannelId, addNewChannel } = require("../youtube");
+const { getChannelIdsNeedingUpdate, processChannels, findNewChannelId, addNewChannel } = require("../youtube");
 const { syncHandler, asyncHandler } = require("../utils/asyncHandler");
 const { successResponse, errorResponse, validationErrorResponse, sendResponse } = require("../utils/responseWrapper");
 
@@ -77,12 +77,19 @@ router.get("/update_channels", asyncHandler(async (req, res) => {
 }));
 
 router.get("/addnewchannel", asyncHandler(async (req, res) => {
-    const channelId = await getNewChannelId();
+    const channelId = await findNewChannelId();
+    if (!channelId) {
+        return sendResponse(res, successResponse({
+            success: "NotFound",
+            Channel_id: null,
+        }, "No new channel found after multiple attempts"));
+    }
+
     const success = await addNewChannel(channelId);
     sendResponse(res, successResponse({
         success: success,
         Channel_id: channelId,
-    }, success === "AlreadyExists" ? "Channel already exists, skipped" : "New channel added successfully"));
+    }, "New channel added successfully"));
 }));
 
 module.exports = router;
