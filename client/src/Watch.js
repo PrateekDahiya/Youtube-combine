@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import "./Watch.css";
-import axios from "axios";
+import { videoApi, subscriptionApi, likeApi } from "./api";
+import { flaskApiClient } from "./api";
 import Videoplayer from "./Videoplayer";
 import Card from "./Card";
 import CardGrid from "./CardGrid";
@@ -18,7 +19,6 @@ const Watch = (params) => {
     const [show_desc, setshow_desc] = useState(false);
     const [fetchFailed, setFetchFailed] = useState(false);
     const [loading, setLoading] = useState(true);
-    const serverurl = process.env.REACT_APP_SERVER_URL;
     const user = params.user;
     const [issubed, setissubed] = useState(false);
     const [channel_id, setChannel_id] = useState(null);
@@ -94,84 +94,57 @@ const Watch = (params) => {
 
     const addSubscriber = async () => {
         if (user === "Guest") return;
-        const requestData = {
-            user_chl_id,
-            channel_id,
-        };
-
-        await axios.post(`${serverurl}/addtosubs`, requestData);
+        await subscriptionApi.addSubscription(user_chl_id, channel_id);
         setissubed(true);
     };
 
     const unsub = async () => {
         if (user === "Guest") return;
-        const requestData = {
-            user_chl_id,
-            channel_id,
-        };
-
-        await axios.post(`${serverurl}/removefromsubs`, requestData);
-
+        await subscriptionApi.removeSubscription(user_chl_id, channel_id);
         setissubed(false);
     };
 
     const addlike = async () => {
         if (user === "Guest") return;
-        const requestData = {
-            user_id: user_chl_id,
-            video_id,
-        };
-
-        await axios.post(`${serverurl}/addtoliked`, requestData);
+        await likeApi.addLike(user_chl_id, video_id);
         setisliked(true);
     };
 
     const removelike = async () => {
         if (user === "Guest") return;
-        const requestData = {
-            user_id: user_chl_id,
-            video_id,
-        };
-
-        await axios.post(`${serverurl}/removefromliked`, requestData);
-
+        await likeApi.removeLike(user_chl_id, video_id);
         setisliked(false);
     };
 
     useEffect(() => {
-        const issubscribed = async () => {
-            const response = await axios.get(
-                `${serverurl}/issub?user_id=${user_chl_id}&channel_id=${channel_id}`
-            );
-            setissubed(response.data.sub);
+        const checkSubAndLike = async () => {
+            if (!user_chl_id || !channel_id) return;
+            try {
+                const [subRes, likeRes] = await Promise.all([
+                    subscriptionApi.isSubscribed(user_chl_id, channel_id),
+                    likeApi.isLiked(user_chl_id, video_id),
+                ]);
+                setissubed(subRes.data.sub);
+                setisliked(likeRes.data.liked);
+            } catch (error) {
+                console.log("Error checking sub/like:", error.message);
+            }
         };
-
-        const isliked = async () => {
-            const response = await axios.get(
-                `${serverurl}/isliked?user_id=${user_chl_id}&video_id=${video_id}`
-            );
-            setisliked(response.data.liked);
-        };
-
-        if (user_chl_id && channel_id) {
-            isliked();
-            issubscribed();
-        }
-    }, [user_chl_id, channel_id, video_id, serverurl]);
+        checkSubAndLike();
+    }, [user_chl_id, channel_id, video_id]);
 
     useEffect(() => {
-        const fetchData = async () => {
-            await axios
-                .get(`${serverurl}/related-videos?video_id=${video_id}`)
-                .then((response) => {
-                    setRelateddata(response.data);
-                })
-                .catch((error) => {
-                    console.log("Error in fetching: ", error.message);
-                });
+        const fetchRelated = async () => {
+            if (!video_id) return;
+            try {
+                const response = await videoApi.getRelatedVideos(video_id);
+                setRelateddata(response.data);
+            } catch (error) {
+                console.log("Error fetching related videos:", error.message);
+            }
         };
-        fetchData();
-    }, [video_id, serverurl]);
+        fetchRelated();
+    }, [video_id]);
 
     useEffect(() => {
         if (!watchdata || !watchdata.video_id) return;
@@ -181,15 +154,14 @@ const Watch = (params) => {
         let cancelled = false;
         const fetchstreamURL = async () => {
             try {
-                const response = await axios.get(
-                    `https://flaskapp-5c1j.onrender.com/get_video_url${window.location.search}`
-                );
+                const searchParams = new URLSearchParams(window.location.search);
+                const response = await flaskApiClient.getVideoUrl(Object.fromEntries(searchParams));
                 if (!cancelled) {
                     setData(response.data);
                     setFetchFailed(false);
                 }
             } catch (error) {
-                console.log("Error in fetching: ", error.message);
+                console.log("Error fetching stream URL:", error.message);
                 if (!cancelled) {
                     setFetchFailed(true);
                 }
@@ -203,32 +175,32 @@ const Watch = (params) => {
 
     useEffect(() => {
         const fetchwatchdata = async () => {
-            await axios
-                .get(`${serverurl}/watch` + window.location.search)
-                .then((response) => {
-                    const row = response.data.data[0];
-                    setwatchdata(row || {});
-                    if (row && row.link && isUploadedLink(row.link)) {
-                        setIsUploaded(true);
-                        setVideo_url(row.link);
-                        setAudio_url("");
-                        setFetchFailed(false);
-                    }
-                })
-                .catch((error) => {
-                    console.log("Error in fetching: ", error.message);
-                })
-                .finally(() => {
-                    setLoading(false);
-                });
+            try {
+                const searchParams = new URLSearchParams(window.location.search);
+                const response = await videoApi.getWatch(Object.fromEntries(searchParams).video_id);
+                const row = response.data.data[0];
+                setwatchdata(row || {});
+                if (row && row.link && isUploadedLink(row.link)) {
+                    setIsUploaded(true);
+                    setVideo_url(row.link);
+                    setAudio_url("");
+                    setFetchFailed(false);
+                }
+            } catch (error) {
+                console.log("Error fetching watch data:", error.message);
+            } finally {
+                setLoading(false);
+            }
         };
         fetchwatchdata();
-    }, [user, serverurl]);
+    }, []);
 
     useEffect(() => {
-        setUser_chl_id(user.channel_id);
-        setChannel_id(watchdata.channel_id);
-        setVideo_id(watchdata.video_id);
+        if (user) setUser_chl_id(user.channel_id);
+        if (watchdata) {
+            setChannel_id(watchdata.channel_id);
+            setVideo_id(watchdata.video_id);
+        }
     }, [user, watchdata]);
 
     useEffect(() => {
@@ -246,9 +218,7 @@ const Watch = (params) => {
             }
             setQualityoptions(
                 data.video_quality_options.length > 0
-                    ? data.video_quality_options.map(
-                        (option) => option.resolution
-                    )
+                    ? data.video_quality_options.map((option) => option.resolution)
                     : ["Auto"]
             );
         }

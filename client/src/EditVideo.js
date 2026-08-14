@@ -1,11 +1,10 @@
 import React, { useState } from "react";
-import axios from "axios";
+import { videoApi, uploadApi } from "./api";
 import "./UploadVideo.css";
 
 const EditVideo = (params) => {
     const video = params.video;
     const user = params.user;
-    const serverurl = process.env.REACT_APP_SERVER_URL;
     const [title, setTitle] = useState(video.title || "");
     const [description, setDescription] = useState(
         video.video_description || ""
@@ -45,14 +44,8 @@ const EditVideo = (params) => {
             return;
         }
         setThumbPreview(URL.createObjectURL(file));
-        const formData = new FormData();
-        formData.append("file", file);
         try {
-            const response = await axios.post(
-                `${serverurl}/upload`,
-                formData,
-                { headers: { "Content-Type": "multipart/form-data" } }
-            );
+            const response = await uploadApi.uploadImage(file);
             setThumbnail(response.data.url);
         } catch (uploadErr) {
             console.error("Thumbnail upload error:", uploadErr);
@@ -74,7 +67,7 @@ const EditVideo = (params) => {
         setError("");
         setSuccess("");
         try {
-            const response = await axios.post(`${serverurl}/updateVideo`, {
+            const response = await videoApi.updateVideo({
                 video_id: video.video_id,
                 user_id: user.channel_id,
                 title,

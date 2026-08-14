@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
-import axios from "axios";
 import { Link } from "react-router-dom";
+import { channelApi } from "./api";
 import "./You.css";
 import Cardloading from "./Cardloading";
 
@@ -11,25 +11,21 @@ const You = (params) => {
     const [loading, setLoading] = useState(true);
     // const [videos, setVideos] = useState("");
     // const [typeShort, setType] = useState(0);
-    const serverurl = process.env.REACT_APP_SERVER_URL;
 
     const user = params.user;
     useEffect(() => {
         const fetchData = async () => {
-            await axios
-                .get(`${serverurl}/yourchannel?channel_id=${user.channel_id}`)
-                .then((response) => {
-                    setData(response.data.channel[0]);
-                })
-                .catch((error) => {
-                    console.log("Error in fetching: ", error.message);
-                })
-                .finally(() => {
-                    setLoading(false);
-                });
+            try {
+                const response = await channelApi.getYourChannel(user.channel_id);
+                setData(response.data.channel[0]);
+            } catch (error) {
+                console.log("Error fetching channel:", error.message);
+            } finally {
+                setLoading(false);
+            }
         };
         fetchData();
-    }, [user, serverurl]);
+    }, [user]);
 
     // function formatNumber(num) {
     //     if (num >= 1000000) {

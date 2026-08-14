@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { Link } from "react-router-dom";
 import "./Uploads.css";
-import axios from "axios";
+import { videoApi } from "./api";
 import UploadVideo from "./UploadVideo";
 import EditVideo from "./EditVideo";
 
@@ -9,20 +9,17 @@ const Uploads = (params) => {
     const [uploads, setUploads] = useState([]);
     const [showUpload, setShowUpload] = useState(false);
     const [editingVideo, setEditingVideo] = useState(null);
-    const serverurl = process.env.REACT_APP_SERVER_URL;
     const user = params.user;
 
     const fetchUploads = useCallback(async () => {
         if (user === "Guest") return;
         try {
-            const response = await axios.get(
-                `${serverurl}/uploadingVideos?channel_id=${user.channel_id}`
-            );
+            const response = await videoApi.getUploadingVideos(user.channel_id);
             setUploads(response.data.uploads || []);
         } catch (error) {
             console.log("Error fetching uploads: ", error.message);
         }
-    }, [serverurl, user]);
+    }, [user]);
 
     useEffect(() => {
         fetchUploads();

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import axios from "axios";
+import { historyApi, watchlaterApi } from "./api";
 import Cookies from "js-cookie";
 import "./Card.css";
 
@@ -9,7 +9,6 @@ const defaultAvatar = "https://cdn-icons-png.flaticon.com/128/1077/1077063.png";
 const Card = (params) => {
     const navigate = useNavigate();
     const [linkto, setLinkto] = useState();
-    const serverurl = process.env.REACT_APP_SERVER_URL;
     const [video_id, setVideo_id] = useState(null);
     const [user_chl_id, setUser_chl_id] = useState(null);
     const [user, setCrntuser] = useState("Guest");
@@ -33,15 +32,7 @@ const Card = (params) => {
 
     const addHistory = async () => {
         if (user === "Guest") return;
-        const requestData = {
-            user_id: user_chl_id,
-            video_id,
-        };
-
-        const response = await axios.post(
-            `${serverurl}/addtohistory`,
-            requestData
-        );
+        await historyApi.addToHistory(user_chl_id, video_id);
     };
 
     const handleClick = () => {
@@ -50,44 +41,28 @@ const Card = (params) => {
 
     const addwatchlater = async () => {
         if (user === "Guest") return;
-        const requestData = {
-            user_id: user_chl_id,
-            video_id,
-        };
-
-        const response = await axios.post(
-            `${serverurl}/addtowatchlater`,
-            requestData
-        );
+        await watchlaterApi.addToWatchlater(user_chl_id, video_id);
         setWatchlater(true);
     };
 
     const removewatchlater = async () => {
         if (user === "Guest") return;
-        const requestData = {
-            user_id: user_chl_id,
-            video_id,
-        };
-
-        const response = await axios.post(
-            `${serverurl}/removefromwatchlater`,
-            requestData
-        );
-
+        await watchlaterApi.removeFromWatchlater(user_chl_id, video_id);
         setWatchlater(false);
     };
 
     useEffect(() => {
-        const iswatchlater = async () => {
-            const response = await axios.get(
-                `${serverurl}/iswatchlater?user_id=${user_chl_id}&video_id=${video_id}`
-            );
-            setWatchlater(response.data.watchlater);
+        const checkWatchlater = async () => {
+            if (!user_chl_id || !video_id || !isHovered) return;
+            try {
+                const response = await watchlaterApi.isWatchlater(user_chl_id, video_id);
+                setWatchlater(response.data.watchlater);
+            } catch (error) {
+                console.log("Error checking watchlater:", error.message);
+            }
         };
-        if (user_chl_id && video_id && isHovered) {
-            iswatchlater();
-        }
-    }, [user_chl_id, video_id, watchlater, isHovered]);
+        checkWatchlater();
+    }, [user_chl_id, video_id, isHovered]);
 
     const handleWatchlater = () => {
         if (watchlater === true) {
@@ -258,8 +233,7 @@ const Card = (params) => {
                 src={thumbnailSrc}
                 alt={params.data.title || ""}
             />
-            <>
-                {forTrending || forrelated ? null : (
+            {forTrending || forrelated ? null : (
                     <span className="duration">
                         {formatDuration(params.data.duration)}
                     </span>
@@ -313,7 +287,6 @@ const Card = (params) => {
                         ) : null}
                     </div>
                 </div>
-            </>
         </Link>
     );
 };

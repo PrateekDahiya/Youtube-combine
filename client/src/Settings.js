@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useContext, useRef } from "react";
 import { Link } from "react-router-dom";
-import axios from "axios";
+import { authApi, uploadApi } from "./api";
 import { ThemeContext } from "./ThemeContext";
 
 import "./Settings.css";
@@ -24,7 +24,6 @@ const Settings = (params) => {
     const bannerInputRef = useRef(null);
     const { theme, toggleTheme } = useContext(ThemeContext);
 
-    const serverurl = process.env.REACT_APP_SERVER_URL;
     const user = params.user;
 
     const userDetails = [
@@ -52,11 +51,7 @@ const Settings = (params) => {
         });
 
     const uploadImage = async (file) => {
-        const formData = new FormData();
-        formData.append("file", file);
-        const response = await axios.post(`${serverurl}/upload`, formData, {
-            headers: { "Content-Type": "multipart/form-data" },
-        });
+        const response = await uploadApi.uploadImage(file);
         return response.data.url;
     };
 
@@ -91,9 +86,7 @@ const Settings = (params) => {
 
     const updateCookies = async () => {
         try {
-            const response = await axios.post(`${serverurl}/getUser`, {
-                user_id: user.user_id,
-            });
+            const response = await authApi.getUser(user.user_id);
             if (response.status === 200) {
                 const user = response.data.user[0];
                 params.setUser(user);
@@ -132,10 +125,7 @@ const Settings = (params) => {
             };
 
             try {
-                const response = await axios.post(
-                    `${serverurl}/updateUserDetail`,
-                    requestData
-                );
+                const response = await authApi.updateUserDetail(userfieldName, value, user.user_id);
                 if (response.status === 200) {
                     setEditIndex(-1);
                 } else {
@@ -153,10 +143,7 @@ const Settings = (params) => {
             };
 
             try {
-                const response = await axios.post(
-                    `${serverurl}/updateChannelDetail`,
-                    requestData
-                );
+                const response = await authApi.updateChannelDetail(channelfieldName, value, user.channel_id);
                 if (response.status === 200) {
                     setEditIndex(-1);
                 } else {
@@ -168,10 +155,7 @@ const Settings = (params) => {
         }
         if (label === "Delete Channel" && value === "Delete Channel") {
             try {
-                const response = await axios.post(`${serverurl}/deleteUser`, {
-                    channel_id: user.channel_id,
-                    user_id: user.user_id,
-                });
+                const response = await authApi.deleteUser(user.user_id, user.channel_id);
                 if (response.status === 200) {
                     await updateCookies();
                     window.location.href = "/";

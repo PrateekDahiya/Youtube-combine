@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { Link } from "react-router-dom";
 import Card from "./Card";
-import axios from "axios";
+import { searchApi } from "./api";
 import "./Search.css";
 import CardGrid from "./CardGrid";
 import Cardloading from "./Cardloading";
@@ -14,7 +14,6 @@ const Search = () => {
     const locationHook = useLocation();
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
-    const serverurl = process.env.REACT_APP_SERVER_URL;
     const [page_no, setpage_no] = useState(1);
     const [loadingMore, setLoadingMore] = useState(false);
     const [hasMore, setHasMore] = useState(true);
@@ -47,22 +46,19 @@ const Search = () => {
         if (loadingMore || !hasMore) return;
         setLoadingMore(true);
         const fetchData = async () => {
-            await axios
-                .get(`${serverurl}/search` + queryString + "&page=" + page_no)
-                .then((response) => {
-                    mergeVideos(response.data.videos || []);
-                    setData((prev) => ({
-                        ...(prev || {}),
-                        channels: response.data.channels || [],
-                    }));
-                })
-                .catch((error) => {
-                    console.log("Error in fetching: ", error.message);
-                })
-                .finally(() => {
-                    setLoading(false);
-                    setLoadingMore(false);
-                });
+            try {
+                const response = await searchApi.search(queryString.replace("?", ""), page_no);
+                mergeVideos(response.data.videos || []);
+                setData((prev) => ({
+                    ...(prev || {}),
+                    channels: response.data.channels || [],
+                }));
+            } catch (error) {
+                console.log("Error fetching search:", error.message);
+            } finally {
+                setLoading(false);
+                setLoadingMore(false);
+            }
         };
         fetchData();
     }, [queryString, page_no]);

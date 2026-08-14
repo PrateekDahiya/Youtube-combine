@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import Card from "./Card";
-import axios from "axios";
+import { trendingApi } from "./api";
 import { useLocation } from "react-router-dom";
 import "./Trendings.css";
 import CardGrid from "./CardGrid";
@@ -15,7 +15,6 @@ const Trendings = (params) => {
     const [page_no, setpage_no] = useState(1);
     const [loadingMore, setLoadingMore] = useState(false);
     const [hasMore, setHasMore] = useState(true);
-    const serverurl = process.env.REACT_APP_SERVER_URL;
     const [page, setPage] = useState(
         new URLSearchParams(locationHook.pathname)
     );
@@ -51,18 +50,15 @@ const Trendings = (params) => {
         if (loadingMore || !hasMore) return;
         setLoadingMore(true);
         const fetchData = async () => {
-            await axios
-                .get(`${serverurl}/trendings?type=${type}&page=${page_no}`)
-                .then((response) => {
-                    mergeVideos(response.data.videos || []);
-                })
-                .catch((error) => {
-                    console.log("Error in fetching: ", error.message);
-                })
-                .finally(() => {
-                    setLoading(false);
-                    setLoadingMore(false);
-                });
+            try {
+                const response = await trendingApi.getTrendings(type, page_no);
+                mergeVideos(response.data.videos || []);
+            } catch (error) {
+                console.log("Error fetching trendings:", error.message);
+            } finally {
+                setLoading(false);
+                setLoadingMore(false);
+            }
         };
         fetchData();
     }, [type, user, page, page_no]);

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import Card from "./Card";
-import axios from "axios";
-import { Link, parsePath } from "react-router-dom";
+import { historyApi } from "./api";
+import { Link } from "react-router-dom";
 import "./History.css";
 import CardGrid from "./CardGrid";
 import Cardloading from "./Cardloading";
@@ -10,8 +10,7 @@ const History = (params) => {
     const [data, setData] = useState([]);
     const [loading, setLoading] = useState(true);
     const [user_chl_id, setUser_chl_id] = useState(null);
-    const [hoveredCards, setHoveredCards] = useState({}); // State to manage hovered cards
-    const serverurl = process.env.REACT_APP_SERVER_URL;
+    const [hoveredCards, setHoveredCards] = useState({});
     const [updateonDelete, setUpdateonDelete] = useState(0);
 
     const compareTimestamps = (timestamp) => {
@@ -37,30 +36,20 @@ const History = (params) => {
         const fetchHistoryData = async () => {
             if (user_chl_id) {
                 try {
-                    const response = await axios.get(
-                        `${serverurl}/history?user_id=${user_chl_id}`
-                    );
+                    const response = await historyApi.getHistory(user_chl_id);
                     setData(response.data.videos);
                 } catch (error) {
-                    console.log("Error in fetching: ", error.message);
+                    console.log("Error fetching history:", error.message);
                 } finally {
                     setLoading(false);
                 }
             }
         };
         fetchHistoryData();
-    }, [user_chl_id, serverurl, updateonDelete]);
+    }, [user_chl_id, updateonDelete]);
 
     const handleRemoveHistory = async (video_id) => {
-        const requestData = {
-            user_id: user_chl_id,
-            video_id,
-        };
-
-        const response = await axios.post(
-            `${serverurl}/removefromhistory`,
-            requestData
-        );
+        await historyApi.removeFromHistory(user_chl_id, video_id);
         setUpdateonDelete((prev) => prev + 1);
     };
 
@@ -86,7 +75,7 @@ const History = (params) => {
             )
             .map((item) => (
                 <div
-                    key={item.video_id} // Ensure each card has a unique key
+                    key={item.video_id}
                     className="history-card"
                     onMouseEnter={() => handleMouseEnter(item.video_id)}
                     onMouseLeave={() => handleMouseLeave(item.video_id)}

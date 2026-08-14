@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { Link } from "react-router-dom";
 import Menuitem from "./Menuitem";
-import axios from "axios";
+import { subscriptionApi } from "./api";
 import "./Menu.css";
 
 function Menu(params) {
@@ -105,16 +105,12 @@ function Menu(params) {
     useEffect(() => {
         if (params.user !== "Guest") {
             const fetchsubs = async () => {
-                await axios
-                    .get(
-                        `${serverurl}/get-subs?user_id=${await user.channel_id}`
-                    )
-                    .then((response) => {
-                        setsubsData(response.data);
-                    })
-                    .catch((error) => {
-                        console.log("Error in fetching: ", error.message);
-                    });
+                try {
+                    const response = await subscriptionApi.getSubscriptions(user.channel_id);
+                    setsubsData(response.data);
+                } catch (error) {
+                    console.log("Error fetching subscriptions:", error.message);
+                }
             };
             fetchsubs();
         }

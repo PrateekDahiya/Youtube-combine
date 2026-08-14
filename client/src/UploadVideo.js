@@ -1,5 +1,5 @@
 import React, { useState, useRef } from "react";
-import axios from "axios";
+import { uploadApi } from "./api";
 import { useNavigate } from "react-router-dom";
 import "./UploadVideo.css";
 
@@ -18,7 +18,6 @@ const UploadVideo = (params) => {
     const [success, setSuccess] = useState("");
     const videoInputRef = useRef(null);
     const thumbInputRef = useRef(null);
-    const serverurl = process.env.REACT_APP_SERVER_URL;
     const user = params.user;
     const navigate = useNavigate();
 
@@ -83,11 +82,15 @@ const UploadVideo = (params) => {
         formData.append("duration", 0);
 
         try {
-            const response = await axios.post(
-                `${serverurl}/uploadVideo`,
-                formData,
-                { headers: { "Content-Type": "multipart/form-data" } }
-            );
+            const response = await uploadApi.uploadVideo(videoFile, thumbFile, {
+                title,
+                description,
+                tags,
+                category,
+                type,
+                user_id: user.channel_id,
+                duration: 0,
+            });
             if (response.status === 200) {
                 setSuccess("Upload started! Track progress in Your channel.");
                 setTimeout(() => {

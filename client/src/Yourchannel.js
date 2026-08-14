@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import "./Yourchannel.css";
-import axios from "axios";
+import { channelApi, videoApi } from "./api";
 import Cardloading from "./Cardloading";
 import Card from "./Card";
 import EditVideo from "./EditVideo";
@@ -13,16 +13,13 @@ const Yourchannel = (params) => {
     const [typeShort, setType] = useState(0);
     const [refresh, setRefresh] = useState(0);
     const [editingVideo, setEditingVideo] = useState(null);
-    const serverurl = process.env.REACT_APP_SERVER_URL;
     const user = params.user;
 
     useEffect(() => {
         const fetchData = async () => {
             try {
-                let getreq = `${serverurl}/yourchannel?channel_id=${user.channel_id}`;
-                const response = await fetch(getreq);
-                const jsonData = await response.json();
-                setData(jsonData.channel[0]);
+                const response = await channelApi.getYourChannel(user.channel_id);
+                setData(response.data.channel[0]);
             } catch (error) {
                 console.error("Error fetching data:", error);
             }
@@ -32,16 +29,12 @@ const Yourchannel = (params) => {
 
     useEffect(() => {
         const fetchVideos = async () => {
-            await axios
-                .get(
-                    `${serverurl}/getvideosofchannel?channel_id=${user.channel_id}&type=${typeShort}`
-                )
-                .then((response) => {
-                    setVideos(response.data);
-                })
-                .catch((error) => {
-                    console.log("Error in fetching: ", error.message);
-                });
+            try {
+                const response = await videoApi.getVideosOfChannel(user.channel_id, typeShort);
+                setVideos(response.data);
+            } catch (error) {
+                console.log("Error fetching videos:", error.message);
+            }
         };
         fetchVideos();
     }, [typeShort, user, refresh]);
@@ -75,7 +68,7 @@ const Yourchannel = (params) => {
     }
 
     function close_moredesc() {
-        let x = document.querySelector(".moredesc");
+        let x = document.query.querySelector(".moredesc");
         if (x.style.display === "block") {
             x.style.display = "none";
         } else {

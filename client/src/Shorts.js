@@ -1,11 +1,10 @@
 import { useEffect, useState } from "react";
 import Shortbox from "./Shortbox";
-import axios from "axios";
+import { shortsApi } from "./api";
 import "./Shorts.css";
 
 const Shorts = (params) => {
     const [shortdata, setShortdata] = useState([]);
-    const serverurl = process.env.REACT_APP_SERVER_URL;
     const [short_index, setShort_index] = useState(0);
 
     const [activebox, setActivebox] = useState(1);
@@ -141,26 +140,20 @@ const Shorts = (params) => {
 
     useEffect(() => {
         const fetchShorts = async () => {
-            await axios
-                .get(
-                    `${serverurl}/shorts${
-                        window.location.search
-                            ? window.location.search + `&needmore=${needmore}`
-                            : `?needmore=${needmore}`
-                    }`
-                )
-                .then((response) => {
-                    setShortdata((prev) =>
-                        prev === null
-                            ? response.data.shorts_vIds
-                            : prev[0] !== response.data.shorts_vIds[0]
-                            ? [...prev, ...response.data.shorts_vIds]
-                            : prev
-                    );
-                })
-                .catch((error) => {
-                    console.log("Error in fetching: ", error.message);
-                });
+            try {
+                const params = new URLSearchParams(window.location.search);
+                params.set("needmore", needmore);
+                const response = await shortsApi.getShorts(null, needmore);
+                setShortdata((prev) =>
+                    prev.length === 0
+                        ? response.data.shorts_vIds
+                        : prev[0]?.video_id !== response.data.shorts_vIds[0]?.video_id
+                        ? [...prev, ...response.data.shorts_vIds]
+                        : prev
+                );
+            } catch (error) {
+                console.log("Error in fetching: ", error.message);
+            }
         };
         fetchShorts();
     }, [needmore]);

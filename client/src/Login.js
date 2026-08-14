@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { NavLink } from "react-router-dom";
 import "./Login.css";
-import axios from "axios";
+import { authApi } from "./api";
 import CryptoJS from "crypto-js";
 import Cookies from "js-cookie";
 
@@ -139,9 +139,7 @@ function Login(params) {
         const hashpass = stringToHash(password);
         try {
             if (type === "login") {
-                const response = await axios.get(`${serverurl}/login`, {
-                    params: { username, email, hashpass },
-                });
+                const response = await authApi.login(username, email, hashpass);
                 if (response.data.success) {
                     setCookie(response.data.user);
                     return { success: true };
@@ -165,10 +163,7 @@ function Login(params) {
                     DOB,
                     location,
                 };
-                const response = await axios.post(
-                    `${serverurl}/register`,
-                    requestData
-                );
+                const response = await authApi.register(requestData);
                 if (response.data.success) {
                     return { success: true };
                 } else {
@@ -185,10 +180,7 @@ function Login(params) {
                     feedback: sanitizeForSQL(feedback),
                     reqchannelid,
                 };
-                const response = await axios.post(
-                    `${serverurl}/feedback`,
-                    requestData
-                );
+                const response = await authApi.sendFeedback(requestData.feedback, requestData.reqchannelid, requestData.name);
                 return { success: response.data.sent };
             }
         } catch (error) {

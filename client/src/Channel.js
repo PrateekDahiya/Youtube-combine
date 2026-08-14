@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
 import "./Channel.css";
-import axios from "axios";
+import { channelApi, subscriptionApi, videoApi } from "./api";
 import Card from "./Card";
 import Cardloading from "./Cardloading";
 import InfiniteScroll from "./InfiniteScroll";
@@ -20,7 +20,6 @@ const Channel = (params) => {
     const [hasMore, setHasMore] = useState(true);
     const [issubed, setissubed] = useState(false);
     const [user_chl_id, setUser_chl_id] = useState(null);
-    const serverurl = process.env.REACT_APP_SERVER_URL;
 
     const [channel_id, setChannel_id] = useState(
         new URLSearchParams(locationHook.search).get("channel_id")
@@ -28,40 +27,27 @@ const Channel = (params) => {
     const user = params.user;
 
     const addSubscriber = async () => {
-        const requestData = {
-            user_chl_id,
-            channel_id,
-        };
-
-        const response = await axios.post(
-            `${serverurl}/addtosubs`,
-            requestData
-        );
+        await subscriptionApi.addSubscription(user_chl_id, channel_id);
         setissubed(true);
     };
 
     const unsub = async () => {
-        const requestData = {
-            user_chl_id,
-            channel_id,
-        };
-
-        const response = await axios.post(
-            `${serverurl}/removefromsubs`,
-            requestData
-        );
-
+        await subscriptionApi.removeSubscription(user_chl_id, channel_id);
         setissubed(false);
     };
 
     useEffect(() => {
         const issubscribed = async () => {
-            const response = await axios.get(
-                `${serverurl}/issub?user_id=${user_chl_id}&channel_id=${channel_id}`
-            );
-            setissubed(response.data.sub);
+            try {
+                const response = await subscriptionApi.isSubscribed(user_chl_id, channel_id);
+                setissubed(response.data.sub);
+            } catch (error) {
+                console.log("Error checking subscription:", error.message);
+            }
         };
-        issubscribed();
+        if (user_chl_id && channel_id) {
+            issubscribed();
+        }
     }, [user_chl_id, channel_id]);
 
     useEffect(() => {
@@ -73,14 +59,12 @@ const Channel = (params) => {
 
     useEffect(() => {
         const fetchData = async () => {
-            await axios
-                .get(`${serverurl}/channel?channel_id=${channel_id}`)
-                .then((response) => {
-                    setData(response.data.channel[0]);
-                })
-                .catch((error) => {
-                    console.log("Error in fetching: ", error.message);
-                });
+            try {
+                const response = await channelApi.getChannel(channel_id);
+                setData(response.data.channel[0]);
+            } catch (error) {
+                console.log("Error fetching channel:", error.message);
+            }
         };
         fetchData();
     }, [typeShort, channel_id, user]);
@@ -113,30 +97,17 @@ const Channel = (params) => {
         if (loadingMore || !hasMore) return;
         setLoadingMore(true);
         const fetchVideos = async () => {
-            await axios
-                .get(
-                    `${serverurl}/getvideosofchannel` +
-                        "?channel_id=" +
-                        channel_id +
-                        "&type=" +
-                        typeShort +
-                        "&query=" +
-                        query +
-                        "&page=" +
-                        page_no
-                )
-                .then((response) => {
-                    mergeVideos(response.data.videos || []);
-                })
-                .catch((error) => {
-                    console.log("Error in fetching: ", error.message);
-                })
-                .finally(() => {
-                    setLoadingMore(false);
-                });
+            try {
+                const response = await videoApi.getVideosOfChannel(channel_id, typeShort, query, page_no);
+                mergeVideos(response.data.videos || []);
+            } catch (error) {
+                console.log("Error fetching videos:", error.message);
+            } finally {
+                setLoadingMore(false);
+            }
         };
         fetchVideos();
-    }, [typeShort, refresh, channel_id, page_no, user]);
+    }, [typeShort, refresh, channel_id, page_no, user, query]);
 
     const loadMore = () => {
         if (loadingMore || !hasMore) return;

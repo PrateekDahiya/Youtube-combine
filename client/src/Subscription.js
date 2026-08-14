@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import Card from "./Card";
 import { Link } from "react-router-dom";
-import axios from "axios";
+import { subscriptionApi } from "./api";
 import "./Subscription.css";
 import CardGrid from "./CardGrid";
 import Cardloading from "./Cardloading";
@@ -18,7 +18,6 @@ const Subscription = (params) => {
     const [loadingMore, setLoadingMore] = useState(false);
     const [hasMore, setHasMore] = useState(true);
     const [page_no, setpage_no] = useState(1);
-    const serverurl = process.env.REACT_APP_SERVER_URL;
     const user = params.user;
 
     const mergeVideos = (newVideos) => {
@@ -47,33 +46,29 @@ const Subscription = (params) => {
         setLoadingMore(true);
         const fetchData = async () => {
             try {
-                const response = await axios.get(
-                    `${serverurl}/subscriptions?isShort=${typeShort}&user_id=${user.channel_id}&page=${page_no}`
-                );
+                const response = await subscriptionApi.getSubscriptionVideos(user.channel_id, typeShort, page_no);
                 mergeVideos(response.data.data || []);
             } catch (error) {
-                console.log("Error in fetching: ", error.message);
+                console.log("Error fetching subscription videos:", error.message);
             } finally {
                 setLoading(false);
                 setLoadingMore(false);
             }
         };
         fetchData();
-    }, [typeShort, page_no, user.channel_id, serverurl, user]);
+    }, [typeShort, page_no, user.channel_id, user]);
 
     useEffect(() => {
         const fetchChannels = async () => {
             try {
-                const response = await axios.get(
-                    `${serverurl}/get-subs?user_id=${user.channel_id}`
-                );
+                const response = await subscriptionApi.getSubscriptions(user.channel_id);
                 setChannels(response.data.subscription || []);
             } catch (error) {
-                console.log("Error in fetching subscriptions: ", error.message);
+                console.log("Error fetching subscriptions:", error.message);
             }
         };
         fetchChannels();
-    }, [serverurl, user.channel_id, user]);
+    }, [user.channel_id, user]);
 
     const filteredVideos =
         selectedChannel === "all"

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import Card from "./Card";
-import axios from "axios";
+import { categoryApi } from "./api";
 import { useLocation } from "react-router-dom";
 import "./Category.css";
 import CardGrid from "./CardGrid";
@@ -15,7 +15,6 @@ const Category = (params) => {
     const [page_no, setpage_no] = useState(1);
     const [loadingMore, setLoadingMore] = useState(false);
     const [hasMore, setHasMore] = useState(true);
-    const serverurl = process.env.REACT_APP_SERVER_URL;
     const [category, setCategory] = useState(
         new URLSearchParams(locationHook.search).get("category")
     );
@@ -58,27 +57,16 @@ const Category = (params) => {
         if (loadingMore || !hasMore) return;
         setLoadingMore(true);
         const fetchData = async () => {
-            await axios
-                .get(
-                    `${serverurl}/category` +
-                        "?category=" +
-                        category +
-                        "&type=" +
-                        typeShort +
-                        "&page=" +
-                        page_no
-                )
-                .then((response) => {
-                    mergeVideos(response.data.videos || []);
-                    setdata((prev) => ({ ...prev, caticon: response.data.caticon, category: response.data.category }));
-                })
-                .catch((error) => {
-                    console.log("Error in fetching: ", error.message);
-                })
-                .finally(() => {
-                    setLoading(false);
-                    setLoadingMore(false);
-                });
+            try {
+                const response = await categoryApi.getCategory(category, typeShort, page_no);
+                mergeVideos(response.data.videos || []);
+                setdata((prev) => ({ ...prev, caticon: response.data.caticon, category: response.data.category }));
+            } catch (error) {
+                console.log("Error fetching category:", error.message);
+            } finally {
+                setLoading(false);
+                setLoadingMore(false);
+            }
         };
         fetchData();
     }, [typeShort, category, page_no, user]);
