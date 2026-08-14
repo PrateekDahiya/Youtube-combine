@@ -8,6 +8,7 @@ export { historyApi } from "./history";
 export { watchlaterApi } from "./watchlater";
 export { authApi } from "./auth";
 export { uploadApi } from "./upload";
+export { commentApi } from "./comment";
 export { channelApi } from "./channel";
 export { searchApi, categoryApi, trendingApi } from "./discover";
 export { flaskApiClient } from "./flask";

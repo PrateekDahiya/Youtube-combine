@@ -145,17 +145,27 @@ CREATE TABLE IF NOT EXISTS watchlater (
 
 -- ---------------------------------------------------------------------------
 -- comments
--- Only referenced via a cascading DELETE on user removal in server.js;
--- no insert/select code exists yet, so this is a reasonable minimal shape
--- for a video comment tied to a channel. Adjust if/when comment routes are added.
+-- Backs the add/edit/delete comment routes in src/routes/comments.js, AND
+-- caches real YouTube commentThreads in the same table (source = 'youtube').
+-- user_id is NULL for youtube-sourced rows (those authors aren't rows in our
+-- own `channels` table); author_name/author_avatar/like_count/external_id
+-- are only populated for youtube-sourced rows. updated_at is NULL until a
+-- native comment is edited.
 -- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS comments (
-    comment_id    INT           NOT NULL AUTO_INCREMENT,
-    video_id      VARCHAR(32)   NOT NULL,
-    user_id       VARCHAR(32)   NOT NULL,
-    comment_text  TEXT          NOT NULL,
-    comment_time  TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    comment_id     INT           NOT NULL AUTO_INCREMENT,
+    video_id       VARCHAR(32)   NOT NULL,
+    user_id        VARCHAR(32)   NULL,
+    source         ENUM('native', 'youtube') NOT NULL DEFAULT 'native',
+    external_id    VARCHAR(64)   NULL,
+    author_name    VARCHAR(255)  NULL,
+    author_avatar  VARCHAR(512)  NULL DEFAULT '',
+    like_count     INT           NOT NULL DEFAULT 0,
+    comment_text   TEXT          NOT NULL,
+    comment_time   TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at     TIMESTAMP     NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (comment_id),
+    UNIQUE KEY uniq_comment_external_id (external_id),
     KEY idx_comment_video_id (video_id),
     KEY idx_comment_user_id (user_id),
     CONSTRAINT fk_comment_user FOREIGN KEY (user_id)

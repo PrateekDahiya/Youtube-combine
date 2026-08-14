@@ -183,6 +183,21 @@ const fetchAndStoreVideos = async (
                 });
 
                 await Promise.all(videoPromises);
+
+                const commentPromises = videoIds.map((id) =>
+                    fetchAndCacheYoutubeComments(id).catch((commentError) => {
+                        console.log(
+                            "Error caching comments for video " +
+                                id +
+                                ": " +
+                                (commentError.response
+                                    ? JSON.stringify(commentError.response.data)
+                                    : commentError.message)
+                        );
+                    })
+                );
+                await Promise.all(commentPromises);
+
                 fetchedResults += videos.length;
                 nextPageToken = searchResponse.data.nextPageToken;
 
@@ -357,6 +372,91 @@ const fetchRelatedVideos = async (video_id) => {
     });
 };
 
+const fetchYoutubeComments = async (videoId, pageToken = null) => {
+    const apiKey = API_KEYS[currentApiKeyIndex];
+    currentApiKeyIndex = (currentApiKeyIndex + 1) % API_KEYS.length;
+
+    try {
+        const response = await axios.get(
+            "https://www.googleapis.com/youtube/v3/commentThreads",
+            {
+                params: {
+                    key: apiKey,
+                    videoId,
+                    part: "snippet",
+                    maxResults: 30,
+                    order: "relevance",
+                    textFormat: "plainText",
+                    pageToken: pageToken || undefined,
+                },
+            }
+        );
+
+        const comments = (response.data.items || []).map((item) => {
+            const top = item.snippet.topLevelComment.snippet;
+            return {
+                id: item.id,
+                author: top.authorDisplayName,
+                authorAvatar: top.authorProfileImageUrl,
+                text: top.textDisplay,
+                likeCount: top.likeCount || 0,
+                publishedAt: top.publishedAt,
+            };
+        });
+
+        return {
+            comments,
+            nextPageToken: response.data.nextPageToken || null,
+            disabled: false,
+        };
+    } catch (error) {
+        const status = error.response && error.response.status;
+        if (status === 403 || status === 404) {
+            // Comments disabled on the video, or the video doesn't exist on YouTube.
+            return { comments: [], nextPageToken: null, disabled: true };
+        }
+        throw error;
+    }
+};
+
+const upsertYoutubeComments = (videoId, comments) => {
+    if (!comments || comments.length === 0) return Promise.resolve();
+
+    const connection = getConnection();
+    const query = `INSERT INTO comments (video_id, source, external_id, author_name, author_avatar, like_count, comment_text, comment_time)
+                   VALUES ?
+                   ON DUPLICATE KEY UPDATE like_count = VALUES(like_count), comment_text = VALUES(comment_text), author_name = VALUES(author_name), author_avatar = VALUES(author_avatar)`;
+    const values = comments.map((c) => [
+        videoId,
+        "youtube",
+        c.id,
+        c.author,
+        c.authorAvatar || "",
+        c.likeCount || 0,
+        c.text,
+        c.publishedAt ? convertToMySQLDatetime(c.publishedAt) : null,
+    ]);
+
+    return new Promise((resolve, reject) => {
+        connection.query(query, [values], (error) => {
+            if (error) return reject(error);
+            resolve();
+        });
+    });
+};
+
+const fetchAndCacheYoutubeComments = async (videoId, pageToken = null) => {
+    const result = await fetchYoutubeComments(videoId, pageToken);
+    try {
+        await upsertYoutubeComments(videoId, result.comments);
+    } catch (error) {
+        console.log(
+            "Error caching YouTube comments for " + videoId + ": " + error.message
+        );
+    }
+    return result;
+};
+
 module.exports = {
     fetchAndStoreVideos,
     getChannelIds,
@@ -366,6 +466,8 @@ module.exports = {
     getRandomCategory,
     fetchVideoHistory,
     fetchRelatedVideos,
+    fetchYoutubeComments,
+    fetchAndCacheYoutubeComments,
     getCurrentApiKeyIndex: () => currentApiKeyIndex,
     setCurrentApiKeyIndex: (val) => { currentApiKeyIndex = val; },
 };

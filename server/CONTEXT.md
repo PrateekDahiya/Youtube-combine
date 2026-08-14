@@ -44,15 +44,16 @@ The **back-end** of VidVault: a Node.js + Express REST API plus the source for a
 |------|------------|-----------|
 | `health.js` | `/api` | `GET /keep-active`, `GET /health` |
 | `feed.js` | `/api` | `/api/home-tags` |
-| `videos.js` | `/api` | `POST /api/videos` (unified video endpoint), `/api/uploadStatus`, `/api/uploadingVideos`, `/api/updateVideo` |
+| `videos.js` | `/api` | `POST /api/videos` (unified video endpoint), `/api/uploadStatus`, `/api/uploadingVideos`, `/api/updateVideo`, `/api/deleteVideo` |
 | `watchlater.js` | `/api` | `/api/addtowatchlater`, `/api/removefromwatchlater` |
 | `likes.js` | `/api` | `/api/addtoliked`, `/api/removefromliked`, `/api/isliked` |
 | `history.js` | `/api` | `/api/addtohistory`, `/api/removefromhistory` |
 | `subscriptions.js` | `/api` | `/api/addtosubs`, `/api/removefromsubs`, `/api/issub`, `/api/get-subs` |
 | `auth.js` | `/api` | `/api/login`, `/api/register`, `/api/getUser`, `/api/updateUserDetail`, `/api/updateChannelDetail`, `/api/deleteUser` |
-| `uploads.js` | `/api` | `/api/upload`, `/api/uploadVideo`, `/api/uploadSignature`, `/api/completeVideoUpload` |
+| `uploads.js` | `/api` | `/api/upload`, `/api/uploadVideo`, `/api/replaceVideo` |
 | `channels.js` | `/api` | `/api/yourchannel`, `/api/channel`, `/api/getallchannels`, `/api/get-channel-ids`, `/api/update_channels`, `/api/addnewchannel` |
 | `feedback.js` | `/api` | `/api/feedback` |
+| `comments.js` | `/api` | `GET /api/comments`, `/api/addComment`, `/api/editComment`, `/api/deleteComment`, `GET /api/youtubeComments` |
 
 ## Unified video endpoint (`POST /api/videos`)
 
@@ -103,6 +104,7 @@ express()                                            // on port process.env.PORT
   ├── app.use("/api", uploadRoutes)
   ├── app.use("/api", channelRoutes)
   ├── app.use("/api", feedbackRoutes)
+  ├── app.use("/api", commentRoutes)
   ├── express.static("../client/build")              // served in production
   ├── app.get("*") → sendFile(index.html)            // SPA fallback
   ├── error handler
@@ -121,6 +123,15 @@ See the route module table above for the full list. All endpoints retain their e
   2. Loop `search.list` (50 per page) by `date`, collecting video IDs.
   3. `videos.list` (`snippet,statistics,contentDetails`) → upsert into `videos`. Sets `isShort = duration <= 61` seconds.
 - Helpers: `getCategoryName`, `convertImageUrl`, `convertToMySQLDatetime`, `convertDurationToSeconds`.
+
+## Comments (`src/routes/comments.js`)
+
+One `comments` table holds both kinds of comment, discriminated by `source`:
+- **Native** (`source = 'native'`): app users. `video_id`, `user_id` = commenter's `channel_id` (FK to `channels`), `comment_text`, `comment_time`, `updated_at` (NULL until edited). `GET /api/comments?video_id=` lists them newest-first joined with `channels` for the commenter's name/icon; `/api/addComment`, `/api/editComment`, `/api/deleteComment` are ownership-checked (`WHERE ... AND user_id = ?`, `affectedRows === 0` → 403/404).
+- **YouTube** (`source = 'youtube'`): cached real YouTube commentThreads, `user_id` NULL, `external_id` (YouTube's own comment id, unique), `author_name`, `author_avatar`, `like_count` filled in instead. Two ways they get populated:
+  1. In bulk — `fetchAndStoreVideos` (`src/youtube/index.js`) fetches and upserts (`ON DUPLICATE KEY UPDATE` by `external_id`) a page of comments for each video it just synced, so `/api/update_channels` and `/api/addnewchannel` warm the cache as a side effect of importing videos.
+  2. On demand — `GET /api/youtubeComments?video_id=&page_token=` reads the cache first; if a video has no cached rows yet (not synced through a channel job, or every prior page was empty), it live-fetches via `commentThreads.list` (same `API_KEYS` rotation as video import) and upserts what it gets before returning.
+  Only meaningful for videos whose `video_id` is a real YouTube video ID (imported videos, not user-uploaded ones); returns `{ comments: [], disabled: true }` on a 403/404 (comments disabled or video not found upstream) rather than erroring. Read-only — there is no way to post to real YouTube from this API key.
 
 ## Personalized feed algorithm
 
