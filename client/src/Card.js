@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { historyApi, watchlaterApi } from "./api";
 import Cookies from "js-cookie";
@@ -6,7 +6,7 @@ import "./Card.css";
 
 const defaultAvatar = "https://cdn-icons-png.flaticon.com/128/1077/1077063.png";
 
-const Card = (params) => {
+const Card = React.memo((params) => {
     const navigate = useNavigate();
     const [linkto, setLinkto] = useState();
     const [video_id, setVideo_id] = useState(null);
@@ -64,13 +64,13 @@ const Card = (params) => {
         checkWatchlater();
     }, [user_chl_id, video_id, isHovered]);
 
-    const handleWatchlater = () => {
+    const handleWatchlater = useCallback(() => {
         if (watchlater === true) {
             removewatchlater();
         } else {
             addwatchlater();
         }
-    };
+    }, [watchlater, user, user_chl_id, video_id]);
 
     useEffect(() => {
         setVideo_id(params.data.video_id);
@@ -150,9 +150,9 @@ const Card = (params) => {
         }
     };
 
-    const handleChannelClick = (e, channelId) => {
+    const handleChannelClick = useCallback((e, channelId) => {
         navigate(`/channel?channel_id=${channelId}`);
-    };
+    }, [navigate]);
 
     useEffect(() => {
         const setlink = async () => {
@@ -165,11 +165,18 @@ const Card = (params) => {
         setlink();
     }, []);
 
-    const thumbnailSrc =
-        params.data.thumbnail_link ||
-        (params.data.link && params.data.link.includes("res.cloudinary.com")
-            ? params.data.link.replace(/\.[a-zA-Z0-9]+$/, ".jpg")
-            : "");
+    const thumbnailSrc = useMemo(() => {
+        if (params.data.thumbnail_link) {
+            return params.data.thumbnail_link.replace(
+                /\/maxresdefault\.jpg$/,
+                "/hqdefault.jpg"
+            );
+        }
+        if (params.data.link && params.data.link.includes("res.cloudinary.com")) {
+            return params.data.link.replace(/\.[a-zA-Z0-9]+$/, ".jpg");
+        }
+        return "";
+    }, [params.data.thumbnail_link, params.data.link]);
 
     return (
         <Link
@@ -232,6 +239,8 @@ const Card = (params) => {
                 title={params.data.channel_name}
                 src={thumbnailSrc}
                 alt={params.data.title || ""}
+                loading="lazy"
+                decoding="async"
             />
             {forTrending || forrelated ? null : (
                     <span className="duration">
@@ -245,6 +254,8 @@ const Card = (params) => {
                             src={params.data.channel_icon || defaultAvatar}
                             alt={params.data.channel_name || ""}
                             title={params.data.channel_name || ""}
+                            loading="lazy"
+                            decoding="async"
                             onClick={(e) => {
                                 e.preventDefault();
                                 handleChannelClick(e, params.data.channel_id);
@@ -289,6 +300,6 @@ const Card = (params) => {
                 </div>
         </Link>
     );
-};
+});
 
 export default Card;

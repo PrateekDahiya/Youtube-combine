@@ -10,6 +10,7 @@ A collection of **one-off SQL migrations** that take an already-provisioned data
 |------|---------|
 | `001_fix_user_id_fk_target.sql` | Repoints the `user_id` foreign keys in `subscriptions`, `likedvideos`, `history`, `watchlater`, and `comments` from `user(user_id)` to `channels(channel_id)` and narrows the column to `VARCHAR(32)`. Also applies `ON DELETE CASCADE`. Assumptions: `schema.sql` was previously applied with the older (incorrect) FK target. |
 | `002_add_video_upload_status.sql` | Adds `upload_status` (0 ready / 1 pending / 2 failed), `upload_progress` (0-100) and `upload_error` columns to `videos` so user-uploaded videos can be inserted before their Cloudinary upload finishes, hidden from public feeds until ready, and show the failure reason if upload fails. Assumptions: `schema.sql` applied at a revision without these columns. |
+| `003_fulltext_search.sql` | Adds FULLTEXT indexes `ft_videos_search` (title, tags, video_description) on `videos` and `ft_channels_search` (channel_name, keywords, short_desc) on `channels` so `/api/search` can use `MATCH ... AGAINST` instead of leading-wildcard `LIKE`. Requires MySQL 8.0+ InnoDB. Assumptions: `videos` and `channels` tables exist. |
 
 ## Why this migration exists
 

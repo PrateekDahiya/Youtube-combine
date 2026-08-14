@@ -288,6 +288,26 @@ function getRandomCategory() {
     return youtubeCategories[randomIndex];
 }
 
+function encodeCursor(uploadTime, videoId) {
+    return Buffer.from(
+        JSON.stringify({ t: uploadTime, v: videoId })
+    ).toString("base64url");
+}
+
+function decodeCursor(cursor) {
+    try {
+        const parsed = JSON.parse(
+            Buffer.from(cursor, "base64url").toString("utf8")
+        );
+        if (parsed && parsed.t && parsed.v) {
+            return { uploadTime: parsed.t, videoId: parsed.v };
+        }
+    } catch (error) {
+        return null;
+    }
+    return null;
+}
+
 module.exports = {
     generateBase64Uuid,
     generateChannelId,
@@ -303,4 +323,6 @@ module.exports = {
     caticon,
     trendingCategoryMapping,
     getRandomCategory,
+    encodeCursor,
+    decodeCursor,
 };

@@ -6,8 +6,8 @@ export const searchApi = {
 };
 
 export const categoryApi = {
-    getCategory: (category, type, page = 1) =>
-        api.get("/category", { params: { category, type, page } }),
+    getCategory: (category, type, page = 1, cursor) =>
+        api.get("/category", { params: { category, type, page, cursor } }),
 };
 
 export const trendingApi = {

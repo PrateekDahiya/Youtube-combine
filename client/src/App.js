@@ -1,26 +1,27 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, lazy, Suspense } from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Cookies from "js-cookie";
 import Menu from "./Menu";
 import Header from "./Header";
-import Home from "./Home";
-import Shorts from "./Shorts";
-import You from "./You";
-import Watch from "./Watch";
-import Subscription from "./Subscription";
-import Yourchannel from "./Yourchannel";
-import Uploads from "./Uploads";
-import Channel from "./Channel";
-import Category from "./Category";
-import Search from "./Search";
-import Login from "./Login";
-import History from "./History";
-import Likedvideos from "./Likedvideos";
-import Watchlater from "./Watchlater";
-import Settings from "./Settings";
-import Trendings from "./Trendings";
 
 import "./App.css";
+
+const Home = lazy(() => import("./Home"));
+const Shorts = lazy(() => import("./Shorts"));
+const You = lazy(() => import("./You"));
+const Watch = lazy(() => import("./Watch"));
+const Subscription = lazy(() => import("./Subscription"));
+const Yourchannel = lazy(() => import("./Yourchannel"));
+const Uploads = lazy(() => import("./Uploads"));
+const Channel = lazy(() => import("./Channel"));
+const Category = lazy(() => import("./Category"));
+const Search = lazy(() => import("./Search"));
+const Login = lazy(() => import("./Login"));
+const History = lazy(() => import("./History"));
+const Likedvideos = lazy(() => import("./Likedvideos"));
+const Watchlater = lazy(() => import("./Watchlater"));
+const Settings = lazy(() => import("./Settings"));
+const Trendings = lazy(() => import("./Trendings"));
 
 function App() {
     const [crntuser, setCrntuser] = useState("Guest");
@@ -112,7 +113,12 @@ function App() {
                     </div>
 
                     <div className="content">
-                        <Routes>
+                        <Suspense
+                            fallback={
+                                <div className="app-loading">Loading...</div>
+                            }
+                        >
+                            <Routes>
                             <Route
                                 path="/"
                                 element={<Home user={crntuser} />}
@@ -216,6 +222,7 @@ function App() {
                                 }
                             />
                         </Routes>
+                        </Suspense>
                     </div>
                 </div>
             </div>

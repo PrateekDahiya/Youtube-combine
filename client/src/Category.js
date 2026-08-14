@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Card from "./Card";
 import { categoryApi } from "./api";
 import { useLocation } from "react-router-dom";
@@ -13,6 +13,7 @@ const Category = (params) => {
     const [data, setdata] = useState(null);
     const [loading, setLoading] = useState(true);
     const [page_no, setpage_no] = useState(1);
+    const cursorRef = useRef(null);
     const [loadingMore, setLoadingMore] = useState(false);
     const [hasMore, setHasMore] = useState(true);
     const [category, setCategory] = useState(
@@ -30,7 +31,7 @@ const Category = (params) => {
         setCategory(currentCategory);
     }, [locationHook]);
 
-    const mergeVideos = (videos) => {
+    const mergeVideos = (videos, nextCursor) => {
         setdata((prev) => {
             if (prev === null || prev.videos === undefined) {
                 return { ...(prev || {}), videos };
@@ -41,14 +42,21 @@ const Category = (params) => {
                 ? { ...prev, videos: [...prev.videos, ...fresh] }
                 : prev;
         });
-        if (videos.length < 24) {
+        if (typeof nextCursor === "string") {
+            cursorRef.current = nextCursor;
+        } else if (nextCursor === null) {
             setHasMore(false);
+            cursorRef.current = null;
+        } else if (videos.length < 24) {
+            setHasMore(false);
+            cursorRef.current = null;
         }
     };
 
     useEffect(() => {
         setdata(null);
         setpage_no(1);
+        cursorRef.current = null;
         setHasMore(true);
         setLoading(true);
     }, [typeShort, category]);
@@ -58,8 +66,8 @@ const Category = (params) => {
         setLoadingMore(true);
         const fetchData = async () => {
             try {
-                const response = await categoryApi.getCategory(category, typeShort, page_no);
-                mergeVideos(response.videos || []);
+                const response = await categoryApi.getCategory(category, typeShort, page_no, cursorRef.current);
+                mergeVideos(response.videos || [], response.nextCursor);
                 setdata((prev) => ({ ...prev, caticon: response.caticon, category: response.category }));
             } catch (error) {
                 console.log("Error fetching category:", error.message);

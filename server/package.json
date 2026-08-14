@@ -17,6 +17,7 @@
         "@google-cloud/monitoring": "^4.1.0",
         "axios": "^0.21.4",
         "cloudinary": "^2.10.0",
+        "compression": "^1.8.1",
         "cors": "^2.8.5",
         "crypto-js": "^4.2.0",
         "dotenv": "^16.4.5",
@@ -30,6 +31,7 @@
         "multer": "^1.4.5-lts.1",
         "mysql": "^2.18.1",
         "mysql2": "^3.9.8",
+        "node-cache": "^5.1.2",
         "node-cron": "^3.0.3",
         "node-fetch": "^3.3.2"
     }

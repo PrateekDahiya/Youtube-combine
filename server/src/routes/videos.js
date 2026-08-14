@@ -8,6 +8,7 @@ const {
 } = require("../youtube");
 const { syncHandler, asyncHandler } = require("../utils/asyncHandler");
 const { successResponse, errorResponse, validationErrorResponse, notFoundResponse, forbiddenResponse, sendResponse } = require("../utils/responseWrapper");
+const { cacheFetch } = require("../utils/cache");
 
 router.get("/watch", syncHandler((req, res) => {
     const videoId = req.query.video_id;
@@ -52,32 +53,44 @@ router.get("/personalized-feed", asyncHandler(async (req, res) => {
         return sendResponse(res, validationErrorResponse("Missing user_id parameter"));
     }
 
-    const videoHistory = await fetchVideoHistory(user_chl_id);
+    const cacheKey = `personalized-feed:${user_chl_id}:${page_no}`;
 
-    const excludedVideoIds = videoHistory.map((video) => video.video_id);
+    cacheFetch(cacheKey, 60, async (done) => {
+        try {
+            const videoHistory = await fetchVideoHistory(user_chl_id);
 
-    const tags = videoHistory
-        .map((video) => video.tags)
-        .join(",")
-        .split(",")
-        .map((tag) => tag.trim());
+            const excludedVideoIds = videoHistory.map((video) => video.video_id);
 
-    const sqlQuery = createFeedAndGenerateSQL(
-        tags,
-        excludedVideoIds,
-        5,
-        24,
-        24 * (page_no - 1)
-    );
+            const tags = videoHistory
+                .map((video) => video.tags)
+                .join(",")
+                .split(",")
+                .map((tag) => tag.trim());
 
-    const connection = getConnection();
-    connection.query(sqlQuery, (error, feed) => {
+            const sqlQuery = createFeedAndGenerateSQL(
+                tags,
+                excludedVideoIds,
+                5,
+                24,
+                24 * (page_no - 1)
+            );
+
+            const connection = getConnection();
+            connection.query(sqlQuery, (error, feed) => {
+                if (error) {
+                    console.log("Error fetching related videos:", error.message);
+                    console.log("Generated SQL Query:", sqlQuery);
+                    return done(error);
+                }
+                done(null, feed);
+            });
+        } catch (error) {
+            done(error);
+        }
+    }, (error, feed) => {
         if (error) {
-            console.log("Error fetching related videos:", error.message);
-            console.log("Generated SQL Query:", sqlQuery);
             return sendResponse(res, errorResponse("Database error"));
         }
-
         sendResponse(res, successResponse({
             page: "personalized_feed",
             videos: feed,

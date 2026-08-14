@@ -40,6 +40,14 @@
     z-index: 1;
 }
 
+.app-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: var(--secondary-color, #606060);
+}
+
 /* Guest user */
 
 .guestuserp {
