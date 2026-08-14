@@ -13,9 +13,14 @@ const {
 } = require("../utils");
 const { syncHandler, asyncHandler } = require("../utils/asyncHandler");
 const { successResponse, errorResponse, validationErrorResponse, sendResponse } = require("../utils/responseWrapper");
+const { cacheFetch } = require("../utils/cache");
+
+const HOME_TTL = 30;
 
 router.get("/home", syncHandler((req, res) => {
     const cursor = decodeCursor(req.query.cursor);
+    const page_no = Number(req.query.page || 1);
+    const cacheKey = cursor ? `home:${cursor}` : `home:page:${page_no}`;
     let query;
     let queryParams;
 
@@ -23,15 +28,21 @@ router.get("/home", syncHandler((req, res) => {
         query = `SELECT * FROM channels c join videos v on c.channel_id=v.channel_id where isShort = 0 and v.upload_status = 0 and (v.upload_time < ? or (v.upload_time = ? and v.video_id < ?)) order by v.upload_time desc, v.video_id desc limit 24`;
         queryParams = [cursor.uploadTime, cursor.uploadTime, cursor.videoId];
     } else {
-        const page_no = Number(req.query.page || 1);
         query = `SELECT * FROM channels c join videos v on c.channel_id=v.channel_id where isShort = 0 and v.upload_status = 0 order by v.upload_time desc, v.video_id desc limit 24 offset ?`;
         queryParams = [24 * (page_no - 1)];
     }
 
     const connection = getConnection();
-    connection.query(query, queryParams, (error, results) => {
+    cacheFetch(cacheKey, HOME_TTL, (done) => {
+        connection.query(query, queryParams, (error, results) => {
+            if (error) {
+                console.log(error);
+                return done(error);
+            }
+            done(null, results);
+        });
+    }, (error, results) => {
         if (error) {
-            console.log(error);
             return sendResponse(res, errorResponse("Database query failed"));
         }
         const last = results[results.length - 1];
@@ -55,8 +66,10 @@ router.get("/feed-by-tag", syncHandler((req, res) => {
 
     let query;
     let queryParams;
+    let cacheKey;
 
     if (type) {
+        cacheKey = `feed-by-tag:${type}:${cursor || "page:" + (req.query.page || 1)}`;
         if (cursor) {
             query = `SELECT * FROM channels c join videos v on c.channel_id=v.channel_id where v.isShort = 0 and v.upload_status = 0 and v.category in (?) ${keysetClause} ${orderClause}`;
             queryParams = [categoryMap[type] || [type], cursor.uploadTime, cursor.uploadTime, cursor.videoId];
@@ -66,6 +79,7 @@ router.get("/feed-by-tag", syncHandler((req, res) => {
             queryParams = [categoryMap[type] || [type], 24 * (page_no - 1)];
         }
     } else {
+        cacheKey = `feed-by-tag:${tag}:${cursor || "page:" + (req.query.page || 1)}`;
         if (cursor) {
             query = `SELECT * FROM channels c join videos v on c.channel_id=v.channel_id where v.isShort = 0 and v.upload_status = 0 and (v.title like ? or v.tags like ? or v.category like ? or c.channel_name like ?) ${keysetClause} ${orderClause}`;
             queryParams = [searchQuery, searchQuery, searchQuery, searchQuery, cursor.uploadTime, cursor.uploadTime, cursor.videoId];
@@ -77,22 +91,29 @@ router.get("/feed-by-tag", syncHandler((req, res) => {
     }
 
     const connection = getConnection();
-    connection.query(
-        query,
-        queryParams,
-        (error, results) => {
-            if (error) {
-                console.log(error);
-                return sendResponse(res, errorResponse("Database query failed"));
+    cacheFetch(cacheKey, HOME_TTL, (done) => {
+        connection.query(
+            query,
+            queryParams,
+            (error, results) => {
+                if (error) {
+                    console.log(error);
+                    return done(error);
+                }
+                done(null, results);
             }
-            const last = results[results.length - 1];
-            const nextCursor =
-                results.length === 24 && last
-                    ? encodeCursor(last.upload_time, last.video_id)
-                    : null;
-            sendResponse(res, successResponse({ page: "home_tag", videos: results, tag, type, nextCursor }, "Feed retrieved successfully"));
+        );
+    }, (error, results) => {
+        if (error) {
+            return sendResponse(res, errorResponse("Database query failed"));
         }
-    );
+        const last = results[results.length - 1];
+        const nextCursor =
+            results.length === 24 && last
+                ? encodeCursor(last.upload_time, last.video_id)
+                : null;
+        sendResponse(res, successResponse({ page: "home_tag", videos: results, tag, type, nextCursor }, "Feed retrieved successfully"));
+    });
 }));
 
 router.get("/home-tags", asyncHandler(async (req, res) => {
@@ -102,25 +123,39 @@ router.get("/home-tags", asyncHandler(async (req, res) => {
         return sendResponse(res, validationErrorResponse("Missing user_id parameter"));
     }
 
-    const videoHistory = await fetchVideoHistory(user_id);
-    const counts = {};
+    const cacheKey = `home-tags:${user_id}`;
 
-    videoHistory.forEach((video) => {
-        (video.tags || "")
-            .split(",")
-            .map((tag) => tag.toLowerCase().trim())
-            .filter(Boolean)
-            .forEach((tag) => {
-                counts[tag] = (counts[tag] || 0) + 1;
+    cacheFetch(cacheKey, 60, async (done) => {
+        try {
+            const videoHistory = await fetchVideoHistory(user_id);
+            const counts = {};
+
+            videoHistory.forEach((video) => {
+                (video.tags || "")
+                    .split(",")
+                    .map((tag) => tag.toLowerCase().trim())
+                    .filter(Boolean)
+                    .forEach((tag) => {
+                        counts[tag] = (counts[tag] || 0) + 1;
+                    });
             });
+
+            const tags = Object.entries(counts)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 5)
+                .map(([tag]) => tag);
+
+            done(null, { tags });
+        } catch (error) {
+            done(error);
+        }
+    }, (error, data) => {
+        if (error) {
+            console.log("Error fetching home tags:", error.message);
+            return sendResponse(res, errorResponse("Failed to fetch home tags"));
+        }
+        sendResponse(res, successResponse(data, "Home tags retrieved successfully"));
     });
-
-    const tags = Object.entries(counts)
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 5)
-        .map(([tag]) => tag);
-
-    sendResponse(res, successResponse({ tags }, "Home tags retrieved successfully"));
 }));
 
 const shortsShuffleCache = {
@@ -240,10 +275,18 @@ router.get("/subscriptions", syncHandler((req, res) => {
         queryParams = [user_id, isShort, 24 * (page_no - 1)];
     }
 
+    const cacheKey = `subscriptions:${user_id}:${isShort}:${cursor || "page:" + (req.query.page || 1)}`;
     const connection = getConnection();
-    connection.query(query, queryParams, (error, results) => {
+    cacheFetch(cacheKey, HOME_TTL, (done) => {
+        connection.query(query, queryParams, (error, results) => {
+            if (error) {
+                console.log(error);
+                return done(error);
+            }
+            done(null, results);
+        });
+    }, (error, results) => {
         if (error) {
-            console.log(error);
             return sendResponse(res, errorResponse("Database query failed"));
         }
         const last = results[results.length - 1];
@@ -272,29 +315,37 @@ router.get("/category", syncHandler((req, res) => {
         queryParams = [categoryMappingFeed[category], type, 24 * (page_no - 1)];
     }
 
+    const cacheKey = `category:${category}:${type}:${cursor || "page:" + (req.query.page || 1)}`;
     const connection = getConnection();
-    connection.query(
-        query,
-        queryParams,
-        (error, results) => {
-            if (error) {
-                console.log(error);
-                return sendResponse(res, errorResponse("Database query failed"));
+    cacheFetch(cacheKey, HOME_TTL, (done) => {
+        connection.query(
+            query,
+            queryParams,
+            (error, results) => {
+                if (error) {
+                    console.log(error);
+                    return done(error);
+                }
+                done(null, results);
             }
-            const last = results[results.length - 1];
-            const nextCursor =
-                results.length === 24 && last
-                    ? encodeCursor(last.upload_time, last.video_id)
-                    : null;
-            sendResponse(res, successResponse({
-                page: "category",
-                caticon: caticon[category],
-                videos: results,
-                category: category,
-                nextCursor,
-            }, "Category feed retrieved successfully"));
+        );
+    }, (error, results) => {
+        if (error) {
+            return sendResponse(res, errorResponse("Database query failed"));
         }
-    );
+        const last = results[results.length - 1];
+        const nextCursor =
+            results.length === 24 && last
+                ? encodeCursor(last.upload_time, last.video_id)
+                : null;
+        sendResponse(res, successResponse({
+            page: "category",
+            caticon: caticon[category],
+            videos: results,
+            category: category,
+            nextCursor,
+        }, "Category feed retrieved successfully"));
+    });
 }));
 
 router.get("/trendings", syncHandler((req, res) => {
