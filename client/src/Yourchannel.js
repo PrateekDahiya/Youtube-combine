@@ -68,7 +68,7 @@ const Yourchannel = (params) => {
     }
 
     function close_moredesc() {
-        let x = document.query.querySelector(".moredesc");
+        let x = document.querySelector(".moredesc");
         if (x.style.display === "block") {
             x.style.display = "none";
         } else {

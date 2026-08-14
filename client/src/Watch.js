@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import "./Watch.css";
-import { videoApi, subscriptionApi, likeApi } from "./api";
+import { videoApi, subscriptionApi, likeApi, historyApi } from "./api";
 import { flaskApiClient } from "./api";
 import Videoplayer from "./Videoplayer";
 import Card from "./Card";
@@ -115,6 +115,15 @@ const Watch = (params) => {
         await likeApi.removeLike(user_chl_id, video_id);
         setisliked(false);
     };
+
+    const historyAddedRef = useRef(null);
+
+    useEffect(() => {
+        if (user === "Guest" || !video_id) return;
+        if (historyAddedRef.current === video_id) return;
+        historyAddedRef.current = video_id;
+        historyApi.addToHistory(user_chl_id, video_id);
+    }, [video_id, user, user_chl_id]);
 
     useEffect(() => {
         const checkSubAndLike = async () => {

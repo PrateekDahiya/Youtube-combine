@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { historyApi, watchlaterApi } from "./api";
+import { watchlaterApi } from "./api";
 import Cookies from "js-cookie";
 import "./Card.css";
 
@@ -29,15 +29,6 @@ const Card = React.memo((params) => {
     useEffect(() => {
         setCrntuser(getUserFromCookie());
     }, [Cookies.get("user")]);
-
-    const addHistory = async () => {
-        if (user === "Guest") return;
-        await historyApi.addToHistory(user_chl_id, video_id);
-    };
-
-    const handleClick = () => {
-        addHistory();
-    };
 
     const addwatchlater = async () => {
         if (user === "Guest") return;
@@ -169,7 +160,6 @@ const Card = React.memo((params) => {
     return (
         <Link
             to={linkto}
-            onClick={handleClick}
             className={`card ${
                 forTrending || forrelated ? "trending-card" : ""
             }`}
