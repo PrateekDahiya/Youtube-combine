@@ -1,0 +1,226 @@
+.comments-section {
+    margin-top: 24px;
+    padding-top: 16px;
+}
+
+.comments-tabs {
+    display: flex;
+    gap: 24px;
+    border-bottom: 1px solid var(--alt-color);
+    margin-bottom: 16px;
+}
+
+.comments-tab {
+    background: none;
+    border: none;
+    padding: 10px 2px;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text2-color);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: color 0.2s ease, border-color 0.2s ease;
+}
+
+.comments-tab:hover {
+    color: var(--text-color);
+}
+
+.comments-tab.active {
+    color: var(--text-color);
+    border-bottom-color: var(--highlight-color);
+}
+
+.comment-composer {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.comment-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+}
+
+.comment-composer-input {
+    flex: 1;
+    min-width: 0;
+}
+
+.comment-composer textarea,
+.comment-edit textarea {
+    width: 100%;
+    resize: none;
+    border: none;
+    border-bottom: 1px solid var(--alt-color);
+    background: transparent;
+    color: var(--text-color);
+    font-size: 14px;
+    font-family: inherit;
+    padding: 6px 0;
+    outline: none;
+}
+
+.comment-composer textarea:focus,
+.comment-edit textarea:focus {
+    border-bottom-color: var(--highlight-color);
+}
+
+.comment-composer-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 8px;
+}
+
+.comment-btn {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.2s ease;
+}
+
+.comment-btn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+.comment-btn-cancel {
+    background-color: var(--alt-color);
+    color: var(--text-color);
+}
+
+.comment-btn-submit {
+    background-color: var(--text-color);
+    color: var(--background-color);
+}
+
+.comment-btn-submit:hover:not(:disabled) {
+    opacity: 0.85;
+}
+
+.comments-guest-hint,
+.comments-empty {
+    color: var(--text2-color);
+    font-size: 14px;
+    padding: 8px 0 20px;
+}
+
+.comments-list {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.comment-item {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+}
+
+.comment-body {
+    flex: 1;
+    min-width: 0;
+}
+
+.comment-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+}
+
+.comment-author {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-color);
+}
+
+.comment-time {
+    font-size: 12px;
+    color: var(--text2-color);
+}
+
+.comment-text {
+    margin: 0;
+    font-size: 14px;
+    color: var(--text-color);
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.comment-likes {
+    display: inline-block;
+    margin-top: 4px;
+    font-size: 12px;
+    color: var(--text2-color);
+}
+
+.comment-actions {
+    display: flex;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.comment-action {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border: none;
+    border-radius: 50%;
+    background-color: transparent;
+    color: var(--text2-color);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.comment-action:hover {
+    background-color: var(--alt-color);
+    color: var(--text-color);
+}
+
+.comment-action-delete:hover {
+    background-color: #e74c3c;
+    color: #fff;
+}
+
+.comment-action svg {
+    width: 15px;
+    height: 15px;
+}
+
+.comment-edit {
+    margin-top: 2px;
+}
+
+.comments-load-more {
+    align-self: center;
+    margin: 16px auto 0;
+    display: block;
+    padding: 8px 18px;
+    border: 1px solid var(--alt-color);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--text-color);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.comments-load-more:hover:not(:disabled) {
+    background-color: var(--alt-color);
+}
+
+.comments-load-more:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}

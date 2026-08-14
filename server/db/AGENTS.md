@@ -12,6 +12,7 @@ This guide is for AI agents (and humans pairing with them) editing the **VidVaul
 |------|---------|
 | `schema.sql` | Authoritative DDL for every table. `CREATE TABLE IF NOT EXISTS`, `utf8mb4`, InnoDB. MySQL 8.0+ (uses window functions). |
 | `migrations/001_fix_user_id_fk_target.sql` | Repoints `user_id` FKs in `subscriptions`/`likedvideos`/`history`/`watchlater`/`comments` from `user(user_id)` to `channels(channel_id)` (matches the runtime behavior where clients send the logged-in user's `channel_id`). |
+| `migrations/004_add_comment_updated_at.sql` | Adds `comments.updated_at` (NULL until edited, refreshed `ON UPDATE`) so `src/routes/comments.js` can distinguish an edited comment. |
 | `CONTEXT.md` | Reference doc for table shapes, the `user_id` convention, index recommendations, and applying the schema. |
 | `AGENTS.md` | This file. |
 
@@ -68,4 +69,4 @@ The indexes already cover the hot query patterns in `server.js`. When adding a n
 - Don't write `user_id` FKs to `user(user_id)` in the join tables — follow the established convention of FK to `channels(channel_id)`.
 - Don't commit production data dumps or seed data here. The schema and migrations are structure-only.
 - Don't add comments to migration SQL beyond a header describing the prerequisite and the end state — keep migrations scannable.
-- Don't introduce a new table without also updating `server/CONTEXT.md` and `server/server.js` routes (a table with no route is dead weight; see the existing `comments` table which is currently unused by routes).
+- Don't introduce a new table without also updating `server/CONTEXT.md` and `server/server.js` routes (a table with no route is dead weight).

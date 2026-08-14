@@ -7,6 +7,7 @@ import Videoplayer from "./Videoplayer";
 import Card from "./Card";
 import CardGrid from "./CardGrid";
 import Cardloading from "./Cardloading";
+import Comments from "./Comments";
 
 const defaultAvatar = "https://cdn-icons-png.flaticon.com/128/1077/1077063.png";
 
@@ -445,6 +446,7 @@ const Watch = (params) => {
                             </>
                         ) : null}
                     </div>
+                    {video_id ? <Comments videoId={video_id} user={user} /> : null}
                 </div>
                 {relateddata && relateddata.videos && relateddata.videos.length > 0 && (
                     <div className="relatedvideos">

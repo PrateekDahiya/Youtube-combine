@@ -23,7 +23,7 @@ Holds the **MySQL schema** and migration SQL for the VidVault database. These fi
 | `likedvideos` | (`user_id`, `video_id`) | `idx_liked_video_id` | `user_id` → `channels.channel_id` (CASCADE). `video_id` → `videos.video_id` (CASCADE). |
 | `history` | (`user_id`, `video_id`) | `idx_history_video_id` | Same `user_id` convention. `watched_time` default `CURRENT_TIMESTAMP`. |
 | `watchlater` | (`user_id`, `video_id`) | `idx_watchlater_video_id` | Same convention. `added_time` default `CURRENT_TIMESTAMP`. |
-| `comments` | `comment_id INT AUTO_INCREMENT` | `idx_comment_video_id`, `idx_comment_user_id` | Currently unused by any route — only cascaded DELETE on user removal. Same `user_id` convention. |
+| `comments` | `comment_id INT AUTO_INCREMENT` | `idx_comment_video_id`, `idx_comment_user_id`, `uniq_comment_external_id` | Backs `src/routes/comments.js`. Two kinds of row via `source`: `native` (app users — `user_id` set, FK to `channels`, ownership-checked on edit/delete) and `youtube` (cached real YouTube commentThreads — `user_id` NULL, `external_id`/`author_name`/`author_avatar`/`like_count` set instead). YouTube rows are populated in bulk by `fetchAndStoreVideos` (`src/youtube/index.js`) and lazily backfilled by `GET /api/youtubeComments`. `updated_at` is NULL until a native comment is edited. |
 
 ## Critical convention: `user_id` in join tables
 
@@ -52,4 +52,3 @@ If you add a new filter on a leading `LIKE` prefix (currently `videos.title LIKE
 
 - `schema.sql` is reverse-engineered from the queries in `server.js` / `videos.js` / `relatedvideos.js`. If you add a route that touches a new column, update `schema.sql` here and add a migration in `migrations/`.
 - Prefer parameterized queries in routes (see `server/CONTEXT.md`) — the schema's column widths (`VARCHAR(32)` ids, `VARCHAR(512)` URLs) reflect observed YouTube payloads.
-- `comments` is the only table that exists in the schema but has no route that inserts or selects from it. Treat its column shape as an educated guess to revisit when adding comment routes.
