@@ -1,16 +1,16 @@
-import api from "./client";
+import { videosApi } from "./videos";
 
 export const searchApi = {
-    search: (query, page = 1) =>
-        api.get("/search", { params: { query, page } }),
+    search: (query, page = 1, userId) =>
+        videosApi.getVideos({ type: "search", query, page, user_id: userId }),
 };
 
 export const categoryApi = {
-    getCategory: (category, type, page = 1, cursor) =>
-        api.get("/category", { params: { category, type, page, cursor } }),
+    getCategory: (category, isShort, page = 1, cursor, userId) =>
+        videosApi.getVideos({ type: "category", category, isShort, page, cursor, user_id: userId }),
 };
 
 export const trendingApi = {
-    getTrendings: (type = 0, page = 1) =>
-        api.get("/trendings", { params: { type, page } }),
+    getTrendings: (tab = 0, page = 1, userId) =>
+        videosApi.getVideos({ type: "trending", tab, page, user_id: userId }),
 };

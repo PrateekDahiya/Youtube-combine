@@ -1,4 +1,5 @@
 import api from "./client";
+import { videosApi } from "./videos";
 
 export const subscriptionApi = {
     addSubscription: (userChlId, channelId) =>
@@ -14,5 +15,5 @@ export const subscriptionApi = {
         api.get("/get-subs", { params: { user_id: userId } }),
 
     getSubscriptionVideos: (userId, isShort, page = 1, cursor) =>
-        api.get("/subscriptions", { params: { user_id: userId, isShort, page, cursor } }),
+        videosApi.getVideos({ type: "subscriptions", user_id: userId, isShort, page, cursor }),
 };

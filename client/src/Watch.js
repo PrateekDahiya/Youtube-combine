@@ -137,7 +137,7 @@ const Watch = (params) => {
         const fetchRelated = async () => {
             if (!video_id) return;
             try {
-                const response = await videoApi.getRelatedVideos(video_id);
+                const response = await videoApi.getRelatedVideos(video_id, user.channel_id);
                 setRelateddata(response);
             } catch (error) {
                 console.log("Error fetching related videos:", error.message);

@@ -4,23 +4,6 @@ const { getConnection } = require("../db");
 const { syncHandler } = require("../utils/asyncHandler");
 const { successResponse, errorResponse, validationErrorResponse, notFoundResponse, sendResponse } = require("../utils/responseWrapper");
 
-router.get("/likedvideos", syncHandler((req, res) => {
-    const user_id = req.query.user_id;
-    const query = `SELECT v.*, c.* FROM likedvideos lv JOIN videos v ON lv.video_id = v.video_id JOIN channels c ON v.channel_id = c.channel_id WHERE lv.user_id = ? order by liked_time desc limit 100`;
-
-    const connection = getConnection();
-    connection.query(query, [user_id], (error, results) => {
-        if (error) {
-            console.log(error);
-            return sendResponse(res, errorResponse("Database query failed"));
-        }
-        sendResponse(res, successResponse({
-            page: "likedvideos",
-            videos: results,
-        }, "Liked videos retrieved successfully"));
-    });
-}));
-
 router.post("/addtoliked", syncHandler((req, res) => {
     const user_id = req.body.user_id;
     const video_id = req.body.video_id;

@@ -68,16 +68,16 @@ const Home = (params) => {
             try {
                 let response;
                 if (selectedTag !== "All") {
-                    response = await feedApi.getFeedByTag(selectedTag, page_no, cursorRef.current);
+                    response = await feedApi.getFeedByTag(selectedTag, page_no, cursorRef.current, user.channel_id);
                     mergeVideos(response.videos || [], response.nextCursor);
                 } else if (selectedType !== "All") {
-                    response = await feedApi.getFeedByType(selectedType, page_no, cursorRef.current);
+                    response = await feedApi.getFeedByType(selectedType, page_no, cursorRef.current, user.channel_id);
                     mergeVideos(response.videos || [], response.nextCursor);
                 } else if (user !== "Guest" && user.channel_id) {
                     response = await feedApi.getPersonalizedFeed(user.channel_id, page_no, cursorRef.current);
                     mergeVideos(response.videos || [], response.nextCursor);
                 } else {
-                    response = await feedApi.getHome(page_no, cursorRef.current);
+                    response = await feedApi.getHome(page_no, cursorRef.current, user.channel_id);
                     mergeVideos(response.videos || [], response.nextCursor);
                 }
             } catch (error) {

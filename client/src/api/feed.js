@@ -1,18 +1,19 @@
 import api from "./client";
+import { videosApi } from "./videos";
 
 export const feedApi = {
-    getHome: (page = 1, cursor) =>
-        api.get("/home", { params: { page, cursor } }),
+    getHome: (page = 1, cursor, userId) =>
+        videosApi.getVideos({ type: "home", page, cursor, user_id: userId }),
 
-    getFeedByTag: (tag, page = 1, cursor) =>
-        api.get("/feed-by-tag", { params: { tag, page, cursor } }),
+    getFeedByTag: (tag, page = 1, cursor, userId) =>
+        videosApi.getVideos({ type: "tag", tag, page, cursor, user_id: userId }),
 
-    getFeedByType: (type, page = 1, cursor) =>
-        api.get("/feed-by-tag", { params: { type, page, cursor } }),
+    getFeedByType: (category, page = 1, cursor, userId) =>
+        videosApi.getVideos({ type: "tag", category, page, cursor, user_id: userId }),
 
     getHomeTags: (userId) =>
         api.get("/home-tags", { params: { user_id: userId } }),
 
     getPersonalizedFeed: (userId, page = 1, cursor) =>
-        api.get("/personalized-feed", { params: { user_id: userId, page, cursor } }),
+        videosApi.getVideos({ type: "personalized", user_id: userId, page, cursor }),
 };

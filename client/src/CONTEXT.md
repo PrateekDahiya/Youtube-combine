@@ -22,27 +22,27 @@ All React application source for the VidVault front-end: the root component, pag
 ### Pages
 | File | Component | Route(s) | What it renders |
 |------|-----------|----------|-----------------|
-| `Home.js` + `Home.css` | `Home` | `/`, `/home` | Infinite-scroll grid of `Card`s. Logged-out → `/api/home`; logged-in → `/api/personalized-feed` (uses history tags). |
-| `Shorts.js` + `Shorts.css` | `Shorts` | `/shorts` | Vertical Shorts feed with three rotating `Shortbox` slots and up/down arrow + keyboard navigation. Fetches `/api/shorts`. |
-| `Watch.js` + `Watch.css` | `Watch` | `/watch` | Video page: fetches `/api/watch` for metadata and the Flask service for stream URLs; falls back to YouTube `<iframe>` if the Flask call fails. When `videos.link` points to an uploaded file (starts with `/uploads/` or a `res.cloudinary.com` URL) it plays the file directly via the custom player and skips the Flask/YouTube pipeline. Like/dislike/subscribe/related-videos. |
-| `Search.js` + `Search.css` | `Search` | `/search` | Hits `/api/search?query=…` and renders a grid of `Card`s. |
-| `Yourchannel.js` + `Yourchannel.css` | `Yourchannel` | `/yourchannel` | The logged-in user's own channel: banner, info, Videos/Shorts tabs, and search. Each video card shows an edit button that opens the `EditVideo` modal. Uses `/api/yourchannel` + `/api/getvideosofchannel`. (Uploading a video lives on the `/uploads` page.) |
+| `Home.js` + `Home.css` | `Home` | `/`, `/home` | Infinite-scroll grid of `Card`s. Logged-out → `POST /api/videos {type:"home"}`; logged-in → `POST /api/videos {type:"personalized"}` (uses history tags). |
+| `Shorts.js` + `Shorts.css` | `Shorts` | `/shorts` | Vertical Shorts feed with three rotating `Shortbox` slots and up/down arrow + keyboard navigation. Fetches `POST /api/videos {type:"shorts"}`. |
+| `Watch.js` + `Watch.css` | `Watch` | `/watch` | Video page: fetches `POST /api/videos {type:"watch"}` for metadata and the Flask service for stream URLs; falls back to YouTube `<iframe>` if the Flask call fails. When `videos.link` points to an uploaded file (starts with `/uploads/` or a `res.cloudinary.com` URL) it plays the file directly via the custom player and skips the Flask/YouTube pipeline. Like/dislike/subscribe/related-videos. |
+| `Search.js` + `Search.css` | `Search` | `/search` | Hits `POST /api/videos {type:"search"}` and renders a grid of `Card`s. |
+| `Yourchannel.js` + `Yourchannel.css` | `Yourchannel` | `/yourchannel` | The logged-in user's own channel: banner, info, Videos/Shorts tabs, and search. Each video card shows an edit button that opens the `EditVideo` modal. Uses `/api/yourchannel` + `POST /api/videos {type:"channel"}`. (Uploading a video lives on the `/uploads` page.) |
 | `EditVideo.js` | `EditVideo` | `Yourchannel.js`. Modal to edit a video's metadata (title, description, tags, category, type, thumbnail) via `/api/updateVideo`. The video file itself is never re-uploaded. Thumbnail changes upload through `/api/upload` first. Reuses the `UploadVideo.css` classes. |
-| `Channel.js` + `Channel.css` | `Channel` | `/channel` | Any channel view (by `?channel_id=`). Subscribe button (`/api/issub`, `/api/addtosubs`, `/api/removefromsubs`). |
+| `Channel.js` + `Channel.css` | `Channel` | `/channel` | Any channel view (by `?channel_id=`). Videos via `POST /api/videos {type:"channel"}`. Subscribe button (`/api/issub`, `/api/addtosubs`, `/api/removefromsubs`). |
 | `You.js` + `You.css` | `You` | `/me` | "Account" landing for signed-in users: channel banner + name. Guests see a sign-in CTA. |
-| `Subscription.js` + `Subscription.css` | `Subscription` | `/subscriptions` | Videos/Shorts from subscribed channels: `/api/subscriptions?isShort=&user_id=`. |
-| `Trendings.js` + `Trendings.css` | `Trendings` | `/trendings` | Trending list with Now/Music/Gaming/Movies tabs: `/api/trendings?type=`. |
-| `Category.js` + `Category.css` | `Category` | `/category?category=` | Browses a category (gaming, music, movies, news, sports, courses, fashionbeauty, shopping): `/api/category`. |
+| `Subscription.js` + `Subscription.css` | `Subscription` | `/subscriptions` | Videos/Shorts from subscribed channels: `POST /api/videos {type:"subscriptions"}`. |
+| `Trendings.js` + `Trendings.css` | `Trendings` | `/trendings` | Trending list with Now/Music/Gaming/Movies tabs: `POST /api/videos {type:"trending"}`. |
+| `Category.js` + `Category.css` | `Category` | `/category?category=` | Browses a category (gaming, music, movies, news, sports, courses, fashionbeauty, shopping): `POST /api/videos {type:"category"}`. |
 | `History.js` + `History.css` | `History` | `/history` | Watch history grouped by Today/Yesterday/This Week/This Month/Older. Items removable via `/api/removefromhistory`. Honors the `ishistory` toggle. |
-| `Likedvideos.js` + `Likedvideos.css` | `Likedvideos` | `/likedvideos` | User's liked videos via `/api/likedvideos`. Honors the `islikedvideos` toggle. |
-| `Watchlater.js` + `Watchlater.css` | `Watchlater` | `/watchlater` | User's watch-later list via `/api/watchlater`. Honors the `iswatchlater` toggle. |
+| `Likedvideos.js` + `Likedvideos.css` | `Likedvideos` | `/likedvideos` | User's liked videos via `POST /api/videos {type:"liked"}`. Honors the `islikedvideos` toggle. |
+| `Watchlater.js` + `Watchlater.css` | `Watchlater` | `/watchlater` | User's watch-later list via `POST /api/videos {type:"watchlater"}`. Honors the `iswatchlater` toggle. |
 | `Settings.js` + `Settings.css` | `Settings` | `/settings` | Settings hub: Account, General (theme/shorts/privacy toggles), Profile (editable user fields → `/api/updateUserDetail`), Channel (editable channel fields → `/api/updateChannelDetail` + profile photo/banner upload via `/api/upload` then saving the returned URL), Advanced (channel_id/user_id/Delete account → `/api/deleteUser`). Refetches user via `/api/getUser` after edits. |
 | `Login.js` + `Login.css` | `Login` | `/login` (also `?type=register|feedback|logout`) | Multi-step auth form. Login (`/api/login`), Registration (`/api/register`), Feedback (`/api/feedback`), and Logout (clears `user` cookie). Hashes password client-side before sending. |
 
 ### Reusable building blocks
 | File | Component | Used by |
 |------|-----------|---------|
-| `Card.js` + `Card.css` | `Card` | Almost every listing page. Renders a video thumbnail with title, channel icon, views, upload time, duration badge, hover watch-later button. Clicking navigates to `/watch` or `/shorts` depending on `isShort`. Adds history on click via `/api/addtohistory`. Optional `onEdit` prop shows an edit button that calls back with the video row (used by `Yourchannel`). Thumbnail falls back to a Cloudinary poster frame derived from the video `link` when `thumbnail_link` is empty. |
+| `Card.js` + `Card.css` | `Card` | Almost every listing page. Renders a video thumbnail with title, channel icon, views, upload time, duration badge, hover watch-later button. The watch-later state comes from the video row's `is_watchlater` field (set by the server on every `POST /api/videos` response) — no per-hover API call. Clicking navigates to `/watch` or `/shorts` depending on `isShort`. Adds history on click via `/api/addtohistory`. Optional `onEdit` prop shows an edit button that calls back with the video row (used by `Yourchannel`). Thumbnail falls back to a Cloudinary poster frame derived from the video `link` when `thumbnail_link` is empty. |
 | `Cardloading.js` + `Cardloading.css` | `Cardloading` | Skeleton loader with shape variants for `home`, `category`, `channel`, `yourchannel`, `subscription`, `watch`. |
 | `Videoplayer.js` + `Videoplayer.css` | `VideoPlayer` | `Watch.js`. Custom video player with separate `<video>` (webm) and `<audio>` sources, sync logic, quality menu, playback-speed menu, volume, fullscreen. |
 | `Shortbox.js` + `Shortbox.css` | `Shortbox` | `Shorts.js`. Fetches the short's stream URL from the Flask `/get-short-url` endpoint. |
@@ -62,7 +62,8 @@ All React application source for the VidVault front-end: the root component, pag
 
 - **Naming**: one PascalCase `.js` file per component, paired with a same-name `.css` (e.g. `Watch.js` ↔ `Watch.css`). All files live flat in this directory.
 - **Default export**: every component is a default export of a function component that accepts a single object argument. The codebase calls this argument `params` (not `props`).
-- **API base**: `const serverurl = process.env.REACT_APP_SERVER_URL;` then call `${serverurl}/<route>` where `<route>` does **not** include the `/api` prefix (the env value does). e.g. `${serverurl}/home` → `/api/home`.
+- **API base**: `const serverurl = process.env.REACT_APP_SERVER_URL;` then call `${serverurl}/<route>` where `<route>` does **not** include the `/api` prefix (the env value does). e.g. `${serverurl}/videos` → `/api/videos`.
+- **Unified videos endpoint**: all video lists (home, tag, category, trending, subscriptions, search, personalized, watchlater, liked, history, channel, related, shorts) go through `POST /api/videos` with a `type` field in the body (see `src/api/videos.js`). Mutations (like/subscribe/history/watch-later add/remove) keep their own endpoints.
 - **User propagation**: `App.js` holds `crntuser` and forwards it as the `user` prop to every page. Pages forward `user.channel_id` to `Card` (which uses it for watch-later/history calls).
 - **Guest handling**: when a page needs a logged-in user it checks `user === "Guest"` and renders a sign-in CTA instead of an error.
 - **Format helpers** (`formatNumber`, `formatISODate`, `getDateDifference`, `formatDuration`) are duplicated across `Card.js`, `Watch.js`, `Channel.js`, `Yourchannel.js`, `Subscription.js`, and others. If you change one, search for the rest.

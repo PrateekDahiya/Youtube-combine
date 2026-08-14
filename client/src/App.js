@@ -127,7 +127,7 @@ function App() {
                                 path="/home"
                                 element={<Home user={crntuser} />}
                             />
-                            <Route path="/search" element={<Search />} />
+                            <Route path="/search" element={<Search user={crntuser} />} />
                             <Route
                                 path="/shorts"
                                 element={<Shorts user={crntuser} />}

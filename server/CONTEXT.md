@@ -31,7 +31,8 @@ The **back-end** of VidVault: a Node.js + Express REST API plus the source for a
 |--------|---------|
 | `src/config/` | Cloudinary config, `API_KEYS` parsing, env helpers. |
 | `src/db/` | MySQL connection (singleton + reconnection logic), `createNewConnection()` for background jobs. |
-| `src/utils/` | ID generators (`generateChannelId`, `generateVideoId`), `sanitizeTag`, `createFeedAndGenerateSQL`, date/duration converters, category mappings, YouTube category helpers. |
+| `src/utils/` | ID generators (`generateChannelId`, `generateVideoId`), `sanitizeTag`, `createFeedAndGenerateSQL`, date/duration converters, category mappings, YouTube category helpers, `watchlaterFlag` (attaches `is_watchlater` per row). Feed type handlers live in `src/feed/`, not here. |
+| `src/feed/` | Per-type video feed handlers (`home.js`, `tag.js`, `category.js`, `trending.js`, `subscriptions.js`, `personalized.js`, `watchlater.js`, `liked.js`, `history.js`, `channel.js`, `search.js`, `related.js`, `watch.js`, `videobyid.js`, `shorts.js`), auto-registered by `index.js` and backed by shared helpers in `helpers.js`. See the "Unified video endpoint" section. |
 | `src/email/` | `sendEmail()` via Resend. |
 | `src/uploads/` | Multer config (image + video), Cloudinary upload helpers, background video processing (`processVideoUpload`). |
 | `src/youtube/` | YouTube Data API v3 fetching: `fetchAndStoreVideos`, `getChannelIds`, `processChannels`, `getNewChannelId`, `addNewChannel`, API key rotation. |
@@ -42,16 +43,46 @@ The **back-end** of VidVault: a Node.js + Express REST API plus the source for a
 | File | Mounted at | Endpoints |
 |------|------------|-----------|
 | `health.js` | `/api` | `GET /keep-active`, `GET /health` |
-| `feed.js` | `/api` | `/api/home`, `/api/feed-by-tag`, `/api/home-tags`, `/api/shorts`, `/api/subscriptions`, `/api/category`, `/api/trendings`, `/api/search` |
-| `videos.js` | `/api` | `/api/watch`, `/api/related-videos`, `/api/personalized-feed`, `/api/getvideobyid`, `/api/getvideosofchannel`, `/api/uploadStatus`, `/api/uploadingVideos`, `/api/updateVideo` |
-| `watchlater.js` | `/api` | `/api/watchlater`, `/api/addtowatchlater`, `/api/removefromwatchlater`, `/api/iswatchlater` |
-| `likes.js` | `/api` | `/api/likedvideos`, `/api/addtoliked`, `/api/removefromliked`, `/api/isliked` |
-| `history.js` | `/api` | `/api/history`, `/api/addtohistory`, `/api/removefromhistory` |
+| `feed.js` | `/api` | `/api/home-tags` |
+| `videos.js` | `/api` | `POST /api/videos` (unified video endpoint), `/api/uploadStatus`, `/api/uploadingVideos`, `/api/updateVideo` |
+| `watchlater.js` | `/api` | `/api/addtowatchlater`, `/api/removefromwatchlater` |
+| `likes.js` | `/api` | `/api/addtoliked`, `/api/removefromliked`, `/api/isliked` |
+| `history.js` | `/api` | `/api/addtohistory`, `/api/removefromhistory` |
 | `subscriptions.js` | `/api` | `/api/addtosubs`, `/api/removefromsubs`, `/api/issub`, `/api/get-subs` |
 | `auth.js` | `/api` | `/api/login`, `/api/register`, `/api/getUser`, `/api/updateUserDetail`, `/api/updateChannelDetail`, `/api/deleteUser` |
 | `uploads.js` | `/api` | `/api/upload`, `/api/uploadVideo`, `/api/uploadSignature`, `/api/completeVideoUpload` |
 | `channels.js` | `/api` | `/api/yourchannel`, `/api/channel`, `/api/getallchannels`, `/api/get-channel-ids`, `/api/update_channels`, `/api/addnewchannel` |
 | `feedback.js` | `/api` | `/api/feedback` |
+
+## Unified video endpoint (`POST /api/videos`)
+
+**Every endpoint that returns a list of videos goes through one POST route.** The body carries a `type` discriminator plus per-type params; the response is chosen by `type` (factory method in `src/feed/index.js`). This removed the per-card `GET /api/iswatchlater` hover calls: each returned video row now carries `is_watchlater` (0/1) for the calling user.
+
+### `src/feed/` — per-type handlers (open/closed)
+
+Each `type` lives in its own file under `src/feed/` (`home.js`, `tag.js`, `category.js`, `trending.js`, `subscriptions.js`, `personalized.js`, `watchlater.js`, `liked.js`, `history.js`, `channel.js`, `search.js`, `related.js`, `watch.js`, `videobyid.js`, `shorts.js`). `src/feed/index.js` **auto-registers every `*.js` file in the directory** (minus `index.js` and `helpers.js`) as a handler keyed by filename, so adding a new feed type is just dropping in a new file that default-exports an `async (params) => response` function — no edits to the factory or registry. Shared plumbing (cursor helpers, `runQuery`, `cachedQuery`, `cachedFetch`, `flagVideos`, `nextCursorFromVideos`, `httpError`) lives in `src/feed/helpers.js`.
+
+Body: `{ type, user_id?, page?, cursor?, isShort?, tag?, category?, tab?, query?, channel_id?, video_id?, needmore? }`
+
+| `type` | Replaces (removed GET) | Key params | Extra payload |
+|--------|------------------------|-----------|---------------|
+| `home` | `/api/home` | page, cursor | `nextCursor` |
+| `tag` | `/api/feed-by-tag` | `tag` **or** `category` (Music/Gaming/…) | `tag`, `category`, `nextCursor` |
+| `category` | `/api/category` | category, isShort, page, cursor | `caticon`, `category`, `nextCursor` |
+| `trending` | `/api/trendings` | tab (0=all), page | — |
+| `subscriptions` | `/api/subscriptions` | isShort, page, cursor | `nextCursor` |
+| `search` | `/api/search` | query, page | `channels`, `query` |
+| `personalized` | `/api/personalized-feed` | page | — |
+| `watchlater` | `/api/watchlater` | — | `is_watchlater` forced to 1 |
+| `liked` | `/api/likedvideos` | — | — |
+| `history` | `/api/history` | — | — |
+| `channel` | `/api/getvideosofchannel` | channel_id, isShort, query, page | — |
+| `related` | `/api/related-videos` | video_id | — |
+| `shorts` | `/api/shorts` | video_id?, needmore | `shorts_vIds` |
+| `watch` | `/api/watch` | video_id | `data` |
+| `videobyid` | `/api/getvideobyid` | video_id | `video` |
+
+**Important:** the `user_id` in the request body is the caller's **channel_id** (consistent with the join-table convention — see root `CONTEXT.md`). When absent, videos are returned without a meaningful flag. The flag is attached centrally via `attachWatchlaterFlag` (`src/utils/watchlaterFlag.js`) inside `helpers.js`, so no handler needs to call it itself. Feed caches store raw rows; the flag is stamped on a shallow copy per request to avoid cache pollution.
 
 ## Runtime architecture of `server.js`
 

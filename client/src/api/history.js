@@ -1,8 +1,9 @@
 import api from "./client";
+import { videosApi } from "./videos";
 
 export const historyApi = {
     getHistory: (userId) =>
-        api.get("/history", { params: { user_id: userId } }),
+        videosApi.getVideos({ type: "history", user_id: userId }),
 
     addToHistory: (userId, videoId) =>
         api.post("/addtohistory", { user_id: userId, video_id: videoId }),

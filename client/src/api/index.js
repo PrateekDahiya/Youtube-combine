@@ -1,5 +1,6 @@
 export { feedApi } from "./feed";
 export { videoApi } from "./video";
+export { videosApi } from "./videos";
 export { shortsApi } from "./shorts";
 export { subscriptionApi } from "./subscription";
 export { likeApi } from "./like";

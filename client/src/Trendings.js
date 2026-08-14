@@ -51,7 +51,7 @@ const Trendings = (params) => {
         setLoadingMore(true);
         const fetchData = async () => {
             try {
-                const response = await trendingApi.getTrendings(type, page_no);
+                const response = await trendingApi.getTrendings(type, page_no, user.channel_id);
                 mergeVideos(response.videos || []);
             } catch (error) {
                 console.log("Error fetching trendings:", error.message);
