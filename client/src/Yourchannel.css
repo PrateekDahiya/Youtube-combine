@@ -1,10 +1,10 @@
 .outer {
-    min-height: calc(100vh - 60px);
     width: 100%;
+    flex: 1;
+    min-height: 0;
     display: flex;
     flex-direction: column;
     overflow-y: auto;
-    padding: 20px;
     background-color: var(--background-color);
 }
 
@@ -27,26 +27,10 @@
     background: var(--text2-color);
 }
 
-.channelinfo {
-    height: fit-content;
-    width: 100%;
-    display: flex;
-    flex-direction: row;
-    align-items: start;
-    gap: 24px;
-    padding: 20px;
-    background-color: var(--background-color);
-    border-radius: 16px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    margin-bottom: 24px;
-}
-
 .banner {
     width: 100%;
-    margin-bottom: 25px;
-    border-radius: 16px;
-    overflow: hidden;
-    position: relative;
+    flex-shrink: 0;
+    padding: 20px 20px 0;
 }
 
 .banner img {
@@ -54,38 +38,74 @@
     height: 200px;
     object-fit: cover;
     border-radius: 16px;
+    display: block;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.channelinfo {
+    width: 100%;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 30px;
+    padding: 24px 30px;
 }
 
 .mypic {
-    height: 100px;
+    height: 120px;
+    width: 120px;
     border-radius: 50%;
-    border: 3px solid var(--background-color);
+    object-fit: cover;
+    flex-shrink: 0;
+    border: 4px solid var(--background-color);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    transition: transform 0.3s ease;
+}
+
+.mypic:hover {
+    transform: scale(1.02);
 }
 
 .details {
-    margin-left: 20px;
     flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
 }
 
 .details .name {
     font-size: 28px;
-    font-weight: 600;
-    margin: 0 0 8px 0;
+    font-weight: 700;
+    margin: 0;
     color: var(--text-color);
+    line-height: 1.2;
 }
 
 .id {
-    cursor: pointer;
     color: var(--text2-color);
-    font-size: 16px;
-    margin-bottom: 16px;
-    display: block;
-    transition: color 0.3s ease;
+    font-size: 14px;
+    margin: 0;
 }
 
-.id:hover {
+.desc {
+    cursor: pointer;
+    color: var(--text2-color);
+    font-size: 14px;
+    line-height: 1.6;
+    margin: 0;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    width: fit-content;
+}
+
+.desc b {
     color: var(--text-color);
+    font-weight: 600;
 }
 
 .menus {
@@ -93,29 +113,21 @@
     flex-direction: row;
     align-items: center;
     border-bottom: 1px solid var(--alt-color);
-    padding: 0 20px;
-    margin: 0 0 24px 0;
-    gap: 24px;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-    -ms-overflow-style: none;
+    padding: 10px 30px;
+    gap: 30px;
+    flex-wrap: wrap;
+    background-color: var(--background-color);
     position: sticky;
     top: 0;
     z-index: 100;
     flex-shrink: 0;
-    background-color: var(--background-color);
-}
-
-.menus::-webkit-scrollbar {
-    display: none;
 }
 
 .menubutton {
     font-size: 16px;
     color: var(--text2-color);
     font-weight: 500;
-    padding: 12px 0;
+    padding: 8px 0;
     cursor: pointer;
     transition: all 0.3s ease;
     position: relative;
@@ -127,18 +139,19 @@
 }
 
 .menubutton.active {
+    font-weight: 600;
     color: var(--text-color);
 }
 
 .menubutton.active::after {
     content: "";
     position: absolute;
-    bottom: -1px;
+    bottom: -2px;
     left: 0;
     width: 100%;
     height: 2px;
     background-color: var(--text-color);
-    border-radius: 2px;
+    transition: all 0.3s ease;
 }
 
 .menus img {
@@ -146,6 +159,7 @@
     height: 24px;
     filter: var(--image-filter);
     opacity: 0.9;
+    cursor: pointer;
     transition: opacity 0.3s ease;
 }
 
@@ -157,8 +171,8 @@
     background-color: var(--alt-color);
     border: none;
     border-radius: 20px;
-    padding: 8px 16px;
-    height: 36px;
+    padding: 0 20px;
+    height: 40px;
     color: var(--text-color);
     font-size: 14px;
     transition: all 0.3s ease;
@@ -169,171 +183,169 @@
     background-color: var(--text2-color);
 }
 
-.videos {
-    flex: 1;
-    width: 100%;
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: 24px;
-    padding: 0 20px;
-}
-
-.mebuttons {
-    display: flex;
-    gap: 12px;
-    flex-wrap: wrap;
-}
-
-.mebuttons button {
+.menus input::placeholder {
     color: var(--text2-color);
-    font-weight: 500;
+}
+
+.videos {
+    width: 100%;
+    flex: 1;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 24px;
+    padding: 30px;
+    align-content: start;
+}
+
+.descdata {
+    color: var(--text-color);
     font-size: 14px;
-    border-radius: 20px;
-    padding: 8px 16px;
-    background-color: var(--alt-color);
-    border: none;
-    cursor: pointer;
-    transition: all 0.3s ease;
+    font-weight: 500;
+    line-height: 1.6;
+    margin: 0 0 12px 0;
     display: flex;
     align-items: center;
-    gap: 8px;
 }
 
-.mebuttons button:hover {
+.descdata img {
+    width: 20px;
+    height: 20px;
+    margin-right: 10px;
+    filter: var(--image-filter);
+    flex-shrink: 0;
+}
+
+.deschead {
     color: var(--text-color);
-    background-color: var(--text2-color);
-    transform: translateY(-2px);
+    font-size: 16px;
+    font-weight: 700;
+    margin: 0 0 12px 0;
+    padding-top: 4px;
 }
 
 /* Responsive breakpoints */
 @media (min-width: 1550px) {
-    .outer {
-        padding: 30px;
-    }
-    .channelinfo {
-        padding: 30px;
-        gap: 30px;
-        margin-bottom: 30px;
+    .videos {
+        grid-template-columns: repeat(5, 1fr);
+        padding: 40px;
     }
     .details .name {
         font-size: 32px;
     }
-    .menus {
-        padding: 0 30px;
-        margin-bottom: 30px;
-        gap: 30px;
+    .channelinfo {
+        padding: 24px 40px;
     }
-    .videos {
-        padding: 0 30px;
-        gap: 30px;
+    .menus {
+        padding: 10px 40px;
     }
 }
 
 @media (min-width: 1200px) and (max-width: 1549px) {
-    .outer {
-        padding: 25px;
-    }
-    .channelinfo {
-        padding: 25px;
-        gap: 24px;
-        margin-bottom: 24px;
-    }
-    .menus {
-        padding: 0 25px;
-        margin-bottom: 24px;
-    }
     .videos {
-        padding: 0 25px;
+        grid-template-columns: repeat(4, 1fr);
+        padding: 30px;
+    }
+    .details .name {
+        font-size: 28px;
     }
 }
 
 @media (min-width: 992px) and (max-width: 1199px) {
-    .outer {
-        padding: 20px;
-    }
-    .channelinfo {
-        padding: 20px;
-        gap: 20px;
-        margin-bottom: 20px;
+    .videos {
+        grid-template-columns: repeat(3, 1fr);
+        padding: 25px;
     }
     .details .name {
         font-size: 24px;
     }
-    .menus {
-        padding: 0 20px;
-        margin-bottom: 20px;
-    }
-    .videos {
-        padding: 0 20px;
+    .mypic {
+        height: 110px;
+        width: 110px;
     }
 }
 
 @media (min-width: 768px) and (max-width: 991px) {
-    .outer {
+    .channelinfo {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 20px;
+    }
+    .videos {
+        grid-template-columns: repeat(2, 1fr);
+        padding: 20px;
+    }
+    .mypic {
+        height: 100px;
+        width: 100px;
+    }
+    .menus {
+        padding: 10px 20px;
+        gap: 20px;
+    }
+}
+
+@media (min-width: 576px) and (max-width: 767px) {
+    .channelinfo {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 15px;
+        padding: 20px;
+    }
+    .details {
+        align-items: flex-start;
+    }
+    .videos {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 15px;
         padding: 15px;
     }
-    .channelinfo {
-        padding: 15px;
-        gap: 16px;
-        margin-bottom: 16px;
+    .mypic {
+        height: 90px;
+        width: 90px;
+    }
+    .banner img {
+        height: 160px;
+    }
+    .menus {
+        padding: 10px 15px;
+        gap: 15px;
     }
     .details .name {
         font-size: 22px;
     }
-    .menus {
-        padding: 0 15px;
-        margin-bottom: 16px;
+}
+
+@media (max-width: 575px) {
+    .channelinfo {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+        padding: 16px;
+    }
+    .details {
+        align-items: flex-start;
+    }
+    .videos {
+        grid-template-columns: 1fr;
+        gap: 15px;
+        padding: 15px;
     }
     .mypic {
         height: 80px;
+        width: 80px;
     }
-    .videos {
-        padding: 0 15px;
+    .banner img {
+        height: 140px;
     }
-}
-
-@media (max-width: 767px) {
-    .outer {
-        padding: 10px;
-    }
-    .channelinfo {
-        flex-direction: column;
-        align-items: center;
-        text-align: center;
-        padding: 15px;
-        gap: 16px;
-        margin-bottom: 16px;
-    }
-    .details {
-        margin-left: 0;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
+    .menus {
+        padding: 8px 10px;
+        gap: 12px;
     }
     .details .name {
         font-size: 20px;
     }
-    .menus {
-        padding: 0 10px;
-        margin-bottom: 16px;
-        gap: 16px;
-    }
-    .menubutton {
-        font-size: 14px;
-        padding: 8px 0;
-    }
-    .mebuttons {
-        justify-content: center;
-    }
-    .mypic {
-        height: 70px;
-    }
-    .banner img {
-        height: 120px;
-        width: 120px;
-    }
-    .videos {
-        padding: 0 10px;
-        gap: 16px;
+    .menus input {
+        width: 180px;
+        height: 36px;
     }
 }

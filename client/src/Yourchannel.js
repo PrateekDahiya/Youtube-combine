@@ -4,6 +4,7 @@ import { channelApi, videoApi } from "./api";
 import Cardloading from "./Cardloading";
 import Card from "./Card";
 import EditVideo from "./EditVideo";
+import Modal from "./Modal";
 
 const defaultAvatar = "https://cdn-icons-png.flaticon.com/128/1077/1077063.png";
 
@@ -12,6 +13,7 @@ const Yourchannel = (params) => {
     const [videos, setVideos] = useState("");
     const [typeShort, setType] = useState(0);
     const [refresh, setRefresh] = useState(0);
+    const [showAbout, setShowAbout] = useState(false);
     const [editingVideo, setEditingVideo] = useState(null);
     const user = params.user;
 
@@ -58,23 +60,6 @@ const Yourchannel = (params) => {
         const options = { year: "numeric", month: "short", day: "numeric" };
         return date.toLocaleDateString("en-US", options);
     }
-    function show_moredesc() {
-        let x = document.querySelector(".moredesc");
-        if (x.style.display === "none") {
-            x.style.display = "block";
-        } else {
-            x.style.display = "none";
-        }
-    }
-
-    function close_moredesc() {
-        let x = document.querySelector(".moredesc");
-        if (x.style.display === "block") {
-            x.style.display = "none";
-        } else {
-            x.style.display = "block";
-        }
-    }
 
     function getshortinfo(str) {
         if (str.length <= 50) {
@@ -119,73 +104,12 @@ const Yourchannel = (params) => {
                             <p
                                 className="desc"
                                 onClick={() => {
-                                    show_moredesc();
+                                    setShowAbout(true);
                                 }}
                             >
                                 {getshortinfo(data.short_desc)}...
                                 <b>more</b>
                             </p>
-                            <div className="moredesc">
-                                <p className="deschead">
-                                    About
-                                    <span
-                                        className="close-btn"
-                                        onClick={() => {
-                                            close_moredesc();
-                                        }}
-                                    >
-                                        X
-                                    </span>
-                                </p>
-                                <p className="descdata">{data.short_desc}</p>
-                                <p className="deschead">Channel details</p>
-                                <p className="descdata">
-                                    <img
-                                        alt="datashow"
-                                        src="https://cdn-icons-png.flaticon.com/128/900/900782.png"
-                                    />
-                                    /channel?channel_id=
-                                    {data.channel_id}
-                                </p>
-                                <p className="descdata">
-                                    <img
-                                        alt="datashow"
-                                        src="https://cdn-icons-png.flaticon.com/128/825/825636.png"
-                                    />
-                                    {formatNumber(data.subscribers)} subscribers
-                                </p>
-                                <p className="descdata">
-                                    <img
-                                        alt="datashow"
-                                        src="https://cdn-icons-png.flaticon.com/128/1179/1179120.png"
-                                    />
-                                    {formatNumber(data.video_count)}
-                                    {""}
-                                    videos
-                                </p>
-                                <p className="descdata">
-                                    <img
-                                        alt="datashow"
-                                        src="https://cdn-icons-png.flaticon.com/128/3742/3742162.png"
-                                    />
-                                    {formatNumberWithCommas(data.total_views)}{" "}
-                                    views
-                                </p>
-                                <p className="descdata">
-                                    <img
-                                        alt="datashow"
-                                        src="https://cdn-icons-png.flaticon.com/128/2342/2342329.png"
-                                    />
-                                    Joined {formatISODate(data.date_created)}
-                                </p>
-                                <p className="descdata">
-                                    <img
-                                        alt="datashow"
-                                        src="https://cdn-icons-png.flaticon.com/128/2838/2838912.png"
-                                    />
-                                    {data.location}
-                                </p>
-                            </div>
                         </div>
                     </div>
                     <div className="menus">
@@ -243,6 +167,59 @@ const Yourchannel = (params) => {
                 </div>
             ) : (
                 <Cardloading page="yourchannel" />
+            )}
+            {data && (
+                <Modal
+                    isOpen={showAbout}
+                    onClose={() => setShowAbout(false)}
+                    title="About"
+                >
+                    <p className="descdata">{data.short_desc}</p>
+                    <p className="deschead">Channel details</p>
+                    <p className="descdata">
+                        <img
+                            alt="datashow"
+                            src="https://cdn-icons-png.flaticon.com/128/900/900782.png"
+                        />
+                        /channel?channel_id=
+                        {data.channel_id}
+                    </p>
+                    <p className="descdata">
+                        <img
+                            alt="datashow"
+                            src="https://cdn-icons-png.flaticon.com/128/825/825636.png"
+                        />
+                        {formatNumber(data.subscribers)} subscribers
+                    </p>
+                    <p className="descdata">
+                        <img
+                            alt="datashow"
+                            src="https://cdn-icons-png.flaticon.com/128/1179/1179120.png"
+                        />
+                        {formatNumber(data.video_count)} videos
+                    </p>
+                    <p className="descdata">
+                        <img
+                            alt="datashow"
+                            src="https://cdn-icons-png.flaticon.com/128/3742/3742162.png"
+                        />
+                        {formatNumberWithCommas(data.total_views)} views
+                    </p>
+                    <p className="descdata">
+                        <img
+                            alt="datashow"
+                            src="https://cdn-icons-png.flaticon.com/128/2342/2342329.png"
+                        />
+                        Joined {formatISODate(data.date_created)}
+                    </p>
+                    <p className="descdata">
+                        <img
+                            alt="datashow"
+                            src="https://cdn-icons-png.flaticon.com/128/2838/2838912.png"
+                        />
+                        {data.location}
+                    </p>
+                </Modal>
             )}
         </>
     );

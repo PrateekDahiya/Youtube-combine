@@ -1,0 +1,228 @@
+.vv-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    box-sizing: border-box;
+    background: rgba(0, 0, 0, 0.45);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    animation: vv-overlay-in 0.22s ease-out;
+}
+
+.vv-modal {
+    position: relative;
+    isolation: isolate;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    border-radius: 24px;
+    background: var(--alt-color);
+    max-height: 88vh;
+    overflow: hidden;
+    box-shadow:
+        0 24px 60px rgba(0, 0, 0, 0.35),
+        0 4px 16px rgba(0, 0, 0, 0.18);
+    outline: none;
+    animation: vv-modal-in 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.vv-modal::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    z-index: 2;
+    background: linear-gradient(
+        90deg,
+        var(--highlight-color),
+        #e91e63,
+        var(--highlight-color)
+    );
+    background-size: 200% 100%;
+    animation: vv-border-flow 4s linear infinite;
+}
+
+.vv-modal-small {
+    max-width: 400px;
+}
+
+.vv-modal-medium {
+    max-width: 580px;
+}
+
+.vv-modal-large {
+    max-width: 820px;
+}
+
+.vv-modal-icon {
+    position: absolute;
+    top: 16px;
+    left: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+}
+
+.vv-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 22px 24px 18px;
+    flex-shrink: 0;
+}
+
+.vv-modal-title {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    color: var(--text-color);
+    line-height: 1.2;
+}
+
+.vv-modal-close {
+    background: none;
+    border: none;
+    cursor: pointer;
+    width: 38px;
+    height: 38px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text2-color);
+    font-size: 22px;
+    line-height: 1;
+    padding: 0;
+    flex-shrink: 0;
+    transition:
+        background 0.2s ease,
+        color 0.2s ease,
+        transform 0.2s ease;
+}
+
+.vv-modal-close span {
+    display: block;
+    transform: translateY(-1px);
+}
+
+.vv-modal-close:hover {
+    background: var(--background-color);
+    color: var(--text-color);
+    transform: scale(1.08);
+}
+
+.vv-modal-close:active {
+    transform: scale(0.94);
+}
+
+.vv-modal-body {
+    padding: 4px 24px 24px;
+    overflow-y: auto;
+    color: var(--text-color);
+    font-size: 14px;
+    line-height: 1.65;
+}
+
+.vv-modal-body::-webkit-scrollbar {
+    width: 8px;
+}
+
+.vv-modal-body::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.vv-modal-body::-webkit-scrollbar-thumb {
+    background: var(--text2-color);
+    border-radius: 8px;
+}
+
+.vv-modal-body::-webkit-scrollbar-thumb:hover {
+    background: var(--text-color);
+}
+
+.vv-modal-footer {
+    padding: 16px 24px;
+    border-top: 1px solid var(--background-color);
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 12px;
+    flex-shrink: 0;
+    background: var(--alt-color);
+}
+
+@keyframes vv-overlay-in {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes vv-modal-in {
+    from {
+        opacity: 0;
+        transform: translateY(18px) scale(0.96);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@keyframes vv-border-flow {
+    0% {
+        background-position: 0% 0;
+    }
+    100% {
+        background-position: 200% 0;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .vv-modal,
+    .vv-modal-overlay {
+        animation: none;
+    }
+}
+
+@media (max-width: 575px) {
+    .vv-modal-overlay {
+        padding: 12px;
+        align-items: flex-end;
+    }
+
+    .vv-modal {
+        max-height: 92vh;
+        border-radius: 22px 22px 18px 18px;
+    }
+
+    .vv-modal-header {
+        padding: 18px 18px 14px;
+    }
+
+    .vv-modal-title {
+        font-size: 19px;
+    }
+
+    .vv-modal-body {
+        padding: 2px 18px 18px;
+    }
+
+    .vv-modal-footer {
+        padding: 14px 18px;
+    }
+}
