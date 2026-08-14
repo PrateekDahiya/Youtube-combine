@@ -1,6 +1,7 @@
 import React, { useState, useRef } from "react";
 import { uploadApi } from "./api";
 import { useNavigate } from "react-router-dom";
+import Modal from "./Modal";
 import "./UploadVideo.css";
 
 const CHUNK_SIZE = 5 * 1024 * 1024;
@@ -161,7 +162,7 @@ const UploadVideo = (params) => {
             } else {
                 await uploadApi.uploadVideo(videoFile, thumbFile, metadata);
             }
-            setSuccess("Upload started! Track progress in Your channel.");
+            setSuccess("Upload started! Track its progress on the Uploads page.");
             setTimeout(() => {
                 if (params.onClose) params.onClose();
                 if (params.onUploaded) params.onUploaded();
@@ -175,143 +176,187 @@ const UploadVideo = (params) => {
         }
     };
 
-    return (
-        <div className="upload-overlay" onClick={params.onClose}>
-            <div
-                className="upload-modal"
-                onClick={(e) => e.stopPropagation()}
+    const footer = (
+        <>
+            <button
+                className="upload-btn upload-cancel"
+                onClick={params.onClose}
+                disabled={uploading}
             >
-                <div className="upload-modal-header">
-                    <h2>Upload video</h2>
-                    <button
-                        className="upload-close"
-                        onClick={params.onClose}
+                Cancel
+            </button>
+            <button
+                className="upload-btn upload-submit"
+                onClick={handleUpload}
+                disabled={uploading}
+            >
+                {uploading ? "Uploading…" : "Upload"}
+            </button>
+        </>
+    );
+
+    return (
+        <Modal
+            isOpen
+            onClose={params.onClose}
+            title="Upload video"
+            size="large"
+            closeOnBackdrop={!uploading}
+            closeOnEscape={!uploading}
+            footer={footer}
+        >
+            <div className="upload-form">
+                <div className="upload-field">
+                    <label>Video file</label>
+                    <div
+                        className="dropzone"
+                        onClick={() => videoInputRef.current?.click()}
                     >
-                        X
-                    </button>
-                </div>
-                <div className="upload-modal-body">
-                    <div className="upload-field">
-                        <label>Video file</label>
                         <input
                             ref={videoInputRef}
                             type="file"
                             accept="video/*"
                             onChange={onVideoChange}
                         />
-                        {videoPreview ? (
-                            <video
-                                className="upload-video-preview"
-                                src={videoPreview}
-                                controls
-                            />
-                        ) : null}
+                        <span className="dropzone-icon">
+                            <svg viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M17 10.5V7a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-3.5l4 4v-11l-4 4z" />
+                            </svg>
+                        </span>
+                        <span className="dropzone-text">
+                            {videoFile
+                                ? videoFile.name
+                                : "Click to select a video file"}
+                        </span>
+                        <span className="dropzone-hint">
+                            MP4, WebM or MOV
+                        </span>
                     </div>
-                    <div className="upload-field">
-                        <label>Title</label>
-                        <input
-                            type="text"
-                            value={title}
-                            onChange={(e) => setTitle(e.target.value)}
-                            placeholder="Video title"
+                    {videoPreview ? (
+                        <video
+                            className="upload-preview upload-video-preview"
+                            src={videoPreview}
+                            controls
                         />
+                    ) : null}
+                </div>
+
+                <div className="upload-field">
+                    <label>Title</label>
+                    <input
+                        type="text"
+                        value={title}
+                        onChange={(e) => setTitle(e.target.value)}
+                        placeholder="Give your video a title"
+                    />
+                </div>
+
+                <div className="upload-field">
+                    <label>Description</label>
+                    <textarea
+                        value={description}
+                        onChange={(e) => setDescription(e.target.value)}
+                        placeholder="Describe your video"
+                        rows="3"
+                    />
+                </div>
+
+                <div className="upload-field">
+                    <label>Tags (comma separated)</label>
+                    <input
+                        type="text"
+                        value={tags}
+                        onChange={(e) => setTags(e.target.value)}
+                        placeholder="tag1, tag2, tag3"
+                    />
+                </div>
+
+                <div className="upload-field-2col">
+                    <div className="upload-field">
+                        <label>Category</label>
+                        <select
+                            value={category}
+                            onChange={(e) => setCategory(e.target.value)}
+                        >
+                            <option value="">Select category</option>
+                            {categories.map((c) => (
+                                <option key={c} value={c}>
+                                    {c}
+                                </option>
+                            ))}
+                        </select>
                     </div>
                     <div className="upload-field">
-                        <label>Description</label>
-                        <textarea
-                            value={description}
-                            onChange={(e) => setDescription(e.target.value)}
-                            placeholder="Describe your video"
-                            rows="3"
-                        />
+                        <label>Type</label>
+                        <select
+                            value={type}
+                            onChange={(e) => setType(e.target.value)}
+                        >
+                            <option value="video">Video</option>
+                            <option value="short">Short</option>
+                        </select>
                     </div>
-                    <div className="upload-field">
-                        <label>Tags (comma separated)</label>
-                        <input
-                            type="text"
-                            value={tags}
-                            onChange={(e) => setTags(e.target.value)}
-                            placeholder="tag1, tag2, tag3"
-                        />
-                    </div>
-                    <div className="upload-field-2col">
-                        <div className="upload-field">
-                            <label>Category</label>
-                            <select
-                                value={category}
-                                onChange={(e) => setCategory(e.target.value)}
-                            >
-                                <option value="">Select category</option>
-                                {categories.map((c) => (
-                                    <option key={c} value={c}>
-                                        {c}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
-                        <div className="upload-field">
-                            <label>Type</label>
-                            <select
-                                value={type}
-                                onChange={(e) => setType(e.target.value)}
-                            >
-                                <option value="video">Video</option>
-                                <option value="short">Short</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div className="upload-field">
-                        <label>Thumbnail (optional)</label>
+                </div>
+
+                <div className="upload-field">
+                    <label>Thumbnail (optional)</label>
+                    <div
+                        className="dropzone"
+                        onClick={() => thumbInputRef.current?.click()}
+                    >
                         <input
                             ref={thumbInputRef}
                             type="file"
                             accept="image/png,image/jpeg,image/gif,image/webp"
                             onChange={onThumbChange}
                         />
-                        {thumbPreview ? (
-                            <img
-                                className="upload-thumb-preview"
-                                src={thumbPreview}
-                                alt="thumbnail"
-                            />
-                        ) : null}
+                        <span className="dropzone-icon">
+                            <svg viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z" />
+                            </svg>
+                        </span>
+                        <span className="dropzone-text">
+                            {thumbFile
+                                ? thumbFile.name
+                                : "Click to select a thumbnail"}
+                        </span>
+                        <span className="dropzone-hint">
+                            PNG, JPEG, GIF or WebP
+                        </span>
                     </div>
-                    {error ? <p className="upload-error">{error}</p> : null}
-                    {uploading ? (
-                        <div className="upload-progress-block">
-                            <div className="upload-progress-bar">
-                                <div
-                                    className="upload-progress-fill"
-                                    style={{ width: `${progress}%` }}
-                                />
-                            </div>
-                            <p className="upload-progress-text">
-                                Uploading… {progress}%
-                            </p>
+                    {thumbPreview ? (
+                        <img
+                            className="upload-preview upload-thumb-preview"
+                            src={thumbPreview}
+                            alt="thumbnail"
+                        />
+                    ) : null}
+                </div>
+
+                {error ? <p className="upload-error">{error}</p> : null}
+                {uploading ? (
+                    <div className="upload-progress-block">
+                        <div className="upload-progress-top">
+                            <span className="upload-progress-label">
+                                Uploading{progress < 100 ? "…" : " and preparing…"}
+                            </span>
+                            <span className="upload-progress-value">
+                                {progress}%
+                            </span>
                         </div>
-                    ) : null}
-                    {success ? (
-                        <p className="upload-success">{success}</p>
-                    ) : null}
-                </div>
-                <div className="upload-modal-footer">
-                    <button
-                        className="upload-cancel"
-                        onClick={params.onClose}
-                        disabled={uploading}
-                    >
-                        Cancel
-                    </button>
-                    <button
-                        className="upload-submit"
-                        onClick={handleUpload}
-                        disabled={uploading}
-                    >
-                        {uploading ? "Uploading..." : "Upload"}
-                    </button>
-                </div>
+                        <div className="upload-progress-bar">
+                            <div
+                                className="upload-progress-fill"
+                                style={{ width: `${progress}%` }}
+                            />
+                        </div>
+                    </div>
+                ) : null}
+                {success ? (
+                    <p className="upload-success">{success}</p>
+                ) : null}
             </div>
-        </div>
+        </Modal>
     );
 };
 
