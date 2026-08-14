@@ -5,8 +5,28 @@
     overflow-x: hidden;
     background-color: var(--background-color);
     padding: 24px 28px 40px;
-    max-width: 1100px;
+    max-width: 1300px;
     margin: 0 auto;
+}
+
+/* Custom scrollbar */
+.uploads-page::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+.uploads-page::-webkit-scrollbar-track {
+    background: var(--background-color);
+    border-radius: 10px;
+}
+
+.uploads-page::-webkit-scrollbar-thumb {
+    background: var(--alt-color);
+    border-radius: 10px;
+}
+
+.uploads-page::-webkit-scrollbar-thumb:hover {
+    background: var(--text2-color);
 }
 
 .uploads-inner {
