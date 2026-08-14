@@ -13,6 +13,6 @@ export const subscriptionApi = {
     getSubscriptions: (userId) =>
         api.get("/get-subs", { params: { user_id: userId } }),
 
-    getSubscriptionVideos: (userId, isShort, page = 1) =>
-        api.get("/subscriptions", { params: { user_id: userId, isShort, page } }),
+    getSubscriptionVideos: (userId, isShort, page = 1, cursor) =>
+        api.get("/subscriptions", { params: { user_id: userId, isShort, page, cursor } }),
 };

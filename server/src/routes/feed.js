@@ -8,36 +8,73 @@ const {
     caticon,
     trendingCategoryMapping,
     createFeedAndGenerateSQL,
+    encodeCursor,
+    decodeCursor,
 } = require("../utils");
 const { syncHandler, asyncHandler } = require("../utils/asyncHandler");
 const { successResponse, errorResponse, validationErrorResponse, sendResponse } = require("../utils/responseWrapper");
 
 router.get("/home", syncHandler((req, res) => {
-    const page_no = Number(req.query.page || 1);
-    const query = `SELECT * FROM channels c join videos v on c.channel_id=v.channel_id where isShort = 0 and v.upload_status = 0 order by upload_time desc limit 24 offset ?`;
+    const cursor = decodeCursor(req.query.cursor);
+    let query;
+    let queryParams;
+
+    if (cursor) {
+        query = `SELECT * FROM channels c join videos v on c.channel_id=v.channel_id where isShort = 0 and v.upload_status = 0 and (v.upload_time < ? or (v.upload_time = ? and v.video_id < ?)) order by v.upload_time desc, v.video_id desc limit 24`;
+        queryParams = [cursor.uploadTime, cursor.uploadTime, cursor.videoId];
+    } else {
+        const page_no = Number(req.query.page || 1);
+        query = `SELECT * FROM channels c join videos v on c.channel_id=v.channel_id where isShort = 0 and v.upload_status = 0 order by v.upload_time desc, v.video_id desc limit 24 offset ?`;
+        queryParams = [24 * (page_no - 1)];
+    }
+
     const connection = getConnection();
-    connection.query(query, [24 * (page_no - 1)], (error, results) => {
+    connection.query(query, queryParams, (error, results) => {
         if (error) {
             console.log(error);
             return sendResponse(res, errorResponse("Database query failed"));
         }
-        sendResponse(res, successResponse({ page: "home", videos: results }, "Home feed retrieved successfully"));
+        const last = results[results.length - 1];
+        const nextCursor =
+            results.length === 24 && last
+                ? encodeCursor(last.upload_time, last.video_id)
+                : null;
+        sendResponse(res, successResponse({ page: "home", videos: results, nextCursor }, "Home feed retrieved successfully"));
     });
 }));
 
 router.get("/feed-by-tag", syncHandler((req, res) => {
     const tag = req.query.tag || "";
     const type = req.query.type || "";
-    const page_no = Number(req.query.page || 1);
+    const cursor = decodeCursor(req.query.cursor);
     const searchQuery = `%${tag}%`;
 
-    const query = type
-        ? `SELECT * FROM channels c join videos v on c.channel_id=v.channel_id where v.isShort = 0 and v.upload_status = 0 and v.category in (?) order by upload_time desc limit 24 offset ?`
-        : `SELECT * FROM channels c join videos v on c.channel_id=v.channel_id where v.isShort = 0 and v.upload_status = 0 and (v.title like ? or v.tags like ? or v.category like ? or c.channel_name like ?) order by upload_time desc limit 24 offset ?`;
+    const keysetClause =
+        "and (v.upload_time < ? or (v.upload_time = ? and v.video_id < ?))";
+    const orderClause = "order by v.upload_time desc, v.video_id desc limit 24";
 
-    const queryParams = type
-        ? [categoryMap[type] || [type], 24 * (page_no - 1)]
-        : [searchQuery, searchQuery, searchQuery, searchQuery, 24 * (page_no - 1)];
+    let query;
+    let queryParams;
+
+    if (type) {
+        if (cursor) {
+            query = `SELECT * FROM channels c join videos v on c.channel_id=v.channel_id where v.isShort = 0 and v.upload_status = 0 and v.category in (?) ${keysetClause} ${orderClause}`;
+            queryParams = [categoryMap[type] || [type], cursor.uploadTime, cursor.uploadTime, cursor.videoId];
+        } else {
+            const page_no = Number(req.query.page || 1);
+            query = `SELECT * FROM channels c join videos v on c.channel_id=v.channel_id where v.isShort = 0 and v.upload_status = 0 and v.category in (?) ${orderClause} offset ?`;
+            queryParams = [categoryMap[type] || [type], 24 * (page_no - 1)];
+        }
+    } else {
+        if (cursor) {
+            query = `SELECT * FROM channels c join videos v on c.channel_id=v.channel_id where v.isShort = 0 and v.upload_status = 0 and (v.title like ? or v.tags like ? or v.category like ? or c.channel_name like ?) ${keysetClause} ${orderClause}`;
+            queryParams = [searchQuery, searchQuery, searchQuery, searchQuery, cursor.uploadTime, cursor.uploadTime, cursor.videoId];
+        } else {
+            const page_no = Number(req.query.page || 1);
+            query = `SELECT * FROM channels c join videos v on c.channel_id=v.channel_id where v.isShort = 0 and v.upload_status = 0 and (v.title like ? or v.tags like ? or v.category like ? or c.channel_name like ?) ${orderClause} offset ?`;
+            queryParams = [searchQuery, searchQuery, searchQuery, searchQuery, 24 * (page_no - 1)];
+        }
+    }
 
     const connection = getConnection();
     connection.query(
@@ -48,7 +85,12 @@ router.get("/feed-by-tag", syncHandler((req, res) => {
                 console.log(error);
                 return sendResponse(res, errorResponse("Database query failed"));
             }
-            sendResponse(res, successResponse({ page: "home_tag", videos: results, tag, type }, "Feed retrieved successfully"));
+            const last = results[results.length - 1];
+            const nextCursor =
+                results.length === 24 && last
+                    ? encodeCursor(last.upload_time, last.video_id)
+                    : null;
+            sendResponse(res, successResponse({ page: "home_tag", videos: results, tag, type, nextCursor }, "Feed retrieved successfully"));
         }
     );
 }));
@@ -128,39 +170,72 @@ router.get("/shorts", syncHandler((req, res) => {
 router.get("/subscriptions", syncHandler((req, res) => {
     const user_id = req.query.user_id;
     const isShort = req.query.isShort;
-    const page_no = Number(req.query.page || 1);
-    const query = `select * from videos v inner join channels c on v.channel_id=c.channel_id where v.channel_id in (select s.channel_id from subscriptions s where s.user_id=?) and v.isShort=? and v.upload_status = 0 order by v.upload_time desc limit 24 offset ?`;
+    const cursor = decodeCursor(req.query.cursor);
+
+    let query;
+    let queryParams;
+
+    if (cursor) {
+        query = `select * from videos v inner join channels c on v.channel_id=c.channel_id where v.channel_id in (select s.channel_id from subscriptions s where s.user_id=?) and v.isShort=? and v.upload_status = 0 and (v.upload_time < ? or (v.upload_time = ? and v.video_id < ?)) order by v.upload_time desc, v.video_id desc limit 24`;
+        queryParams = [user_id, isShort, cursor.uploadTime, cursor.uploadTime, cursor.videoId];
+    } else {
+        const page_no = Number(req.query.page || 1);
+        query = `select * from videos v inner join channels c on v.channel_id=c.channel_id where v.channel_id in (select s.channel_id from subscriptions s where s.user_id=?) and v.isShort=? and v.upload_status = 0 order by v.upload_time desc, v.video_id desc limit 24 offset ?`;
+        queryParams = [user_id, isShort, 24 * (page_no - 1)];
+    }
 
     const connection = getConnection();
-    connection.query(query, [user_id, isShort, 24 * (page_no - 1)], (error, results) => {
+    connection.query(query, queryParams, (error, results) => {
         if (error) {
             console.log(error);
             return sendResponse(res, errorResponse("Database query failed"));
         }
-        sendResponse(res, successResponse({ page: "subscription", data: results }, "Subscriptions retrieved successfully"));
+        const last = results[results.length - 1];
+        const nextCursor =
+            results.length === 24 && last
+                ? encodeCursor(last.upload_time, last.video_id)
+                : null;
+        sendResponse(res, successResponse({ page: "subscription", data: results, nextCursor }, "Subscriptions retrieved successfully"));
     });
 }));
 
 router.get("/category", syncHandler((req, res) => {
     const category = req.query.category;
     const type = req.query.type;
-    const page_no = Number(req.query.page || 1);
-    const query = `select * from videos v join channels c on v.channel_id=c.channel_id where v.category in (?) and v.isShort = ? and v.upload_status = 0 order by v.upload_time desc limit 24 offset ?`;
+    const cursor = decodeCursor(req.query.cursor);
+
+    let query;
+    let queryParams;
+
+    if (cursor) {
+        query = `select * from videos v join channels c on v.channel_id=c.channel_id where v.category in (?) and v.isShort = ? and v.upload_status = 0 and (v.upload_time < ? or (v.upload_time = ? and v.video_id < ?)) order by v.upload_time desc, v.video_id desc limit 24`;
+        queryParams = [categoryMappingFeed[category], type, cursor.uploadTime, cursor.uploadTime, cursor.videoId];
+    } else {
+        const page_no = Number(req.query.page || 1);
+        query = `select * from videos v join channels c on v.channel_id=c.channel_id where v.category in (?) and v.isShort = ? and v.upload_status = 0 order by v.upload_time desc, v.video_id desc limit 24 offset ?`;
+        queryParams = [categoryMappingFeed[category], type, 24 * (page_no - 1)];
+    }
 
     const connection = getConnection();
     connection.query(
         query,
-        [categoryMappingFeed[category], type, 24 * (page_no - 1)],
+        queryParams,
         (error, results) => {
             if (error) {
                 console.log(error);
                 return sendResponse(res, errorResponse("Database query failed"));
             }
+            const last = results[results.length - 1];
+            const nextCursor =
+                results.length === 24 && last
+                    ? encodeCursor(last.upload_time, last.video_id)
+                    : null;
             sendResponse(res, successResponse({
                 page: "category",
                 caticon: caticon[category],
                 videos: results,
                 category: category,
+                nextCursor,
             }, "Category feed retrieved successfully"));
         }
     );

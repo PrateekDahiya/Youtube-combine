@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Card from "./Card";
 import { Link } from "react-router-dom";
 import { subscriptionApi } from "./api";
@@ -18,9 +18,10 @@ const Subscription = (params) => {
     const [loadingMore, setLoadingMore] = useState(false);
     const [hasMore, setHasMore] = useState(true);
     const [page_no, setpage_no] = useState(1);
+    const cursorRef = useRef(null);
     const user = params.user;
 
-    const mergeVideos = (newVideos) => {
+    const mergeVideos = (newVideos, nextCursor) => {
         setVideos((prev) => {
             const existing = prev.data || [];
             const existingIds = new Set(existing.map((v) => v.video_id));
@@ -29,14 +30,21 @@ const Subscription = (params) => {
                 ? { ...prev, data: [...existing, ...fresh] }
                 : prev;
         });
-        if (newVideos.length < 24) {
+        if (typeof nextCursor === "string") {
+            cursorRef.current = nextCursor;
+        } else if (nextCursor === null) {
             setHasMore(false);
+            cursorRef.current = null;
+        } else if (newVideos.length < 24) {
+            setHasMore(false);
+            cursorRef.current = null;
         }
     };
 
     useEffect(() => {
         setVideos({ data: [] });
         setpage_no(1);
+        cursorRef.current = null;
         setHasMore(true);
         setLoading(true);
     }, [typeShort]);
@@ -46,8 +54,8 @@ const Subscription = (params) => {
         setLoadingMore(true);
         const fetchData = async () => {
             try {
-                const response = await subscriptionApi.getSubscriptionVideos(user.channel_id, typeShort, page_no);
-                mergeVideos(response.data || []);
+                const response = await subscriptionApi.getSubscriptionVideos(user.channel_id, typeShort, page_no, cursorRef.current);
+                mergeVideos(response.data || [], response.nextCursor);
             } catch (error) {
                 console.log("Error fetching subscription videos:", error.message);
             } finally {

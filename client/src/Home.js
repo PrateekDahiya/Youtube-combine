@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Card from "./Card";
 import { feedApi } from "./api";
 import "./Home.css";
@@ -12,26 +12,34 @@ const Home = (params) => {
     const [selectedTag, setSelectedTag] = useState("All");
     const [selectedType, setSelectedType] = useState("All");
     const [page_no, setpage_no] = useState(1);
+    const cursorRef = useRef(null);
     const [loadingMore, setLoadingMore] = useState(false);
     const [hasMore, setHasMore] = useState(true);
     const user = params.user;
     const videoTypes = ["All", "Music", "Gaming", "Movies", "News", "Sports"];
 
-    const mergeVideos = (videos) => {
+    const mergeVideos = (videos, nextCursor) => {
         setData((prev) => {
             if (prev === null) return videos;
             const existingIds = new Set(prev.map((v) => v.video_id));
             const fresh = videos.filter((v) => !existingIds.has(v.video_id));
             return fresh.length > 0 ? [...prev, ...fresh] : prev;
         });
-        if (videos.length < 24) {
+        if (typeof nextCursor === "string") {
+            cursorRef.current = nextCursor;
+        } else if (nextCursor === null) {
             setHasMore(false);
+            cursorRef.current = null;
+        } else if (videos.length < 24) {
+            setHasMore(false);
+            cursorRef.current = null;
         }
     };
 
     useEffect(() => {
         setData(null);
         setpage_no(1);
+        cursorRef.current = null;
         setHasMore(true);
     }, [selectedTag, selectedType]);
 
@@ -60,17 +68,17 @@ const Home = (params) => {
             try {
                 let response;
                 if (selectedTag !== "All") {
-                    response = await feedApi.getFeedByTag(selectedTag, page_no);
-                    mergeVideos(response.videos || []);
+                    response = await feedApi.getFeedByTag(selectedTag, page_no, cursorRef.current);
+                    mergeVideos(response.videos || [], response.nextCursor);
                 } else if (selectedType !== "All") {
-                    response = await feedApi.getFeedByType(selectedType, page_no);
-                    mergeVideos(response.videos || []);
+                    response = await feedApi.getFeedByType(selectedType, page_no, cursorRef.current);
+                    mergeVideos(response.videos || [], response.nextCursor);
                 } else if (user !== "Guest" && user.channel_id) {
-                    response = await feedApi.getPersonalizedFeed(user.channel_id, page_no);
-                    mergeVideos(response.videos || []);
+                    response = await feedApi.getPersonalizedFeed(user.channel_id, page_no, cursorRef.current);
+                    mergeVideos(response.videos || [], response.nextCursor);
                 } else {
-                    response = await feedApi.getHome(page_no);
-                    mergeVideos(response.videos || []);
+                    response = await feedApi.getHome(page_no, cursorRef.current);
+                    mergeVideos(response.videos || [], response.nextCursor);
                 }
             } catch (error) {
                 console.log("Error in fetching: ", error.message);
