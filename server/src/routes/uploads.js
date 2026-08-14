@@ -3,8 +3,30 @@ const router = express.Router();
 const { getConnection } = require("../db");
 const { generateVideoId } = require("../utils");
 const { upload, videoUpload, processVideoUpload, isCloudinaryConfigured } = require("../uploads");
+const { cloudinary } = require("../config");
 const { syncHandler } = require("../utils/asyncHandler");
 const { successResponse, errorResponse, validationErrorResponse, sendResponse } = require("../utils/responseWrapper");
+
+router.post("/uploadSignature", syncHandler((req, res) => {
+    if (!isCloudinaryConfigured()) {
+        return sendResponse(res, errorResponse("Cloudinary is not configured"));
+    }
+    const resource_type = req.body.resource_type === "image" ? "image" : "video";
+    const folder = resource_type === "image" ? "vidvault/thumbnails" : "vidvault/videos";
+    const timestamp = Math.round(Date.now() / 1000);
+    const signature = cloudinary.utils.api_sign_request(
+        { timestamp, folder },
+        process.env.CLOUDINARY_API_SECRET
+    );
+    sendResponse(res, successResponse({
+        cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+        api_key: process.env.CLOUDINARY_API_KEY,
+        timestamp,
+        signature,
+        folder,
+        resource_type,
+    }, "Upload signature generated"));
+}));
 
 router.post("/upload", syncHandler((req, res) => {
     upload.single("file")(req, res, async (err) => {
@@ -126,6 +148,62 @@ router.post("/uploadVideo", syncHandler((req, res) => {
                 );
             }
         });
+    });
+}));
+
+router.post("/completeVideoUpload", syncHandler((req, res) => {
+    const title = (req.body.title || "").trim() || "Untitled";
+    const description = req.body.description || "";
+    const tags = req.body.tags || "";
+    const category = req.body.category || "";
+    const type = req.body.type;
+    const user_id = req.body.user_id;
+    const duration = parseInt(req.body.duration || 0, 10);
+    const link = req.body.link || "";
+    const thumbnail_link = req.body.thumbnail_link || "";
+    if (!user_id) {
+        return sendResponse(res, validationErrorResponse("Missing user_id"));
+    }
+    if (!link) {
+        return sendResponse(res, validationErrorResponse("Missing video link"));
+    }
+    const isShort = type === "short" ? 1 : 0;
+    const video_id = generateVideoId(user_id || "upload");
+
+    const insertQuery = `INSERT INTO videos (video_id, title, views, likes, dislikes, link, upload_time, channel_id, thumbnail_link, video_description, duration, tags, category, isShort, upload_status, upload_progress)
+                         VALUES (?, ?, 0, 0, 0, ?, NOW(), ?, ?, ?, ?, ?, ?, ?, 0, 100)`;
+    const params = [
+        video_id,
+        title,
+        link,
+        user_id,
+        thumbnail_link,
+        description,
+        duration,
+        tags,
+        category,
+        isShort,
+    ];
+
+    const connection = getConnection();
+    connection.query(insertQuery, params, (error) => {
+        if (error) {
+            console.log("completeVideoUpload insert: " + error);
+            return sendResponse(res, errorResponse("Failed to save video details"));
+        }
+        connection.query(
+            `UPDATE channels SET video_count = video_count + 1 WHERE channel_id = ?`,
+            [user_id],
+            (countErr) => {
+                if (countErr) {
+                    console.log("completeVideoUpload count update: " + countErr);
+                }
+                sendResponse(res, successResponse({
+                    video_id,
+                    upload_status: 0,
+                }, "Video uploaded successfully"));
+            }
+        );
     });
 }));
 

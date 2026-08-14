@@ -49,7 +49,7 @@ The **back-end** of VidVault: a Node.js + Express REST API plus the source for a
 | `history.js` | `/api` | `/api/history`, `/api/addtohistory`, `/api/removefromhistory` |
 | `subscriptions.js` | `/api` | `/api/addtosubs`, `/api/removefromsubs`, `/api/issub`, `/api/get-subs` |
 | `auth.js` | `/api` | `/api/login`, `/api/register`, `/api/getUser`, `/api/updateUserDetail`, `/api/updateChannelDetail`, `/api/deleteUser` |
-| `uploads.js` | `/api` | `/api/upload`, `/api/uploadVideo` |
+| `uploads.js` | `/api` | `/api/upload`, `/api/uploadVideo`, `/api/uploadSignature`, `/api/completeVideoUpload` |
 | `channels.js` | `/api` | `/api/yourchannel`, `/api/channel`, `/api/getallchannels`, `/api/get-channel-ids`, `/api/update_channels`, `/api/addnewchannel` |
 | `feedback.js` | `/api` | `/api/feedback` |
 

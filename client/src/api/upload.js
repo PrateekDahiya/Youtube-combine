@@ -20,4 +20,12 @@ export const uploadApi = {
             headers: { "Content-Type": "multipart/form-data" },
         });
     },
+
+    getUploadSignature: (resourceType) => {
+        return api.post("/uploadSignature", { resource_type: resourceType });
+    },
+
+    completeVideoUpload: (metadata) => {
+        return api.post("/completeVideoUpload", metadata);
+    },
 };
