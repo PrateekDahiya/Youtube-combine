@@ -123,15 +123,50 @@ router.get("/home-tags", asyncHandler(async (req, res) => {
     sendResponse(res, successResponse({ tags }, "Home tags retrieved successfully"));
 }));
 
+const shortsShuffleCache = {
+    ids: [],
+    loadedAt: 0,
+};
+const SHORTS_CACHE_TTL = 10 * 60 * 1000;
+
+function shuffleArray(arr) {
+    for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+}
+
+function getShortsIdsInOrder(callback) {
+    const connection = getConnection();
+
+    if (
+        shortsShuffleCache.ids.length > 0 &&
+        Date.now() - shortsShuffleCache.loadedAt < SHORTS_CACHE_TTL
+    ) {
+        return callback(null, shortsShuffleCache.ids);
+    }
+
+    connection.query(
+        `SELECT video_id FROM videos WHERE isShort = 1 AND upload_status = 0`,
+        (error, results) => {
+            if (error) {
+                return callback(error);
+            }
+            const ids = shuffleArray(results.map((r) => r.video_id));
+            shortsShuffleCache.ids = ids;
+            shortsShuffleCache.loadedAt = Date.now();
+            callback(null, ids);
+        }
+    );
+}
+
 router.get("/shorts", syncHandler((req, res) => {
     const video_id = req.query.video_id;
-    const needmore = req.query.needmore || 0;
-
-    let query;
-    let queryParams;
+    const needmore = Number(req.query.needmore || 0);
 
     if (video_id) {
-        query = `
+        const query = `
             (SELECT v1.*, c1.* FROM videos v1 
             INNER JOIN channels c1 ON c1.channel_id = v1.channel_id 
             WHERE v1.video_id = ?)
@@ -145,25 +180,46 @@ router.get("/shorts", syncHandler((req, res) => {
             ORDER BY v2.upload_time
             LIMIT 5 OFFSET ?)
         `;
-        queryParams = [video_id, video_id, video_id, 5 * needmore];
-    } else {
-        query = `
-            SELECT v.*, c.* FROM videos v 
-            INNER JOIN channels c ON c.channel_id = v.channel_id 
-            WHERE v.isShort = 1 AND v.upload_status = 0 
-            ORDER BY RAND() DESC 
-            LIMIT 5 OFFSET ?
-        `;
-        queryParams = [5 * needmore];
+        const queryParams = [video_id, video_id, video_id, 5 * needmore];
+
+        const connection = getConnection();
+        connection.query(query, queryParams, (error, results) => {
+            if (error) {
+                console.error(error);
+                return sendResponse(res, errorResponse("Internal server error"));
+            }
+            sendResponse(res, successResponse({ page: "shorts", shorts_vIds: results }, "Shorts retrieved successfully"));
+        });
+        return;
     }
 
-    const connection = getConnection();
-    connection.query(query, queryParams, (error, results) => {
+    getShortsIdsInOrder((error, ids) => {
         if (error) {
             console.error(error);
             return sendResponse(res, errorResponse("Internal server error"));
         }
-        sendResponse(res, successResponse({ page: "shorts", shorts_vIds: results }, "Shorts retrieved successfully"));
+
+        const pageIds = ids.slice(5 * needmore, 5 * needmore + 5);
+        if (pageIds.length === 0) {
+            return sendResponse(res, successResponse({ page: "shorts", shorts_vIds: [] }, "Shorts retrieved successfully"));
+        }
+
+        const connection = getConnection();
+        connection.query(
+            `SELECT v.*, c.* FROM videos v 
+             INNER JOIN channels c ON c.channel_id = v.channel_id 
+             WHERE v.video_id IN (?)`,
+            [pageIds],
+            (error, results) => {
+                if (error) {
+                    console.error(error);
+                    return sendResponse(res, errorResponse("Internal server error"));
+                }
+                const orderMap = new Map(results.map((row) => [row.video_id, row]));
+                const ordered = pageIds.map((id) => orderMap.get(id)).filter(Boolean);
+                sendResponse(res, successResponse({ page: "shorts", shorts_vIds: ordered }, "Shorts retrieved successfully"));
+            }
+        );
     });
 }));
 
