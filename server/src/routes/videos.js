@@ -1,8 +1,8 @@
 const express = require("express");
 const router = express.Router();
 const { getConnection } = require("../db");
+const { createFeedAndGenerateSQL } = require("../utils");
 const {
-    createFeedAndGenerateSQL,
     fetchRelatedVideos,
     fetchVideoHistory,
 } = require("../youtube");
