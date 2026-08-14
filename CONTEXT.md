@@ -9,7 +9,7 @@ The repository root for **VidVault** (a.k.a. "Youtube-combine"), a full-stack Yo
 | Path | Purpose |
 |------|---------|
 | `client/` | React (Create React App) front-end. Built to static files and served by the Express server. |
-| `server/` | Node.js + Express REST API (`server.js`) plus a Flask/`yt-dlp` micro-service (`videoquality.py`, `vq.py`, `vqold.py`) for fetching direct YouTube stream URLs. Also holds the MySQL schema and helper scripts. |
+| `server/` | Node.js + Express REST API (modular `src/` + slim `server.js`) plus a Flask/`yt-dlp` micro-service (`videoquality.py`, `vq.py`, `vqold.py`) for fetching direct YouTube stream URLs. Also holds the MySQL schema and helper scripts. |
 | `package.json` | Workspace orchestration scripts only — no runtime code lives here. |
 | `render.yaml` | Render Blueprint. Defines one `node` web service that installs + builds the client, installs the server, and serves both from `npm start`. |
 | `.gitignore` | Ignores `node_modules`, `build/`, `dist/`, env files, `cookies.txt`, leftover Firebase config. |
