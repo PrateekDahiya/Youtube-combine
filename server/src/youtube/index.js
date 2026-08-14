@@ -16,8 +16,10 @@ const fetchAndStoreVideos = async (
     totalResults,
     startingPageToken = null
 ) => {
+    let connection;
+    const syncedVideos = [];
     try {
-        const connection = await createNewConnection();
+        connection = await createNewConnection();
         let nextPageToken = startingPageToken;
         let fetchedResults = 0;
 
@@ -186,23 +188,10 @@ const fetchAndStoreVideos = async (
 
                 // Only videos that were actually just inserted have a row to
                 // FK against; videoIds can include ones videos.list dropped
-                // (private/deleted/restricted). Sequential, not Promise.all,
-                // to keep concurrent writes to `comments` low and avoid
-                // InnoDB deadlocks under parallel channel processing.
-                for (const video of videos) {
-                    try {
-                        await fetchAndCacheYoutubeComments(video.videoId);
-                    } catch (commentError) {
-                        console.log(
-                            "Error caching comments for video " +
-                                video.videoId +
-                                ": " +
-                                (commentError.response
-                                    ? JSON.stringify(commentError.response.data)
-                                    : commentError.message)
-                        );
-                    }
-                }
+                // (private/deleted/restricted). Comment caching happens
+                // after this connection is released (see below) — it uses
+                // the pool, not this raw connection, and can be slow.
+                syncedVideos.push(...videos);
 
                 fetchedResults += videos.length;
                 nextPageToken = searchResponse.data.nextPageToken;
@@ -233,8 +222,6 @@ const fetchAndStoreVideos = async (
                 break;
             }
         }
-
-        await connection.end();
     } catch (error) {
         if (error.response) {
             console.log(
@@ -243,6 +230,33 @@ const fetchAndStoreVideos = async (
             );
         } else {
             console.log("Error fetching and storing videos:", error.message);
+        }
+    } finally {
+        if (connection) {
+            try {
+                await connection.end();
+            } catch (endError) {
+                console.log("Error closing connection:", endError.message);
+            }
+        }
+    }
+
+    // Best-effort, sequential (not Promise.all) to keep concurrent writes to
+    // `comments` low and avoid InnoDB deadlocks under parallel channel
+    // processing. Runs after the raw connection above is released — this
+    // uses the pool instead, and can take a while across many videos.
+    for (const video of syncedVideos) {
+        try {
+            await fetchAndCacheYoutubeComments(video.videoId);
+        } catch (commentError) {
+            console.log(
+                "Error caching comments for video " +
+                    video.videoId +
+                    ": " +
+                    (commentError.response
+                        ? JSON.stringify(commentError.response.data)
+                        : commentError.message)
+            );
         }
     }
 };
