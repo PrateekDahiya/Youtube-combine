@@ -390,7 +390,7 @@ const fetchYoutubeComments = async (videoId, pageToken = null) => {
                     key: apiKey,
                     videoId,
                     part: "snippet",
-                    maxResults: 30,
+                    maxResults: 10,
                     order: "relevance",
                     textFormat: "plainText",
                     pageToken: pageToken || undefined,

@@ -136,7 +136,7 @@ router.get("/youtubeComments", asyncHandler(async (req, res) => {
                      FROM comments
                      WHERE video_id = ? AND source = 'youtube'
                      ORDER BY like_count DESC, comment_time DESC
-                     LIMIT 60`,
+                     LIMIT 10`,
                     [video_id],
                     (error, rows) => {
                         if (error) return reject(error);
