@@ -5,7 +5,7 @@ services:
     plan: free
     buildCommand: npm run render-build
     startCommand: npm start
-    healthCheckPath: /health
+    healthCheckPath: /api/health/keep-active
     envVars:
       - key: NODE_VERSION
         value: 20

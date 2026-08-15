@@ -305,10 +305,14 @@ async function getChannelIdsNeedingUpdate(offset, limit, staleDays = 3) {
 async function processChannels(channelIds, totalResults = 5) {
     const startingPageToken = null;
 
-    const fetchPromises = channelIds.map((channelId) => {
-        return fetchAndStoreVideos(channelId, totalResults, startingPageToken);
-    });
-    await Promise.all(fetchPromises);
+    // Sequential, not Promise.all: each channel opens its own raw DB
+    // connection and makes several YouTube API calls, so running all of
+    // them at once spikes memory/connections and bursts API calls together.
+    // One at a time keeps peak resource usage flat — fine since this only
+    // runs on a cron tick, not in the request/response path a user waits on.
+    for (const channelId of channelIds) {
+        await fetchAndStoreVideos(channelId, totalResults, startingPageToken);
+    }
 }
 
 const getNewChannelId = async () => {
@@ -385,9 +389,11 @@ const addNewChannel = async (channelId) => {
         return "AlreadyExists";
     }
 
-    fetchAndStoreVideos(channelId, totalResults, startingPageToken).catch((error) => {
+    try {
+        await fetchAndStoreVideos(channelId, totalResults, startingPageToken);
+    } catch (error) {
         console.log("Error adding new channel " + channelId + ": " + error.message);
-    });
+    }
     return "True";
 };
 
