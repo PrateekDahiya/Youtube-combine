@@ -70,7 +70,7 @@ router.get("/issub", syncHandler((req, res) => {
 
 router.get("/get-subs", syncHandler((req, res) => {
     const user_id = req.query.user_id;
-    const query = `SELECT * FROM subscriptions s join channels c where s.channel_id=c.channel_id and s.user_id= ? order by sub_time desc`;
+    const query = `SELECT * FROM subscriptions s join channels c where s.channel_id=c.channel_id and s.user_id= ? order by sub_time desc limit 500`;
 
     const connection = getConnection();
     connection.query(query, [user_id], (error, results) => {

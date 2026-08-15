@@ -61,35 +61,59 @@ let offset = 0;
 let batchSize = 5;
 let totalResults = 5;
 
-router.get("/update_channels", asyncHandler(async (req, res) => {
-    // Only channels whose most recently synced video is >3 days old (or
-    // that have no videos yet) are re-processed — skips channels that were
-    // already refreshed recently, instead of blindly re-syncing every batch.
-    const channelIds = await getChannelIdsNeedingUpdate(offset, batchSize, 3);
-    if (channelIds.length === 0) {
-        offset = 0;
-    } else {
-        await processChannels(channelIds);
-        offset += batchSize;
-    }
+// These routes are hit on a cron schedule and each invocation can run long
+// (multiple sequential YouTube API calls + fresh DB connections per channel).
+// Without a guard, an overlapping cron tick starts a second run on top of a
+// still-running one, piling up open connections/requests. Skip instead of
+// stacking.
+let isUpdatingChannels = false;
+let isAddingChannel = false;
 
-    sendResponse(res, successResponse({ Channels_updated_successfully: channelIds }, "Channels updated successfully"));
+router.get("/update_channels", asyncHandler(async (req, res) => {
+    if (isUpdatingChannels) {
+        return sendResponse(res, successResponse({ skipped: true }, "Update already in progress"));
+    }
+    isUpdatingChannels = true;
+    try {
+        // Only channels whose most recently synced video is >3 days old (or
+        // that have no videos yet) are re-processed — skips channels that were
+        // already refreshed recently, instead of blindly re-syncing every batch.
+        const channelIds = await getChannelIdsNeedingUpdate(offset, batchSize, 3);
+        if (channelIds.length === 0) {
+            offset = 0;
+        } else {
+            await processChannels(channelIds);
+            offset += batchSize;
+        }
+
+        sendResponse(res, successResponse({ Channels_updated_successfully: channelIds }, "Channels updated successfully"));
+    } finally {
+        isUpdatingChannels = false;
+    }
 }));
 
 router.get("/addnewchannel", asyncHandler(async (req, res) => {
-    const channelId = await findNewChannelId();
-    if (!channelId) {
-        return sendResponse(res, successResponse({
-            success: "NotFound",
-            Channel_id: null,
-        }, "No new channel found after multiple attempts"));
+    if (isAddingChannel) {
+        return sendResponse(res, successResponse({ skipped: true }, "Add-channel already in progress"));
     }
+    isAddingChannel = true;
+    try {
+        const channelId = await findNewChannelId();
+        if (!channelId) {
+            return sendResponse(res, successResponse({
+                success: "NotFound",
+                Channel_id: null,
+            }, "No new channel found after multiple attempts"));
+        }
 
-    const success = await addNewChannel(channelId);
-    sendResponse(res, successResponse({
-        success: success,
-        Channel_id: channelId,
-    }, "New channel added successfully"));
+        const success = await addNewChannel(channelId);
+        sendResponse(res, successResponse({
+            success: success,
+            Channel_id: channelId,
+        }, "New channel added successfully"));
+    } finally {
+        isAddingChannel = false;
+    }
 }));
 
 module.exports = router;
