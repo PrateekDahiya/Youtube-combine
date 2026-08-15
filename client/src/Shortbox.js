@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import "./Shortbox.css";
 import { Link } from "react-router-dom";
-import axios from "axios";
+import { streamApi } from "./api";
 import Shortplayer from "./Shortplayer";
 
 const defaultAvatar = "https://cdn-icons-png.flaticon.com/128/1077/1077063.png";
@@ -10,9 +10,9 @@ const Shortbox = (params) => {
     const [data, setData] = useState("");
     const [shortdata, setShortdata] = useState(null);
     const [stream_url, setStream_url] = useState("");
+    const [stream_mode, setStream_mode] = useState(null);
     const [active, setActive] = useState(false);
 
-    const serverurl = process.env.REACT_APP_SERVER_URL;
     function formatNumber(num) {
         if (num >= 1000000) {
             return (num / 1000000).toFixed(1) + "M";
@@ -27,14 +27,11 @@ const Shortbox = (params) => {
         if (params.short) {
             const fetchstreamURL = async () => {
                 try {
-                    const response = await axios.get(
-                        `https://flaskapp-5c1j.onrender.com/get-short-url?video_id=` +
-                            params.short.video_id
-                    );
-                    setData(response.data);
+                    const response = await streamApi.getStream(params.short.video_id);
+                    setData(response);
                 } catch (error) {
                     console.log("Error in fetching: ", error.message);
-                    setData({ stream_url: null });
+                    setData({ extraction_ok: false });
                 }
             };
             fetchstreamURL();
@@ -47,15 +44,25 @@ const Shortbox = (params) => {
 
     useEffect(() => {
         setShortdata(params.short);
-        setStream_url(data?.stream_url || null);
+        if (data && data.hls_url) {
+            setStream_mode("hls");
+            setStream_url(data.hls_url);
+        } else if (data && data.progressive && data.progressive.length > 0) {
+            setStream_mode("progressive");
+            setStream_url(data.progressive[0].url);
+        } else {
+            setStream_mode(null);
+            setStream_url(null);
+        }
     }, [data, params.short]);
 
     return (
         <div className="shortsbox">
-            <Shortplayer 
-                type="short" 
-                streamUrl={stream_url} 
-                active={active} 
+            <Shortplayer
+                type="short"
+                mode={stream_mode}
+                streamUrl={stream_url}
+                active={active}
                 videoId={shortdata?.video_id}
             />
             <div className="short-btns">

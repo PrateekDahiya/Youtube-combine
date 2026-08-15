@@ -2,7 +2,7 @@
 
 ## What this directory is
 
-The **back-end** of VidVault: a Node.js + Express REST API plus the source for a separately-deployed Flask / `yt-dlp` micro-service, the MySQL schema, and a few helper scripts. In production Render runs `node server.js`; the Flask service is deployed separately to `flaskapp-5c1j.onrender.com`.
+The **back-end** of VidVault: a Node.js + Express REST API, the MySQL schema, and a few helper scripts. In production Render runs `node server.js` — this is the only deployed service; there is no separate microservice. Stream URL resolution for YouTube-sourced videos runs in-process via `youtubei.js` (`src/youtube/streamResolver.js`) rather than a separately-deployed Flask/`yt-dlp` service, since the latter could (and did) go down independently of the main app.
 
 ## Top-level layout
 
@@ -14,10 +14,6 @@ The **back-end** of VidVault: a Node.js + Express REST API plus the source for a
 | `package-lock.json` | Lockfile. |
 | `db/schema.sql` | Authoritative MySQL 8.0+ DDL for all tables. See `db/CONTEXT.md`. |
 | `db/migrations/` | One-off SQL migrations applied after `schema.sql`. See `db/migrations/CONTEXT.md`. |
-| `videoquality.py` | Current Flask service — exposes `/get_video_url` and `/get-short-url` over `yt-dlp`. Deployed as `flaskapp-5c1j` on Render. |
-| `vq.py` | Older Flask variant with cookies support and verbose logging. Same routes. Kept for reference. |
-| `vqold.py` | Older Flask variant using a custom `MyLogger` and a `get-short-url` that picks a non-best stream URL. Kept for reference. |
-| `requirements.txt` | Python deps for the Flask service: `Flask==3.0.3`, `yt-dlp==2024.6.30.232744.dev0`, `Flask-CORS==4.0.1`. |
 | `videos.js` | Standalone Node script — duplicate of the `fetchAndStoreVideos` blob that is also in `src/youtube`. Run manually to seed a list of channel IDs. |
 | `relatedvideos.js` | Standalone Node script — a precursor of `createFeedAndGenerateSQL` used to print a sample related-videos SQL query for debugging. Not required at runtime. |
 | `passtohash.js` | Tiny dev script that prints the DB column name mapped from a friendly "Name" / "Subscribers" label — mirrors the label-to-field maps embedded in `Settings.js` on the client. |
@@ -35,7 +31,7 @@ The **back-end** of VidVault: a Node.js + Express REST API plus the source for a
 | `src/feed/` | Per-type video feed handlers (`home.js`, `tag.js`, `category.js`, `trending.js`, `subscriptions.js`, `personalized.js`, `watchlater.js`, `liked.js`, `history.js`, `channel.js`, `search.js`, `related.js`, `watch.js`, `videobyid.js`, `shorts.js`), auto-registered by `index.js` and backed by shared helpers in `helpers.js`. See the "Unified video endpoint" section. |
 | `src/email/` | `sendEmail()` via Resend. |
 | `src/uploads/` | Multer config (image + video), Cloudinary upload helpers, background video processing (`processVideoUpload`). |
-| `src/youtube/` | YouTube Data API v3 fetching: `fetchAndStoreVideos`, `getChannelIds`, `processChannels`, `getNewChannelId`, `addNewChannel`, API key rotation. |
+| `src/youtube/` | YouTube Data API v3 fetching: `fetchAndStoreVideos`, `getChannelIds`, `processChannels`, `getNewChannelId`, `addNewChannel`, API key rotation. Also `streamResolver.js` — resolves a playable stream URL (progressive/adaptive/HLS) for a video via `youtubei.js`, in-process (see "Stream resolution" below). |
 | `src/routes/` | Express routers grouped by feature/domain (see below). |
 
 ## `src/routes/` — route modules
@@ -54,6 +50,7 @@ The **back-end** of VidVault: a Node.js + Express REST API plus the source for a
 | `channels.js` | `/api` | `/api/yourchannel`, `/api/channel`, `/api/getallchannels`, `/api/get-channel-ids`, `/api/update_channels`, `/api/addnewchannel` |
 | `feedback.js` | `/api` | `/api/feedback` |
 | `comments.js` | `/api` | `GET /api/comments`, `/api/addComment`, `/api/editComment`, `/api/deleteComment`, `GET /api/youtubeComments` |
+| `stream.js` | `/api` | `GET /api/stream/:videoId` — resolves a playable YouTube stream (see "Stream resolution" below) |
 
 ## Unified video endpoint (`POST /api/videos`)
 
@@ -128,6 +125,22 @@ See the route module table above for the full list. All endpoints retain their e
 - `/api/update_channels` calls `getChannelIdsNeedingUpdate(offset, batchSize, staleDays=3)` instead of scanning every channel — only channels with no videos yet, or whose most-recently-synced video's `upload_time` is older than `staleDays`, are re-processed. `offset` still round-robins through that (shrinking) filtered set and resets to 0 once it's exhausted.
 - `/api/addnewchannel` calls `findNewChannelId()`, which loops `getNewChannelId()` (random category → random pick among the top 50 of that category's `mostPopular` chart, not always slot #1) plus a `channelExists()` check up to 15 times until it finds a channel not already in `channels`, instead of accepting the first (likely already-known) candidate and returning `"AlreadyExists"`. `addNewChannel` still re-checks existence itself before syncing as a defensive double-check; if `findNewChannelId` exhausts its attempts, the route returns `"NotFound"` rather than syncing nothing silently.
 
+## Stream resolution (`src/youtube/streamResolver.js`, `src/routes/stream.js`)
+
+`GET /api/stream/:videoId` returns a best-effort playback contract for a YouTube video, resolved entirely in-process via `youtubei.js` — there is no external microservice for this anymore (a previously-separate Flask/`yt-dlp` service was removed after it went down independently of the main app):
+
+```jsonc
+{ "video_id": "...", "hls_url": "..." | null, "progressive": [{resolution, itag, bitrate, mimeType, url}], "adaptive": { "video": [...], "audio": [...] }, "extraction_ok": true }
+```
+
+- A single module-level `Innertube` client (`getClient()`) is created once and reused across requests.
+- `Platform.shim.eval` is wired to Node's `vm` module at module load — `youtubei.js` refuses to execute YouTube's obfuscated deciphering JS unless the host explicitly opts in (security-sensitive by design), so signed format URLs fail to decipher without this.
+- Formats are classified by `has_audio`/`has_video`: both → `progressive`; video-only → `adaptive.video`; audio-only → `adaptive.audio`. Each is deciphered via `format.decipher(client.session.player)` and deduped by resolution (highest bitrate wins).
+- `extraction_ok` is `false` only when every tier comes back empty (or `getInfo` throws) — the client's iframe fallback is keyed off this flag, not off network errors.
+- **Known limitation, empirically confirmed**: YouTube's SABR streaming enforcement means the default WEB client frequently has **no retrievable URL at all** (no plain `url`, no `signature_cipher`) for adaptive (video-only/audio-only) formats — only the 360p progressive format (itag 18) reliably deciphers. Some videos have no progressive format either, in which case `extraction_ok` is `false` and the client falls back to the iframe. Getting past this would require a PO Token (via the companion `bgutils-js` project) — deliberately deferred; not implemented here.
+
+**Client-side playback mode** (`Watch.js`, `Shortbox.js`/`Shortplayer.js`, `Videoplayer.js`): picks `hls` (via `hls.js`, adaptive quality with no custom sync) > `progressive` (single `<video src>`) > `adaptive` (legacy dual `<video>`+`<audio>` element sync, kept only as a fallback) based on whichever tier the response populated, falling back to a YouTube `<iframe>` only when `extraction_ok` is `false`.
+
 ## Comments (`src/routes/comments.js`)
 
 One `comments` table holds both kinds of comment, discriminated by `source`:
@@ -171,8 +184,7 @@ One `comments` table holds both kinds of comment, discriminated by `source`:
 
 1. Copy `.env.example` → `.env` and fill in real values.
 2. `npm install` (package.json's `preinstall` sets `omit=dev` on the **client**; not here, so devDeps install normally). To be safe use `npm install --include=dev`.
-3. `npm run dev` — `nodemon server.js` on port 5000.
-4. For video playback, also run the Flask service: `python videoquality.py` on port 8111 — but the client hard-codes `https://flaskapp-5c1j.onrender.com`, so to use a local instance you must temporarily change the URLs in `src/Watch.js` and `src/Shortbox.js`.
+3. `npm run dev` — `nodemon server.js` on port 5000. Video playback works out of the box — stream resolution runs in-process (see "Stream resolution" above), no separate service to start.
 
 ## Security notes to keep in mind when editing
 

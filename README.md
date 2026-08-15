@@ -6,7 +6,7 @@ A full-stack YouTube clone. Browse, watch, and organize videos pulled from real 
 
 - **Client:** React (Create React App), React Router
 - **Server:** Node.js + Express, MySQL (`mysql2`)
-- **Video streaming:** a separate Flask + `yt-dlp` microservice for resolving direct stream URLs
+- **Video streaming:** in-process stream URL resolution via `youtubei.js`, with `hls.js` for adaptive playback in the browser
 - **Media storage:** Cloudinary (uploaded videos/thumbnails)
 - **Email:** Resend (registration + feedback notifications)
 - **Data source:** YouTube Data API v3 (with rotating API keys)
@@ -24,9 +24,7 @@ A full-stack YouTube clone. Browse, watch, and organize videos pulled from real 
  Express also calls out (server-side) to:
    • YouTube Data API v3 (search.list, videos.list, channels.list)
    • Resend email API
-
- The browser also calls out directly to:
-   • a separately deployed Flask/yt-dlp service, for direct video stream URLs
+   • youtubei.js (in-process) — resolves stream URLs for /api/stream/:videoId
 ```
 
 Two endpoints (`/api/update_channels`, `/api/addnewchannel`) are meant to be triggered on a schedule (e.g. an external cron) to keep the video catalog fresh and occasionally discover new channels.
@@ -66,16 +64,6 @@ cp .env.example .env.development   # REACT_APP_SERVER_URL=http://localhost:5000/
 npm install
 npm start                          # http://localhost:3000
 ```
-
-### Video playback (optional)
-
-For in-browser video streaming locally, also run the Flask microservice:
-
-```bash
-python server/videoquality.py   # http://localhost:8111
-```
-
-By default the client points at the deployed Flask service — see `server/CONTEXT.md` for how to point it at your local instance instead.
 
 ## Deployment
 

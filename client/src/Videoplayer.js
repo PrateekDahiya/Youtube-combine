@@ -1,13 +1,21 @@
 import React, { useEffect, useState, useRef } from "react";
+import Hls from "hls.js";
 import "./Videoplayer.css";
 
 const VideoPlayer = (params) => {
+    // "hls" | "progressive" | "adaptive". Defaults to "adaptive" (the
+    // pre-existing dual video+audio sync behavior) for callers that don't
+    // pass mode yet.
+    const mode = params.mode || "adaptive";
+    const hasAudioElement = mode === "adaptive";
+
     const [muted, setMuted] = useState(false);
     const [streamUrl, setStreamUrl] = useState("");
     const [audioUrl, setAudioUrl] = useState("");
     const [loop, setLoop] = useState("");
     const videoRef = useRef(null);
     const audioRef = useRef(null);
+    const hlsRef = useRef(null);
     const [isPlaying, setIsPlaying] = useState(false);
     const [volume, setVolume] = useState(80);
     const [playback_speed, setPlayback_speed] = useState(1);
@@ -18,6 +26,8 @@ const VideoPlayer = (params) => {
     const [showPlaybackspeed, setShowPlaybackspeed] = useState(false);
     const [showQualitychange, setShowQualitychange] = useState(false);
     const [showsettings, setShowsettings] = useState(false);
+    const [hlsLevels, setHlsLevels] = useState([]);
+    const [hlsActiveLevel, setHlsActiveLevel] = useState(-1);
     const speeds = [0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0, 2.5, 3.0];
 
     const speedLabels = {
@@ -43,33 +53,40 @@ const VideoPlayer = (params) => {
         }
     };
 
+    // Play/pause/seek/speed wiring. Adaptive mode drives a hidden `<video>` +
+    // separate `<audio>` kept in sync via timeupdate drift correction (the
+    // only mode that still needs this — hls/progressive are single elements
+    // where the browser/hls.js handles audio+video together natively).
     useEffect(() => {
         const video = videoRef.current;
-        const audio = audioRef.current;
-        audio.muted = true;
-        video.muted = true;
+        const audio = hasAudioElement ? audioRef.current : null;
+        if (!video) return;
 
         const handlePlay = () => {
             video.play().catch((error) => {
                 console.error("Error playing video:", error);
             });
-            audio.play().catch((error) => {
-                console.error("Error playing video:", error);
-            });
-            audio.muted = false;
+            if (audio) {
+                audio.play().catch((error) => {
+                    console.error("Error playing video:", error);
+                });
+                audio.muted = false;
+            }
             setIsPlaying(true);
         };
 
         const handlePause = () => {
             video.pause();
-            audio.pause();
-            audio.muted = true;
+            if (audio) {
+                audio.pause();
+                audio.muted = true;
+            }
             setIsPlaying(false);
         };
 
         const syncMedia = () => {
             setCurrentTime(video.currentTime);
-            if (Math.abs(video.currentTime - audio.currentTime) > 0.3) {
+            if (audio && Math.abs(video.currentTime - audio.currentTime) > 0.3) {
                 audio.currentTime = video.currentTime;
             }
         };
@@ -79,36 +96,81 @@ const VideoPlayer = (params) => {
 
         video.addEventListener("play", handlePlay);
         video.addEventListener("pause", handlePause);
-        audio.addEventListener("play", handlePlay);
-        audio.addEventListener("pause", handlePause);
         video.addEventListener("timeupdate", syncMedia);
-        audio.addEventListener("timeupdate", syncMedia);
         video.addEventListener("loadedmetadata", handleLoadedMetadata);
+        if (audio) {
+            audio.addEventListener("play", handlePlay);
+            audio.addEventListener("pause", handlePause);
+            audio.addEventListener("timeupdate", syncMedia);
+        }
 
         return () => {
             video.removeEventListener("play", handlePlay);
             video.removeEventListener("pause", handlePause);
-            audio.removeEventListener("play", handlePlay);
-            audio.removeEventListener("pause", handlePause);
-            audio.removeEventListener("timeupdate", syncMedia);
             video.removeEventListener("timeupdate", syncMedia);
             video.removeEventListener("loadedmetadata", handleLoadedMetadata);
+            if (audio) {
+                audio.removeEventListener("play", handlePlay);
+                audio.removeEventListener("pause", handlePause);
+                audio.removeEventListener("timeupdate", syncMedia);
+            }
         };
-    }, []);
+    }, [hasAudioElement]);
+
+    // HLS setup/teardown — only relevant in "hls" mode. Safari plays HLS
+    // natively via <video src>, everyone else needs hls.js for MSE-backed
+    // adaptive playback.
+    useEffect(() => {
+        if (mode !== "hls" || !streamUrl) return;
+        const video = videoRef.current;
+        if (!video) return;
+
+        let hls = null;
+        if (Hls.isSupported()) {
+            hls = new Hls();
+            hlsRef.current = hls;
+            hls.loadSource(streamUrl);
+            hls.attachMedia(video);
+            hls.on(Hls.Events.MANIFEST_PARSED, (_event, data) => {
+                setHlsLevels(
+                    (data.levels || []).map((level, index) => ({
+                        index,
+                        height: level.height,
+                    }))
+                );
+            });
+            hls.on(Hls.Events.LEVEL_SWITCHED, (_event, data) => {
+                setHlsActiveLevel(data.level);
+            });
+        } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
+            video.src = streamUrl;
+        }
+
+        return () => {
+            if (hls) {
+                hls.destroy();
+            }
+            hlsRef.current = null;
+            setHlsLevels([]);
+            setHlsActiveLevel(-1);
+        };
+    }, [mode, streamUrl]);
 
     const handlePlayPause = () => {
         const video = videoRef.current;
-        const audio = audioRef.current;
+        const audio = hasAudioElement ? audioRef.current : null;
         if (isPlaying) {
             video.pause();
-            audio.pause();
+            if (audio) audio.pause();
         } else {
             video.play().catch((error) => {
                 console.error("Error playing video:", error);
             });
-            audio.play().catch((error) => {
-                console.error("Error playing audio:", error);
-            });
+            if (audio) {
+                audio.play().catch((error) => {
+                    console.error("Error playing audio:", error);
+                });
+            }
         }
     };
 
@@ -121,28 +183,29 @@ const VideoPlayer = (params) => {
     };
 
     const handleVolumeChange = (e) => {
-        const audio = audioRef.current;
-        audio.volume = e.target.value / 100;
+        const target = hasAudioElement ? audioRef.current : videoRef.current;
+        target.volume = e.target.value / 100;
     };
 
     const handleSpeedChange = (value) => {
         const video = videoRef.current;
-        const audio = audioRef.current;
+        const audio = hasAudioElement ? audioRef.current : null;
         video.playbackRate = parseFloat(value);
-        audio.playbackRate = parseFloat(value);
+        if (audio) audio.playbackRate = parseFloat(value);
         setPlayback_speed(parseFloat(value));
     };
 
     const handleRangeChange = (event) => {
         const newTime = parseFloat(event.target.value);
         videoRef.current.currentTime = newTime;
-        audioRef.current.currentTime = newTime;
+        if (hasAudioElement) audioRef.current.currentTime = newTime;
         setCurrentTime(newTime);
     };
 
     const handlePlay = () => {
-        const audio = audioRef.current;
-        audio.muted = false;
+        if (hasAudioElement) {
+            audioRef.current.muted = false;
+        }
     };
 
     const handleMousemove = () => {
@@ -195,6 +258,40 @@ const VideoPlayer = (params) => {
         params.type,
     ]);
 
+    // Quality menu is driven by hls.js levels in "hls" mode, and by the
+    // resolution list Watch.js/Shortbox.js computed server-side otherwise.
+    const isHls = mode === "hls";
+    const qualityOptions = isHls
+        ? hlsLevels.slice().sort((a, b) => (b.height || 0) - (a.height || 0))
+        : (params.qualityoptions || []).slice();
+    const activeQualityIsAuto = isHls
+        ? hlsActiveLevel === -1
+        : params.video_resolution === 0;
+
+    const selectQuality = (option) => {
+        if (isHls) {
+            if (hlsRef.current) hlsRef.current.currentLevel = option;
+        } else {
+            params.handleQualityChange(option);
+        }
+        if (hasAudioElement) {
+            audioRef.current.muted = true;
+        }
+        setIsPlaying(false);
+    };
+
+    const selectAutoQuality = () => {
+        if (isHls) {
+            if (hlsRef.current) hlsRef.current.currentLevel = -1;
+        } else {
+            params.handleQualityChange(0);
+        }
+        if (hasAudioElement) {
+            audioRef.current.muted = true;
+        }
+        setIsPlaying(false);
+    };
+
     return (
         <div
             className="watch-page"
@@ -214,8 +311,8 @@ const VideoPlayer = (params) => {
                     ref={videoRef}
                     id="myVideo"
                     className={streamUrl !== "" ? "video" : "hidden-video"}
-                    muted
-                    src={streamUrl}
+                    muted={hasAudioElement ? true : muted}
+                    src={isHls ? undefined : streamUrl}
                     loop={loop}
                 />
                 <video
@@ -224,11 +321,13 @@ const VideoPlayer = (params) => {
                     autoPlay
                     muted
                 />
-                <audio
-                    ref={audioRef}
-                    src={audioUrl !== "" ? audioUrl : ""}
-                    muted={!muted ? false : true}
-                />
+                {hasAudioElement && (
+                    <audio
+                        ref={audioRef}
+                        src={audioUrl !== "" ? audioUrl : ""}
+                        muted={!muted ? false : true}
+                    />
+                )}
             </div>
 
             {playerhovered ||
@@ -426,60 +525,36 @@ const VideoPlayer = (params) => {
                                                 >
                                                     {"< "} Quality
                                                 </div>
-                                                {params.qualityoptions
-                                                    .slice()
-                                                    .reverse()
-                                                    .map((option) => (
+                                                {qualityOptions.map((option) => {
+                                                    const value = isHls ? option.index : option;
+                                                    const label = isHls
+                                                        ? (option.height ? option.height + "p" : "Unknown")
+                                                        : (qualityOptions.length > 1 ? option + "p" : option);
+                                                    const isActive = isHls
+                                                        ? hlsActiveLevel === option.index
+                                                        : params.video_resolution === option;
+                                                    return (
                                                         <div
-                                                            key={option}
-                                                            onClick={() => {
-                                                                params.handleQualityChange(
-                                                                    option
-                                                                );
-                                                                const audio =
-                                                                    audioRef.current;
-                                                                audio.muted = true;
-                                                                setIsPlaying(
-                                                                    false
-                                                                );
-                                                            }}
+                                                            key={value}
+                                                            onClick={() => selectQuality(value)}
                                                             className="options"
                                                         >
                                                             <img
-                                                                className={`option-img-tick ${
-                                                                    params.video_resolution ===
-                                                                    option
-                                                                        ? "tick"
-                                                                        : ""
-                                                                }`}
+                                                                className={`option-img-tick ${isActive ? "tick" : ""}`}
                                                                 src="https://cdn-icons-png.flaticon.com/128/3388/3388530.png"
                                                                 alt="tick"
                                                             />
-                                                            {params
-                                                                .qualityoptions
-                                                                .length > 1
-                                                                ? option + "p"
-                                                                : option}
+                                                            {label}
                                                         </div>
-                                                    ))}
+                                                    );
+                                                })}
                                                 <div
-                                                    onClick={() => {
-                                                        params.handleQualityChange(
-                                                            0
-                                                        );
-                                                        const audio =
-                                                            audioRef.current;
-                                                        audio.muted = true;
-                                                        setIsPlaying(false);
-                                                    }}
+                                                    onClick={selectAutoQuality}
                                                     className="options"
                                                 >
                                                     <img
                                                         className={`option-img-tick ${
-                                                            params.video_resolution ===
-                                                            0
-                                                                ? "tick"
-                                                                : ""
+                                                            activeQualityIsAuto ? "tick" : ""
                                                         }`}
                                                         src="https://cdn-icons-png.flaticon.com/128/3388/3388530.png"
                                                         alt="tick"

@@ -33,6 +33,7 @@
         "mysql2": "^3.9.8",
         "node-cache": "^5.1.2",
         "node-cron": "^3.0.3",
-        "node-fetch": "^3.3.2"
+        "node-fetch": "^3.3.2",
+        "youtubei.js": "^18.0.0"
     }
 }

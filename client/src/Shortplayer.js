@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import Hls from "hls.js";
 import "./Shortplayer.css";
 
 const Shortplayer = (params) => {
@@ -8,6 +9,7 @@ const Shortplayer = (params) => {
     const [isLoading, setIsLoading] = useState(true);
     const [fetchFailed, setFetchFailed] = useState(false);
     const videoRef = useRef(null);
+    const hlsRef = useRef(null);
 
     useEffect(() => {
         const video = videoRef.current;
@@ -48,6 +50,29 @@ const Shortplayer = (params) => {
         setFetchFailed(true);
     };
 
+    const isHls = params.mode === "hls";
+
+    useEffect(() => {
+        if (!isHls || !shortlink) return;
+        const video = videoRef.current;
+        if (!video) return;
+
+        let hls = null;
+        if (Hls.isSupported()) {
+            hls = new Hls();
+            hlsRef.current = hls;
+            hls.loadSource(shortlink);
+            hls.attachMedia(video);
+        } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
+            video.src = shortlink;
+        }
+
+        return () => {
+            if (hls) hls.destroy();
+            hlsRef.current = null;
+        };
+    }, [isHls, shortlink]);
+
     return (
         <div
             className={`short-player-container ${isLoading ? 'loading' : ''}`}
@@ -68,7 +93,7 @@ const Shortplayer = (params) => {
                 <video
                     ref={videoRef}
                     className="short"
-                    src={shortlink ? shortlink : null}
+                    src={isHls ? undefined : (shortlink ? shortlink : null)}
                     autoPlay
                     controls
                     muted={false}
