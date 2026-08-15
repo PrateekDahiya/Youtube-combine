@@ -1,5 +1,5 @@
 const axios = require("axios");
-const { createNewConnection, getConnection } = require("../db");
+const { createNewConnection, createNewPromiseConnection, getConnection } = require("../db");
 const { API_KEYS } = require("../config");
 const {
     convertToMySQLDatetime,
@@ -32,7 +32,7 @@ const fetchAndStoreVideos = async (
     let connection;
     const syncedVideos = [];
     try {
-        connection = guardConnection(await createNewConnection(), "fetchAndStoreVideos");
+        connection = guardConnection(await createNewPromiseConnection(), "fetchAndStoreVideos");
         let nextPageToken = startingPageToken;
         let fetchedResults = 0;
 
@@ -554,6 +554,13 @@ const upsertYoutubeComments = async (videoId, comments, attempt = 0) => {
         if (isDeadlock && attempt < 2) {
             await sleep(150 * (attempt + 1));
             return upsertYoutubeComments(videoId, comments, attempt + 1);
+        }
+        // video_id no longer exists in `videos` (deleted/replaced between
+        // being synced and comments being fetched) — same "nothing to
+        // attach to" case as comments being disabled, not worth erroring.
+        const isMissingVideo = error.code === "ER_NO_REFERENCED_ROW_2" || error.errno === 1452;
+        if (isMissingVideo) {
+            return;
         }
         throw error;
     }
