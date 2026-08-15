@@ -11,5 +11,5 @@ export { uploadApi } from "./upload";
 export { commentApi } from "./comment";
 export { channelApi } from "./channel";
 export { searchApi, categoryApi, trendingApi } from "./discover";
-export { flaskApiClient } from "./flask";
+export { streamApi } from "./stream";
 export { default as api } from "./client";

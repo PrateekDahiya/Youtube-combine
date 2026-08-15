@@ -20,6 +20,7 @@ const uploadRoutes = require("./src/routes/uploads");
 const channelRoutes = require("./src/routes/channels");
 const feedbackRoutes = require("./src/routes/feedback");
 const commentRoutes = require("./src/routes/comments");
+const streamRoutes = require("./src/routes/stream");
 
 const app = express();
 const port = process.env.PORT || 5000;
@@ -40,6 +41,7 @@ app.use("/api", uploadRoutes);
 app.use("/api", channelRoutes);
 app.use("/api", feedbackRoutes);
 app.use("/api", commentRoutes);
+app.use("/api", streamRoutes);
 
 const clientBuildPath = path.join(__dirname, "../client/build");
 app.use(express.static(clientBuildPath));

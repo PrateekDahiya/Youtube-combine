@@ -9,7 +9,7 @@ The repository root for **VidVault** (a.k.a. "Youtube-combine"), a full-stack Yo
 | Path | Purpose |
 |------|---------|
 | `client/` | React (Create React App) front-end. Built to static files and served by the Express server. |
-| `server/` | Node.js + Express REST API (modular `src/` + slim `server.js`) plus a Flask/`yt-dlp` micro-service (`videoquality.py`, `vq.py`, `vqold.py`) for fetching direct YouTube stream URLs. Also holds the MySQL schema and helper scripts. |
+| `server/` | Node.js + Express REST API (modular `src/` + slim `server.js`), including in-process YouTube stream URL resolution via `youtubei.js` (`src/youtube/streamResolver.js`). Also holds the MySQL schema and helper scripts. |
 | `package.json` | Workspace orchestration scripts only — no runtime code lives here. |
 | `render.yaml` | Render Blueprint. Defines one `node` web service that installs + builds the client, installs the server, and serves both from `npm start`. |
 | `.gitignore` | Ignores `node_modules`, `build/`, `dist/`, env files, `cookies.txt`, leftover Firebase config. |
@@ -36,12 +36,10 @@ The repository root for **VidVault** (a.k.a. "Youtube-combine"), a full-stack Yo
  Express also calls out (server-side) to:
    • YouTube Data API v3  (search.list, videos.list, channels.list) using rotating API_KEYS
    • Resend email API     (new-user registration + feedback notifications)
-
- The browser (client) also calls out directly to:
-   • Flask app https://flaskapp-5c1j.onrender.com  (yt-dlp service for stream URLs)
+   • youtubei.js (in-process) — resolves playable stream URLs for /api/stream/:videoId
 ```
 
-The Flask service code lives in `server/videoquality.py` (and the older `vq.py` / `vqold.py` variants) but is **deployed separately** to a Render service named `flaskapp-5c1j`. It is not started by the Node server.
+Stream URL resolution (`GET /api/stream/:videoId`) runs entirely inside the Node process via `youtubei.js` — see `server/CONTEXT.md`. There is no separate microservice; a previously-separate Flask/`yt-dlp` service was removed after it went down independently of the main app.
 
 ## Key API endpoints (summary; full list in `server/CONTEXT.md`)
 
@@ -76,8 +74,7 @@ See `server/db/schema.sql` for the authoritative DDL. Core tables:
 1. Create `server/.env` from `server/.env.example` (fill DB credentials + at least one `API_KEYS` entry).
 2. `npm run install:server` then `npm run dev` inside `server/` (uses `nodemon`).
 3. Create `client/.env.development` from `client/.env.example` (already committed here: `REACT_APP_SERVER_URL=http://localhost:5000/api`).
-4. `npm run install:client` then `npm start` inside `client/`.
-5. (Optional) Start the Flask service separately for in-browser video playback: `python server/videoquality.py` on port 8111, or rely on the deployed `flaskapp-5c1j.onrender.com`.
+4. `npm run install:client` then `npm start` inside `client/`. Video playback works out of the box — no separate service needed.
 
 ## Build & run (production / Render)
 

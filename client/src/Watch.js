@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import "./Watch.css";
-import { videoApi, subscriptionApi, likeApi, historyApi } from "./api";
-import { flaskApiClient } from "./api";
+import { videoApi, subscriptionApi, likeApi, historyApi, streamApi } from "./api";
 import Videoplayer from "./Videoplayer";
 import Card from "./Card";
 import CardGrid from "./CardGrid";
@@ -26,10 +25,11 @@ const Watch = (params) => {
     const [video_id, setVideo_id] = useState(null);
     const [user_chl_id, setUser_chl_id] = useState(null);
     const [video_resolution, setVideo_resolution] = useState(0);
-    const [qualityoptions, setQualityoptions] = useState([480, 720, 1080]);
+    const [qualityoptions, setQualityoptions] = useState(["Auto"]);
     const [video_url, setVideo_url] = useState("");
     const [audio_url, setAudio_url] = useState("");
     const [isUploaded, setIsUploaded] = useState(false);
+    const [mode, setMode] = useState(null);
 
     const isUploadedLink = (link) =>
         !!link &&
@@ -164,11 +164,10 @@ const Watch = (params) => {
         let cancelled = false;
         const fetchstreamURL = async () => {
             try {
-                const searchParams = new URLSearchParams(window.location.search);
-                const response = await flaskApiClient.getVideoUrl(Object.fromEntries(searchParams));
+                const response = await streamApi.getStream(watchdata.video_id);
                 if (!cancelled) {
-                    setData(response.data);
-                    setFetchFailed(false);
+                    setData(response);
+                    setFetchFailed(response.extraction_ok === false);
                 }
             } catch (error) {
                 console.log("Error fetching stream URL:", error.message);
@@ -192,6 +191,7 @@ const Watch = (params) => {
                 setwatchdata(row || {});
                 if (row && row.link && isUploadedLink(row.link)) {
                     setIsUploaded(true);
+                    setMode("progressive");
                     setVideo_url(row.link);
                     setAudio_url("");
                     setFetchFailed(false);
@@ -213,26 +213,47 @@ const Watch = (params) => {
         }
     }, [user, watchdata]);
 
+    // Picks the best available playback tier from the stream-resolver
+    // response: HLS (adaptive quality, no sync hack needed) > progressive
+    // (single muxed file, simple src swap) > adaptive video+audio (legacy
+    // dual-element sync, kept only as a fallback for videos with no
+    // progressive format). If none are populated, `mode` stays null and the
+    // fetchFailed/extraction_ok check above already routes to the iframe.
     useEffect(() => {
-        if (data.video_quality_options) {
-            setAudio_url(data.best_audio_url);
-            const videoOptions = data.video_quality_options;
-            for (let i = 0; i < videoOptions.length; i++) {
-                if (videoOptions[i].resolution === video_resolution) {
-                    setVideo_url(videoOptions[i].url);
-                    setAudio_url(data.best_audio_url);
-                } else if (video_resolution === 0) {
-                    setVideo_url(data.best_video_url);
-                    setAudio_url(data.best_audio_url);
-                }
-            }
-            setQualityoptions(
-                data.video_quality_options.length > 0
-                    ? data.video_quality_options.map((option) => option.resolution)
-                    : ["Auto"]
-            );
+        if (isUploaded || !data || !data.video_id) return;
+
+        if (data.hls_url) {
+            setMode("hls");
+            setVideo_url(data.hls_url);
+            setAudio_url("");
+            return;
         }
-    }, [data, video_resolution]);
+
+        if (data.progressive && data.progressive.length > 0) {
+            setMode("progressive");
+            const options = data.progressive.map((f) => f.resolution).filter(Boolean);
+            setQualityoptions(options.length > 0 ? options : ["Auto"]);
+            const match = data.progressive.find((f) => f.resolution === video_resolution);
+            const chosen = match || data.progressive[0];
+            setVideo_url(chosen.url);
+            setAudio_url("");
+            return;
+        }
+
+        if (data.adaptive && data.adaptive.video && data.adaptive.video.length > 0) {
+            setMode("adaptive");
+            const options = data.adaptive.video.map((f) => f.resolution).filter(Boolean);
+            setQualityoptions(options.length > 0 ? options : ["Auto"]);
+            const match = data.adaptive.video.find((f) => f.resolution === video_resolution);
+            const chosenVideo = match || data.adaptive.video[0];
+            const chosenAudio = data.adaptive.audio && data.adaptive.audio[0];
+            setVideo_url(chosenVideo.url);
+            setAudio_url(chosenAudio ? chosenAudio.url : "");
+            return;
+        }
+
+        setMode(null);
+    }, [data, video_resolution, isUploaded]);
 
     const handleQualityChange = (option) => {
         setVideo_resolution(parseInt(option));
@@ -269,6 +290,7 @@ const Watch = (params) => {
                             </div>
                         ) : (
                             <Videoplayer
+                                mode={mode}
                                 streamUrl={video_url}
                                 audioUrl={audio_url}
                                 type="video"
