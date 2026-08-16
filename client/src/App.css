@@ -16,6 +16,7 @@
     margin-top: 60px;
     height: calc(100vh - 60px);
     overflow: hidden;
+    min-width: 0;
 }
 
 .menu {
@@ -31,11 +32,14 @@
 .content {
     /* margin-left: 5px; */
     width: 100%;
+    flex: 1;
+    min-width: 0;
     transition: margin-left 0.3s ease;
     height: 100%;
     display: flex;
     flex-direction: column;
     overflow-y: hidden;
+    overflow-x: hidden;
     position: relative;
     z-index: 1;
 }

@@ -89,27 +89,56 @@ const Channel = (params) => {
         }
     };
 
+    const isInitialLoadRef = React.useRef(true);
+
     useEffect(() => {
         setVideos({ videos: [] });
         setpage_no(1);
         setHasMore(true);
-    }, [typeShort, refresh, channel_id]);
+        isInitialLoadRef.current = true;
 
-    useEffect(() => {
-        if (loadingMore || !hasMore) return;
-        setLoadingMore(true);
-        const fetchVideos = async () => {
+        let cancelled = false;
+        const fetchInitial = async () => {
+            if (cancelled) return;
+            setLoadingMore(true);
             try {
-                const response = await videoApi.getVideosOfChannel(channel_id, typeShort, query, page_no, user.channel_id);
-                mergeVideos(response.videos || []);
+                const response = await videoApi.getVideosOfChannel(channel_id, typeShort, query, 1, user.channel_id);
+                if (!cancelled) {
+                    mergeVideos(response.videos || []);
+                }
             } catch (error) {
                 console.log("Error fetching videos:", error.message);
             } finally {
-                setLoadingMore(false);
+                if (!cancelled) {
+                    setLoadingMore(false);
+                }
+            }
+        };
+        fetchInitial();
+        return () => { cancelled = true; };
+    }, [typeShort, refresh, channel_id, query, user?.channel_id]);
+
+    useEffect(() => {
+        if (loadingMore || !hasMore || isInitialLoadRef.current) return;
+        setLoadingMore(true);
+        let cancelled = false;
+        const fetchVideos = async () => {
+            try {
+                const response = await videoApi.getVideosOfChannel(channel_id, typeShort, query, page_no, user.channel_id);
+                if (!cancelled) {
+                    mergeVideos(response.videos || []);
+                }
+            } catch (error) {
+                console.log("Error fetching videos:", error.message);
+            } finally {
+                if (!cancelled) {
+                    setLoadingMore(false);
+                }
             }
         };
         fetchVideos();
-    }, [typeShort, refresh, channel_id, page_no, user, query]);
+        return () => { cancelled = true; };
+    }, [page_no, user, query]);
 
     const loadMore = () => {
         if (loadingMore || !hasMore) return;
