@@ -17,7 +17,7 @@ async function initializePoMinter() {
     const innertube = await Innertube.create({ cache: new UniversalCache(true) });
 
     const challengeResponse = await innertube.getAttestationChallenge('ENGAGEMENT_TYPE_UNBOUND');
-    if (!challengeResponse.bgChallenge) {
+    if (!challengeResponse || !challengeResponse.bgChallenge) {
         throw new Error('Could not get attestation challenge from InnerTube');
     }
 
