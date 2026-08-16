@@ -1,11 +1,14 @@
 .outer {
     width: 100%;
+    max-width: 100%;
     flex: 1;
     min-height: 0;
     display: flex;
     flex-direction: column;
     overflow-y: auto;
+    overflow-x: hidden;
     background-color: var(--background-color);
+    box-sizing: border-box;
 }
 
 .outer::-webkit-scrollbar {
@@ -121,6 +124,8 @@
     top: 0;
     z-index: 100;
     flex-shrink: 0;
+    overflow-x: auto;
+    scrollbar-width: thin;
 }
 
 .menubutton {
@@ -189,12 +194,15 @@
 
 .videos {
     width: 100%;
+    max-width: 100%;
     flex: 1;
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 24px;
     padding: 30px;
     align-content: start;
+    box-sizing: border-box;
+    overflow-x: hidden;
 }
 
 .descdata {
@@ -226,7 +234,7 @@
 /* Responsive breakpoints */
 @media (min-width: 1550px) {
     .videos {
-        grid-template-columns: repeat(5, 1fr);
+        grid-template-columns: repeat(5, minmax(0, 1fr));
         padding: 40px;
     }
     .details .name {
@@ -242,7 +250,7 @@
 
 @media (min-width: 1200px) and (max-width: 1549px) {
     .videos {
-        grid-template-columns: repeat(4, 1fr);
+        grid-template-columns: repeat(4, minmax(0, 1fr));
         padding: 30px;
     }
     .details .name {
@@ -252,7 +260,7 @@
 
 @media (min-width: 992px) and (max-width: 1199px) {
     .videos {
-        grid-template-columns: repeat(3, 1fr);
+        grid-template-columns: repeat(3, minmax(0, 1fr));
         padding: 25px;
     }
     .details .name {
@@ -271,7 +279,7 @@
         gap: 20px;
     }
     .videos {
-        grid-template-columns: repeat(2, 1fr);
+        grid-template-columns: repeat(2, minmax(0, 1fr));
         padding: 20px;
     }
     .mypic {
@@ -295,7 +303,7 @@
         align-items: flex-start;
     }
     .videos {
-        grid-template-columns: repeat(2, 1fr);
+        grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 15px;
         padding: 15px;
     }
