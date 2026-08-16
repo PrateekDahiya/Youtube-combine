@@ -43,6 +43,9 @@ async function initializePoMinter() {
             runScripts: 'dangerously',
             pretendToBeVisual: true,
         });
+        try {
+            dom.window.HTMLCanvasElement.prototype.getContext = function () { return null; };
+        } catch (e) {}
         const scriptEl = dom.window.document.createElement('script');
         scriptEl.textContent = interpreterJavascript;
         dom.window.document.head.appendChild(scriptEl);
