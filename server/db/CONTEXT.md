@@ -8,7 +8,7 @@ Holds the **MySQL schema** and migration SQL for the VidVault database. These fi
 
 | File | Purpose |
 |------|---------|
-| `schema.sql` | Full DDL for all tables (channels, user, videos, subscriptions, likedvideos, history, watchlater, comments). Uses `utf8mb4`, InnoDB, MySQL 8.0+ window functions. Safe to run against an empty database (every statement is `CREATE TABLE IF NOT EXISTS`). |
+| `schema.sql` | Full DDL for all tables (channels, user, videos, subscriptions, likedvideos, history, watchlater, comments, schema_migrations). Uses `utf8mb4`, InnoDB, MySQL 8.0+ window functions. Safe to run against an empty database (every statement is `CREATE TABLE IF NOT EXISTS`). |
 | `migrations/` | One-off SQL migrations applied to an existing database to bring it in line with the current schema. See `migrations/CONTEXT.md`. |
 | `AGENTS.md` | Agent-facing guide for editing schema in this directory. |
 
@@ -23,7 +23,9 @@ Holds the **MySQL schema** and migration SQL for the VidVault database. These fi
 | `likedvideos` | (`user_id`, `video_id`) | `idx_liked_video_id` | `user_id` → `channels.channel_id` (CASCADE). `video_id` → `videos.video_id` (CASCADE). |
 | `history` | (`user_id`, `video_id`) | `idx_history_video_id` | Same `user_id` convention. `watched_time` default `CURRENT_TIMESTAMP`. |
 | `watchlater` | (`user_id`, `video_id`) | `idx_watchlater_video_id` | Same convention. `added_time` default `CURRENT_TIMESTAMP`. |
+| `notifications` | `notification_id INT AUTO_INCREMENT` | `idx_notifications_user_id`, `idx_notifications_is_read`, `idx_notifications_created_at`, `idx_notifications_user_read_created` | `user_id` → `channels.channel_id` (subscriber). `video_id` → `videos.video_id`. `channel_id` → `channels.channel_id` (uploader). Stores channel_icon, thumbnail_link, title, channel_name denormalized for quick display. |
 | `comments` | `comment_id INT AUTO_INCREMENT` | `idx_comment_video_id`, `idx_comment_user_id`, `uniq_comment_external_id` | Backs `src/routes/comments.js`. Two kinds of row via `source`: `native` (app users — `user_id` set, FK to `channels`, ownership-checked on edit/delete) and `youtube` (cached real YouTube commentThreads — `user_id` NULL, `external_id`/`author_name`/`author_avatar`/`like_count` set instead). YouTube rows are populated in bulk by `fetchAndStoreVideos` (`src/youtube/index.js`) and lazily backfilled by `GET /api/youtubeComments`. `updated_at` is NULL until a native comment is edited. |
+| `schema_migrations` | `id INT AUTO_INCREMENT` | `uniq_migration_name` | Tracks applied migration files (name + SHA-256 checksum). Populated by `src/db/migrationRunner.js` on service startup. Enables Liquibase-style automatic migration execution. |
 
 ## Critical convention: `user_id` in join tables
 

@@ -1,0 +1,328 @@
+.notification-panel-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.3);
+    z-index: 1000;
+    display: flex;
+    justify-content: flex-end;
+    animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.notification-panel {
+    width: 100%;
+    max-width: 440px;
+    height: 100%;
+    background: var(--bg-primary, #fff);
+    box-shadow: -4px 0 20px rgba(0, 0, 0, 0.15);
+    display: flex;
+    flex-direction: column;
+    animation: slideIn 0.3s ease;
+    overflow: hidden;
+}
+
+@keyframes slideIn {
+    from { transform: translateX(100%); }
+    to { transform: translateX(0); }
+}
+
+body.dark .notification-panel {
+    background: var(--bg-primary, #1a1a1a);
+    border-left: 1px solid var(--border-color, #333);
+}
+
+.notification-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border-color, #e0e0e0);
+    flex-shrink: 0;
+}
+
+body.dark .notification-header {
+    border-bottom-color: var(--border-color, #333);
+}
+
+.notification-header h3 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-primary, #0f0f0f);
+}
+
+body.dark .notification-header h3 {
+    color: var(--text-primary, #fff);
+}
+
+.mark-all-read {
+    background: none;
+    border: none;
+    color: var(--link-color, #065fd4);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    padding: 6px 12px;
+    border-radius: 4px;
+    transition: background 0.2s;
+}
+
+.mark-all-read:hover {
+    background: var(--hover-bg, #f0f0f0);
+}
+
+body.dark .mark-all-read {
+    color: var(--link-color, #3ea6ff);
+}
+
+body.dark .mark-all-read:hover {
+    background: var(--hover-bg, #2a2a2a);
+}
+
+.notification-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px 0;
+}
+
+.notification-loading,
+.notification-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    padding: 40px 20px;
+    text-align: center;
+    color: var(--text-secondary, #606060);
+}
+
+body.dark .notification-loading,
+body.dark .notification-empty {
+    color: var(--text-secondary, #aaa);
+}
+
+.loading-spinner {
+    width: 32px;
+    height: 32px;
+    border: 3px solid var(--border-color, #e0e0e0);
+    border-top-color: var(--link-color, #065fd4);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 16px;
+}
+
+body.dark .loading-spinner {
+    border-color: var(--border-color, #333);
+    border-top-color: var(--link-color, #3ea6ff);
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.notification-empty img {
+    width: 80px;
+    height: 80px;
+    opacity: 0.6;
+    margin-bottom: 16px;
+}
+
+.notification-empty p {
+    font-size: 16px;
+    font-weight: 500;
+    margin: 0 0 8px;
+    color: var(--text-primary, #0f0f0f);
+}
+
+body.dark .notification-empty p {
+    color: var(--text-primary, #fff);
+}
+
+.notification-empty span {
+    font-size: 13px;
+    color: var(--text-secondary, #606060);
+    max-width: 280px;
+    line-height: 1.4;
+}
+
+body.dark .notification-empty span {
+    color: var(--text-secondary, #aaa);
+}
+
+.notification-item {
+    display: flex;
+    gap: 12px;
+    padding: 12px 16px;
+    cursor: pointer;
+    transition: background 0.15s;
+    border-left: 3px solid transparent;
+}
+
+.notification-item:hover {
+    background: var(--hover-bg, #f9f9f9);
+}
+
+body.dark .notification-item:hover {
+    background: var(--hover-bg, #252525);
+}
+
+.notification-item.unread {
+    background: var(--unread-bg, #f0f7ff);
+    border-left-color: var(--link-color, #065fd4);
+}
+
+body.dark .notification-item.unread {
+    background: var(--unread-bg, #1a2a3a);
+    border-left-color: var(--link-color, #3ea6ff);
+}
+
+.notification-avatar {
+    flex-shrink: 0;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    overflow: hidden;
+}
+
+.notification-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.notification-content {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.notification-main {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.notification-title-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+}
+
+.notification-title {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-primary, #0f0f0f);
+    line-height: 1.3;
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+body.dark .notification-title {
+    color: var(--text-primary, #fff);
+}
+
+.notification-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--link-color, #065fd4);
+    flex-shrink: 0;
+    margin-top: 3px;
+}
+
+.notification-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    font-size: 12px;
+    color: var(--text-secondary, #606060);
+}
+
+body.dark .notification-meta {
+    color: var(--text-secondary, #aaa);
+}
+
+.notification-channel {
+    font-weight: 500;
+}
+
+.notification-type {
+    background: var(--tag-bg, #f0f0f0);
+    color: var(--text-secondary, #606060);
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-size: 11px;
+    font-weight: 500;
+    text-transform: capitalize;
+}
+
+body.dark .notification-type {
+    background: var(--tag-bg, #2a2a2a);
+    color: var(--text-secondary, #aaa);
+}
+
+.notification-time {
+    color: var(--text-tertiary, #909090);
+}
+
+body.dark .notification-time {
+    color: var(--text-tertiary, #777);
+}
+
+.notification-thumbnail {
+    width: 160px;
+    height: 90px;
+    flex-shrink: 0;
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.notification-thumbnail img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.2s;
+}
+
+.notification-item:hover .notification-thumbnail img {
+    transform: scale(1.02);
+}
+
+.load-more-btn {
+    width: 100%;
+    padding: 14px;
+    background: none;
+    border: none;
+    border-top: 1px solid var(--border-color, #e0e0e0);
+    color: var(--link-color, #065fd4);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+body.dark .load-more-btn {
+    border-top-color: var(--border-color, #333);
+    color: var(--link-color, #3ea6ff);
+}
+
+.load-more-btn:hover {
+    background: var(--hover-bg, #f0f0f0);
+}
+
+body.dark .load-more-btn:hover {
+    background: var(--hover-bg, #2a2a2a);
+}

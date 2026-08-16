@@ -1,14 +1,10 @@
--- Schema for the YouTube-clone MySQL database.
--- Reverse-engineered from every query in server.js / videos.js / relatedvideos.js.
--- Requires MySQL 8.0+ (uses window functions in the related-videos query).
--- Run against a fresh database, e.g.: mysql -h <host> -u <user> -p <database> < schema.sql
+-- Migration 008: Initial schema
+-- Creates all base tables from schema.sql for empty databases.
+-- This migration is idempotent - safe to run multiple times.
 
 SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS = 0;
 
--- ---------------------------------------------------------------------------
--- channels
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS channels (
     channel_id      VARCHAR(32)   NOT NULL,
     channel_name    VARCHAR(255)  NULL,
@@ -27,11 +23,6 @@ CREATE TABLE IF NOT EXISTS channels (
     FULLTEXT KEY ft_channels_search (channel_name, keywords, short_desc)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- ---------------------------------------------------------------------------
--- user
--- Note: user_id stores the login username (see /register), "username" stores
--- the display/full name. That naming comes straight from the existing app code.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS user (
     user_id     VARCHAR(64)   NOT NULL,
     username    VARCHAR(255)  NULL,
@@ -46,9 +37,6 @@ CREATE TABLE IF NOT EXISTS user (
         REFERENCES channels (channel_id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- ---------------------------------------------------------------------------
--- videos
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS videos (
     video_id            VARCHAR(32)   NOT NULL,
     title               VARCHAR(512)  NULL,
@@ -77,12 +65,6 @@ CREATE TABLE IF NOT EXISTS videos (
         REFERENCES channels (channel_id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- ---------------------------------------------------------------------------
--- subscriptions (join table: subscriber's own channel -> channel subscribed to)
--- Note: despite the column name, "user_id" here is the logged-in user's
--- channel_id, not user.user_id -- that's how every client call (Card.js,
--- Channel.js, Watch.js, etc.) populates it. FK points at channels, not user.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS subscriptions (
     user_id     VARCHAR(32)  NOT NULL,
     channel_id  VARCHAR(32)  NOT NULL,
@@ -95,10 +77,6 @@ CREATE TABLE IF NOT EXISTS subscriptions (
         REFERENCES channels (channel_id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- ---------------------------------------------------------------------------
--- likedvideos
--- "user_id" is the logged-in user's channel_id (see note above).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS likedvideos (
     user_id     VARCHAR(32)  NOT NULL,
     video_id    VARCHAR(32)  NOT NULL,
@@ -111,10 +89,6 @@ CREATE TABLE IF NOT EXISTS likedvideos (
         REFERENCES videos (video_id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- ---------------------------------------------------------------------------
--- history
--- "user_id" is the logged-in user's channel_id (see note above).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS history (
     user_id       VARCHAR(32)  NOT NULL,
     video_id      VARCHAR(32)  NOT NULL,
@@ -127,10 +101,6 @@ CREATE TABLE IF NOT EXISTS history (
         REFERENCES videos (video_id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- ---------------------------------------------------------------------------
--- watchlater
--- "user_id" is the logged-in user's channel_id (see note above).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS watchlater (
     user_id     VARCHAR(32)  NOT NULL,
     video_id    VARCHAR(32)  NOT NULL,
@@ -143,28 +113,6 @@ CREATE TABLE IF NOT EXISTS watchlater (
         REFERENCES videos (video_id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- ---------------------------------------------------------------------------
--- schema_migrations
--- Tracks which migration files have been applied (Liquibase-style).
--- ---------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS schema_migrations (
-    id              INT             NOT NULL AUTO_INCREMENT,
-    migration_name  VARCHAR(255)    NOT NULL,
-    checksum        VARCHAR(64)     NOT NULL,
-    applied_at      TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (id),
-    UNIQUE KEY uniq_migration_name (migration_name)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
--- ---------------------------------------------------------------------------
--- comments
--- Backs the add/edit/delete comment routes in src/routes/comments.js, AND
--- caches real YouTube commentThreads in the same table (source = 'youtube').
--- user_id is NULL for youtube-sourced rows (those authors aren't rows in our
--- own `channels` table); author_name/author_avatar/like_count/external_id
--- are only populated for youtube-sourced rows. updated_at is NULL until a
--- native comment is edited.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS comments (
     comment_id     INT           NOT NULL AUTO_INCREMENT,
     video_id       VARCHAR(32)   NOT NULL,
@@ -185,6 +133,41 @@ CREATE TABLE IF NOT EXISTS comments (
         REFERENCES channels (channel_id) ON DELETE CASCADE,
     CONSTRAINT fk_comment_video FOREIGN KEY (video_id)
         REFERENCES videos (video_id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS notifications (
+    notification_id     INT             NOT NULL AUTO_INCREMENT,
+    user_id             VARCHAR(32)     NOT NULL,
+    video_id            VARCHAR(32)     NOT NULL,
+    channel_id          VARCHAR(32)     NOT NULL,
+    type                ENUM('new_video', 'new_short') NOT NULL,
+    title               VARCHAR(512)    NULL,
+    channel_name        VARCHAR(255)    NULL,
+    channel_icon        VARCHAR(512)    NULL,
+    thumbnail_link      VARCHAR(512)    NULL,
+    upload_time         DATETIME        NULL,
+    is_read             TINYINT(1)      NOT NULL DEFAULT 0,
+    created_at          TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (notification_id),
+    KEY idx_notifications_user_id (user_id),
+    KEY idx_notifications_is_read (is_read),
+    KEY idx_notifications_created_at (created_at),
+    KEY idx_notifications_user_read_created (user_id, is_read, created_at),
+    CONSTRAINT fk_notifications_user FOREIGN KEY (user_id)
+        REFERENCES channels (channel_id) ON DELETE CASCADE,
+    CONSTRAINT fk_notifications_video FOREIGN KEY (video_id)
+        REFERENCES videos (video_id) ON DELETE CASCADE,
+    CONSTRAINT fk_notifications_channel FOREIGN KEY (channel_id)
+        REFERENCES channels (channel_id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS schema_migrations (
+    id              INT             NOT NULL AUTO_INCREMENT,
+    migration_name  VARCHAR(255)    NOT NULL,
+    checksum        VARCHAR(64)     NOT NULL,
+    applied_at      TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY uniq_migration_name (migration_name)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 SET FOREIGN_KEY_CHECKS = 1;

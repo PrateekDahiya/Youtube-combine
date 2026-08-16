@@ -7,6 +7,8 @@ const cors = require("cors");
 const compression = require("compression");
 
 const { getConnection } = require("./src/db");
+const { runMigrations } = require("./src/db/migrationRunner");
+const { startNotificationCron } = require("./src/youtube/checkNewVideos");
 const { uploadsDir } = require("./src/uploads");
 const healthRoutes = require("./src/routes/health");
 const feedRoutes = require("./src/routes/feed");
@@ -21,6 +23,7 @@ const channelRoutes = require("./src/routes/channels");
 const feedbackRoutes = require("./src/routes/feedback");
 const commentRoutes = require("./src/routes/comments");
 const streamRoutes = require("./src/routes/stream");
+const notificationRoutes = require("./src/routes/notifications");
 
 const app = express();
 const port = process.env.PORT || 5000;
@@ -42,6 +45,7 @@ app.use("/api", channelRoutes);
 app.use("/api", feedbackRoutes);
 app.use("/api", commentRoutes);
 app.use("/api", streamRoutes);
+app.use("/api", notificationRoutes);
 
 const clientBuildPath = path.join(__dirname, "../client/build");
 app.use(express.static(clientBuildPath));
@@ -63,9 +67,17 @@ app.use((err, req, res, next) => {
     });
 });
 
-const server = app.listen(port, () => {
+const server = app.listen(port, async () => {
     console.log(`Server running on port ${port}`);
     console.log(`Environment: ${process.env.NODE_ENV || "development"}`);
+
+    try {
+        await runMigrations();
+    } catch (err) {
+        console.error("Failed to run migrations, server may be in inconsistent state");
+    }
+
+    startNotificationCron();
 });
 
 server.on("error", (error) => {

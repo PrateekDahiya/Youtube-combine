@@ -142,26 +142,21 @@
     margin-right: 20px;
 }
 
-.create,
-.notifications {
-    width: 20px;
-    height: 20px;
+.create {
+    width: 40px;
+    height: 40px;
     margin-left: 10px;
     border-radius: 50%;
     filter: var(--image-filter);
     cursor: pointer;
+    transition: all 0.2s ease;
+    padding: 8px;
+    box-sizing: border-box;
 }
 
-.create:hover,
-.notifications:hover {
+.create:hover {
     background-color: var(--alt-color);
-}
-
-.profilepic {
-    border-radius: 50%;
-    margin-left: 20px;
-    width: 35px;
-    cursor: pointer;
+    transform: scale(1.05);
 }
 
 .header-guest-menu {
@@ -304,6 +299,123 @@
 }
 
 /* Responsive breakpoints */
+.notification-bell-wrapper {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.notification-bell {
+    width: 40px;
+    height: 40px;
+    margin-left: 10px;
+    border: none;
+    background-color: transparent;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px;
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+.notification-bell:hover {
+    background-color: var(--alt-color);
+    transform: scale(1.05);
+}
+
+.notification-bell:active {
+    transform: scale(0.95);
+}
+
+.notification-bell img {
+    width: 22px;
+    height: 22px;
+    filter: var(--image-filter);
+}
+
+.notification-badge {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    background: #cc0000;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    border: 2px solid var(--background-color, #fff);
+    animation: badgePulse 0.3s ease;
+}
+
+@keyframes badgePulse {
+    0% { transform: scale(0.5); opacity: 0; }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+body.dark .notification-badge {
+    border-color: var(--background-color, #1a1a1a);
+}
+
+.login-profile {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.login-profile > img,
+.login-profile > a > img,
+.login-profile > .notification-bell-wrapper,
+.login-profile > div {
+    flex-shrink: 0;
+}
+
+.create {
+    width: 40px;
+    height: 40px;
+    margin-left: 10px;
+    border-radius: 50%;
+    filter: var(--image-filter);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    padding: 8px;
+    box-sizing: border-box;
+}
+
+.create:hover {
+    background-color: var(--alt-color);
+    transform: scale(1.05);
+}
+
+.profilepic {
+    border-radius: 50%;
+    margin-left: 8px;
+    width: 35px;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+}
+
+.profilepic:hover {
+    transform: scale(1.05);
+}
+
+@media (max-width: 600px) {
+    .notification-panel {
+        max-width: 100%;
+        width: 100%;
+    }
+}
+
 @media (max-width: 400px) {
     .iconntitle p {
         display: none;
@@ -360,10 +472,21 @@
         width: 18px;
     }
 
-    .create,
-    .notifications {
-        margin-left: 5px;
-        width: 12px;
+    .create {
+        width: 28px;
+        height: 28px;
+        padding: 5px;
+        margin-left: 4px;
+    }
+    .notification-bell {
+        width: 28px;
+        height: 28px;
+        padding: 5px;
+        margin-left: 4px;
+    }
+    .notification-bell img {
+        width: 18px;
+        height: 18px;
     }
 
     .profilepic {
@@ -405,10 +528,21 @@
         margin-right: 0;
     }
 
-    .create,
-    .notifications {
-        margin-left: 8px;
-        width: 15px;
+    .create {
+        width: 32px;
+        height: 32px;
+        padding: 6px;
+        margin-left: 4px;
+    }
+    .notification-bell {
+        width: 32px;
+        height: 32px;
+        padding: 6px;
+        margin-left: 4px;
+    }
+    .notification-bell img {
+        width: 20px;
+        height: 20px;
     }
 
     .profilepic {
@@ -456,10 +590,21 @@
         margin-right: 15px;
     }
 
-    .create,
-    .notifications {
-        margin-left: 10px;
-        width: 15px;
+    .create {
+        width: 32px;
+        height: 32px;
+        padding: 6px;
+        margin-left: 6px;
+    }
+    .notification-bell {
+        width: 32px;
+        height: 32px;
+        padding: 6px;
+        margin-left: 6px;
+    }
+    .notification-bell img {
+        width: 20px;
+        height: 20px;
     }
 
     .profilepic {
@@ -495,10 +640,21 @@
         font-size: 14px;
     }
 
-    .create,
-    .notifications {
-        margin-left: 12px;
-        width: 17px;
+    .create {
+        width: 36px;
+        height: 36px;
+        padding: 7px;
+        margin-left: 8px;
+    }
+    .notification-bell {
+        width: 36px;
+        height: 36px;
+        padding: 7px;
+        margin-left: 8px;
+    }
+    .notification-bell img {
+        width: 22px;
+        height: 22px;
     }
 
     .profilepic {
@@ -517,10 +673,21 @@
         margin: 0 15px;
     }
 
-    .create,
-    .notifications {
-        margin-left: 15px;
-        width: 19px;
+    .create {
+        width: 38px;
+        height: 38px;
+        padding: 8px;
+        margin-left: 10px;
+    }
+    .notification-bell {
+        width: 38px;
+        height: 38px;
+        padding: 8px;
+        margin-left: 10px;
+    }
+    .notification-bell img {
+        width: 22px;
+        height: 22px;
     }
 
     .profilepic {
@@ -535,10 +702,21 @@
         margin: 0 20px;
     }
 
-    .create,
-    .notifications {
-        margin-left: 20px;
-        width: 20px;
+    .create {
+        width: 40px;
+        height: 40px;
+        padding: 8px;
+        margin-left: 12px;
+    }
+    .notification-bell {
+        width: 40px;
+        height: 40px;
+        padding: 8px;
+        margin-left: 12px;
+    }
+    .notification-bell img {
+        width: 22px;
+        height: 22px;
     }
 
     .profilepic {

@@ -13,6 +13,8 @@ A collection of **one-off SQL migrations** that take an already-provisioned data
 | `003_fulltext_search.sql` | Adds FULLTEXT indexes `ft_videos_search` (title, tags, video_description) on `videos` and `ft_channels_search` (channel_name, keywords, short_desc) on `channels` so `/api/search` can use `MATCH ... AGAINST` instead of leading-wildcard `LIKE`. Requires MySQL 8.0+ InnoDB. Assumptions: `videos` and `channels` tables exist. |
 | `004_add_comment_updated_at.sql` | Adds `comments.updated_at` (NULL, `ON UPDATE CURRENT_TIMESTAMP`) so an edited comment can be distinguished from an untouched one. Assumptions: `comments` table exists. |
 | `005_add_youtube_comment_columns.sql` | Widens `comments` so YouTube-imported comments can live alongside native ones: `user_id` becomes nullable, adds `source` (`native`/`youtube`), `external_id` (YouTube's own comment id, unique), `author_name`, `author_avatar`, `like_count`. Populated during `fetchAndStoreVideos` and backfilled lazily by `GET /api/youtubeComments`. Assumptions: `comments` table exists with migration 004 applied. |
+| `006_add_migration_tracking.sql` | Creates `schema_migrations` table to track applied migrations (checksum-based, like Liquibase/Flyway). Enables automatic migration execution on service startup via `src/db/migrationRunner.js`. Assumptions: `schema.sql` applied. |
+| `007_add_notifications_table.sql` | Adds `notifications` table to store user notifications when subscribed channels upload new videos/shorts. Includes denormalized `channel_icon`, `thumbnail_link`, `title`, `channel_name`, `upload_time` for quick display without joins. Assumptions: `channels`, `videos`, `user` tables exist. |
 
 ## Why this migration exists
 
@@ -20,7 +22,14 @@ Historically the join tables declared `FOREIGN KEY (user_id) REFERENCES user(use
 
 ## Applying migrations
 
-Migrations are not run automatically by `server.js`. Apply them manually against the target database once:
+Migrations are **automatically executed on service startup** by `src/db/migrationRunner.js` (called from `server.js`). The runner:
+- Reads all `NNN_*.sql` files from `db/migrations/` in sorted order
+- Computes SHA-256 checksum of each file
+- Compares against `schema_migrations` table (tracks migration_name + checksum)
+- Executes only new/pending migrations in a transaction
+- Records each applied migration with its checksum
+
+For manual application (e.g., against a database that predates the tracking table):
 
 ```bash
 mysql -h <host> -P <port> -u <user> -p <database> < 001_fix_user_id_fk_target.sql
@@ -28,6 +37,11 @@ mysql -h <host> -P <port> -u <user> -p <database> < 001_fix_user_id_fk_target.sq
 
 - Each migration file should be safe to re-run only because dropping the foreign key by name is idempotent — **however** if you've changed constraint names in `schema.sql`, update the `DROP FOREIGN KEY <name>` statements accordingly.
 - Always check the current state of `SHOW CREATE TABLE <table>` before running a migration to confirm the constraint names match.
+- If applying manually, also insert a row into `schema_migrations` so the auto-runner doesn't re-apply:
+  ```sql
+  INSERT INTO schema_migrations (migration_name, checksum)
+  VALUES ('001_fix_user_id_fk_target.sql', '<sha256_of_file>');
+  ```
 
 ## Convention for adding a migration
 
