@@ -75,6 +75,7 @@
     min-height: 0;
     overflow: visible;
     box-sizing: border-box;
+    max-width: 100%;
 }
 
 .cards::-webkit-scrollbar {
