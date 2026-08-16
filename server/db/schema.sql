@@ -174,4 +174,17 @@ CREATE TABLE IF NOT EXISTS comments (
         REFERENCES videos (video_id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- ---------------------------------------------------------------------------
+-- schema_migrations
+-- Tracks which migration files have been applied (Liquibase-style).
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS schema_migrations (
+    id              INT             NOT NULL AUTO_INCREMENT,
+    migration_name  VARCHAR(255)    NOT NULL,
+    checksum        VARCHAR(64)     NOT NULL,
+    applied_at      TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY uniq_migration_name (migration_name)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 SET FOREIGN_KEY_CHECKS = 1;

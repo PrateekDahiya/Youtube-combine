@@ -6,7 +6,7 @@ const path = require("path");
 const cors = require("cors");
 const compression = require("compression");
 
-const { getConnection } = require("./src/db");
+const { getConnection, runMigrations } = require("./src/db");
 const { uploadsDir } = require("./src/uploads");
 const healthRoutes = require("./src/routes/health");
 const feedRoutes = require("./src/routes/feed");
@@ -63,9 +63,15 @@ app.use((err, req, res, next) => {
     });
 });
 
-const server = app.listen(port, () => {
+const server = app.listen(port, async () => {
     console.log(`Server running on port ${port}`);
     console.log(`Environment: ${process.env.NODE_ENV || "development"}`);
+    
+    try {
+        await runMigrations();
+    } catch (err) {
+        console.error("Failed to run migrations, server may be in inconsistent state");
+    }
 });
 
 server.on("error", (error) => {
