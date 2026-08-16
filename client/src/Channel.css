@@ -11,6 +11,11 @@
     box-sizing: border-box;
 }
 
+.banner,
+.channelinfo {
+    flex-shrink: 0;
+}
+
 .outer::-webkit-scrollbar {
     width: 10px;
     height: 10px;
