@@ -10,16 +10,23 @@ Platform.shim.eval = async (data) => {
 
 let poMinter = null;
 let poMinterExpiry = 0;
+let initPromise = null;
 const PO_TOKEN_TTL_BUFFER = 60000;
 
 async function initializePoMinter() {
-    console.log("[PO Token] Initializing PO token minter...");
-    const innertube = await Innertube.create({ cache: new UniversalCache(true) });
-
-    const challengeResponse = await innertube.getAttestationChallenge('ENGAGEMENT_TYPE_UNBOUND');
-    if (!challengeResponse || !challengeResponse.bgChallenge) {
-        throw new Error('Could not get attestation challenge from InnerTube');
+    if (initPromise) {
+        return initPromise;
     }
+
+    initPromise = (async () => {
+        console.log("[PO Token] Initializing PO token minter...");
+        const innertube = await Innertube.create({ cache: new UniversalCache(true) });
+
+        const challengeResponse = await innertube.getAttestationChallenge('ENGAGEMENT_TYPE_UNBOUND');
+        if (!challengeResponse || !challengeResponse.bgChallenge) {
+            initPromise = null;
+            throw new Error('Could not get attestation challenge from InnerTube');
+        }
 
     const interpreterUrl = challengeResponse.bgChallenge.interpreterUrl.privateDoNotAccessOrElseTrustedResourceUrlWrappedValue;
     const bgScriptResponse = await fetch(`https:${interpreterUrl}`);
@@ -59,8 +66,11 @@ async function initializePoMinter() {
     };
 
     poMinter = await WebPoMinter.create(integrityTokenData, webPoSignalOutput);
-    poMinterExpiry = Date.now() + (estimatedTtlSecs * 1000) - PO_TOKEN_TTL_BUFFER;
-    console.log("[PO Token] PO token minter initialized, expires in " + estimatedTtlSecs + "s");
+        poMinterExpiry = Date.now() + (estimatedTtlSecs * 1000) - PO_TOKEN_TTL_BUFFER;
+        console.log("[PO Token] PO token minter initialized, expires in " + estimatedTtlSecs + "s");
+    })();
+
+    return initPromise;
 }
 
 async function getPoToken(videoId) {
@@ -69,6 +79,7 @@ async function getPoToken(videoId) {
             await initializePoMinter();
         } catch (error) {
             console.error("[PO Token] Failed to initialize: " + error.message);
+            initPromise = null;
             throw error;
         }
     }
