@@ -111,14 +111,19 @@ async function initializePoMinter() {
         throw new Error('Could not load VM');
     }
 
+    console.log("[PO Token] Creating BotGuard client...");
     const botGuardClient = await BotGuardClient.create({
         program,
         globalName,
         globalObject: globalThis
     });
+    console.log("[PO Token] BotGuard client created");
 
     const webPoSignalOutput = [];
+    console.log("[PO Token] Taking snapshot...");
     const botguardResponse = await botGuardClient.snapshot({ webPoSignalOutput });
+    console.log("[PO Token] Snapshot done, webPoSignalOutput length:", webPoSignalOutput.length);
+    console.log("[PO Token] webPoSignalOutput[0] is function:", typeof webPoSignalOutput[0] === 'function');
 
     const payload = ['O43z0dpjhgX20SCx4KAo', botguardResponse];
 
@@ -130,6 +135,7 @@ async function initializePoMinter() {
 
     const integrityTokenJson = await integrityTokenResponse.json();
     const [integrityToken, estimatedTtlSecs, mintRefreshThreshold, websafeFallbackToken] = integrityTokenJson;
+    console.log("[PO Token] Integrity token received, TTL:", estimatedTtlSecs);
 
     const integrityTokenData = {
         integrityToken,
@@ -138,6 +144,7 @@ async function initializePoMinter() {
         websafeFallbackToken
     };
 
+    console.log("[PO Token] Creating WebPoMinter...");
     poMinter = await WebPoMinter.create(integrityTokenData, webPoSignalOutput);
     poMinterExpiry = Date.now() + (estimatedTtlSecs * 1000) - PO_TOKEN_TTL_BUFFER;
     console.log("[PO Token] PO token minter initialized, expires in " + estimatedTtlSecs + "s");
