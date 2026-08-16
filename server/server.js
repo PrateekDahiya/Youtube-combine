@@ -6,7 +6,8 @@ const path = require("path");
 const cors = require("cors");
 const compression = require("compression");
 
-const { getConnection, runMigrations } = require("./src/db");
+const { getConnection } = require("./src/db");
+const { runMigrations } = require("./src/db/migrationRunner");
 const { startNotificationCron } = require("./src/youtube/checkNewVideos");
 const { uploadsDir } = require("./src/uploads");
 const healthRoutes = require("./src/routes/health");

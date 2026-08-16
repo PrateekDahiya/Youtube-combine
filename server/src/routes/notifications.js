@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const connection = require("../db");
+const { getConnection } = require("../db");
 
 router.get("/notifications", (req, res) => {
     const user_id = req.query.user_id;
@@ -12,7 +12,7 @@ router.get("/notifications", (req, res) => {
     }
 
     const sql = `
-        SELECT notification_id, video_id, channel_id, type, title, channel_name, 
+        SELECT notification_id, video_id, channel_id, type, title, channel_name,
                channel_icon, thumbnail_link, upload_time, is_read, created_at
         FROM notifications
         WHERE user_id = ?
@@ -20,7 +20,7 @@ router.get("/notifications", (req, res) => {
         LIMIT ? OFFSET ?
     `;
 
-    connection.query(sql, [user_id, limit, offset], (err, results) => {
+    getConnection().query(sql, [user_id, limit, offset], (err, results) => {
         if (err) {
             console.error("Error fetching notifications:", err);
             return res.status(500).json({ error: "Failed to fetch notifications" });
@@ -38,7 +38,7 @@ router.get("/notifications/unread-count", (req, res) => {
 
     const sql = `SELECT COUNT(*) as count FROM notifications WHERE user_id = ? AND is_read = 0`;
 
-    connection.query(sql, [user_id], (err, results) => {
+    getConnection().query(sql, [user_id], (err, results) => {
         if (err) {
             console.error("Error fetching unread count:", err);
             return res.status(500).json({ error: "Failed to fetch unread count" });
@@ -52,7 +52,7 @@ router.patch("/notifications/:id/read", (req, res) => {
 
     const sql = `UPDATE notifications SET is_read = 1 WHERE notification_id = ?`;
 
-    connection.query(sql, [notificationId], (err, result) => {
+    getConnection().query(sql, [notificationId], (err, result) => {
         if (err) {
             console.error("Error marking notification as read:", err);
             return res.status(500).json({ error: "Failed to mark notification as read" });
@@ -73,7 +73,7 @@ router.patch("/notifications/read-all", (req, res) => {
 
     const sql = `UPDATE notifications SET is_read = 1 WHERE user_id = ? AND is_read = 0`;
 
-    connection.query(sql, [user_id], (err, result) => {
+    getConnection().query(sql, [user_id], (err, result) => {
         if (err) {
             console.error("Error marking all notifications as read:", err);
             return res.status(500).json({ error: "Failed to mark notifications as read" });

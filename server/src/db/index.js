@@ -47,13 +47,10 @@ function connectDatabase() {
     console.log("Database pool created");
 }
 
-const { runMigrations } = require("./migrationRunner");
-
 module.exports = {
     getConnection,
     acquireConnection,
     createNewConnection,
     createNewPromiseConnection,
     connectDatabase,
-    runMigrations,
 };
