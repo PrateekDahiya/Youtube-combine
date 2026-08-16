@@ -15,7 +15,16 @@ Platform.shim.eval = async (data) => {
 // videos have no progressive format either. MWEB does not have this
 // restriction (100% of adaptive formats came back deciphable in testing);
 // IOS is a second-choice fallback in case that changes for some videos.
-const CLIENT_FALLBACK_ORDER = [ClientType.MWEB, ClientType.IOS];
+// Additional clients (WEB_EMBEDDED, ANDROID, TV_EMBEDDED) improve success
+// rate on hosting providers like Render where some client types are blocked.
+const CLIENT_FALLBACK_ORDER = [
+    ClientType.MWEB,
+    ClientType.IOS,
+    ClientType.WEB_EMBEDDED,
+    ClientType.ANDROID,
+    ClientType.TV_EMBEDDED,
+    ClientType.WEB,
+];
 
 // One Innertube client per client type, created once and reused — creation
 // does session bootstrapping (fetching player JS, etc.) that's wasteful to
