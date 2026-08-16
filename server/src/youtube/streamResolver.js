@@ -1,22 +1,11 @@
 const { Innertube, Platform, ClientType } = require("youtubei.js");
 const vm = require("vm");
+const { getPoToken } = require("./poTokenGenerator");
 
-// youtubei.js refuses to execute YouTube's obfuscated deciphering JS unless
-// the host explicitly opts in (security-sensitive by design) — this wires up
-// Node's `vm` module as that evaluator. Without it, every signed format URL
-// fails to decipher.
 Platform.shim.eval = async (data) => {
     return vm.runInNewContext("(function(){" + data.output + "})()", {});
 };
 
-// The default WEB client is subject to YouTube's SABR streaming enforcement,
-// which — confirmed empirically against real videos — leaves adaptive
-// (video-only/audio-only) formats with no retrievable URL at all, and some
-// videos have no progressive format either. MWEB does not have this
-// restriction (100% of adaptive formats came back deciphable in testing);
-// IOS is a second-choice fallback in case that changes for some videos.
-// Additional clients (WEB_EMBEDDED, ANDROID, TV_EMBEDDED) improve success
-// rate on hosting providers like Render where some client types are blocked.
 const CLIENT_FALLBACK_ORDER = [
     ClientType.MWEB,
     ClientType.IOS,
@@ -26,9 +15,6 @@ const CLIENT_FALLBACK_ORDER = [
     ClientType.WEB,
 ];
 
-// One Innertube client per client type, created once and reused — creation
-// does session bootstrapping (fetching player JS, etc.) that's wasteful to
-// repeat per request.
 const clientPromises = new Map();
 function getClient(clientType) {
     if (!clientPromises.has(clientType)) {
@@ -48,7 +34,6 @@ async function decipherFormat(format, player) {
     };
 }
 
-// Best-effort: a single bad format shouldn't fail the whole request.
 async function decipherAll(formats, player) {
     const settled = await Promise.allSettled(
         formats.map((format) => decipherFormat(format, player))
@@ -62,7 +47,6 @@ function emptyResult(videoId) {
     return { video_id: videoId, hls_url: null, progressive: [], adaptive: { video: [], audio: [] }, extraction_ok: false };
 }
 
-// Highest bitrate first within each resolution, dedupe by resolution.
 function dedupeByResolution(list) {
     const byResolution = new Map();
     for (const item of list.sort((a, b) => (b.bitrate || 0) - (a.bitrate || 0))) {
@@ -73,9 +57,10 @@ function dedupeByResolution(list) {
     return Array.from(byResolution.values()).sort((a, b) => (b.resolution || 0) - (a.resolution || 0));
 }
 
-async function resolveWithClient(clientType, videoId) {
+async function resolveWithClient(clientType, videoId, poToken) {
     const client = await getClient(clientType);
-    const info = await client.getBasicInfo(videoId);
+    const options = poToken ? { po_token: poToken } : {};
+    const info = await client.getBasicInfo(videoId, options);
     const streamingData = info.streaming_data;
 
     if (!streamingData) {
@@ -110,11 +95,9 @@ async function resolveWithClient(clientType, videoId) {
     return result;
 }
 
-// Tries each client in CLIENT_FALLBACK_ORDER until one yields a usable
-// result — a video that's blocked/empty on one client is often fine on
-// another (see the comment on CLIENT_FALLBACK_ORDER above).
 async function resolveStream(videoId) {
     let last = emptyResult(videoId);
+
     for (const clientType of CLIENT_FALLBACK_ORDER) {
         try {
             const result = await resolveWithClient(clientType, videoId);
@@ -126,6 +109,22 @@ async function resolveStream(videoId) {
             console.log("Error resolving stream for " + videoId + " via " + clientType + ": " + error.message);
         }
     }
+
+    if (!last.extraction_ok) {
+        try {
+            console.log("Retrying with PO token for " + videoId);
+            const poToken = await getPoToken(videoId);
+            const result = await resolveWithClient(ClientType.MWEB, videoId, poToken);
+            if (result.extraction_ok) {
+                console.log("PO token succeeded for " + videoId);
+                return result;
+            }
+            last = result;
+        } catch (error) {
+            console.log("Error resolving stream for " + videoId + " with PO token: " + error.message);
+        }
+    }
+
     return last;
 }
 
