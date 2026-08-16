@@ -1,0 +1,19 @@
+{
+  "name": "stream-service",
+  "version": "1.0.0",
+  "description": "Standalone YouTube stream URL resolver service",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "license": "ISC",
+  "dependencies": {
+    "bgutils-js": "^4.0.3",
+    "canvas": "^2.11.2",
+    "compression": "^1.8.1",
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "jsdom": "^22.1.0",
+    "youtubei.js": "^18.0.0"
+  }
+}
