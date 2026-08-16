@@ -51,6 +51,7 @@ The **back-end** of VidVault: a Node.js + Express REST API, the MySQL schema, an
 | `feedback.js` | `/api` | `/api/feedback` |
 | `comments.js` | `/api` | `GET /api/comments`, `/api/addComment`, `/api/editComment`, `/api/deleteComment`, `GET /api/youtubeComments` |
 | `stream.js` | `/api` | `GET /api/stream/:videoId` — resolves a playable YouTube stream (see "Stream resolution" below) |
+| `notifications.js` | `/api` | `GET /api/notifications`, `PATCH /api/notifications/:id/read`, `PATCH /api/notifications/read-all`, `GET /api/notifications/unread-count` |
 
 ## Unified video endpoint (`POST /api/videos`)
 

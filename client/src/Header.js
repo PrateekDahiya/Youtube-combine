@@ -2,9 +2,11 @@ import React, { useContext, useEffect, useState, useRef } from "react";
 import { useLocation } from "react-router-dom";
 import { ThemeContext } from "./ThemeContext.js";
 import { Link } from "react-router-dom";
+import { notificationApi } from "./api";
 import "./Header.css";
 import "./themes.css";
 import UploadVideo from "./UploadVideo";
+import NotificationPanel from "./NotificationPanel";
 
 const defaultAvatar = "https://cdn-icons-png.flaticon.com/128/1077/1077063.png";
 
@@ -15,20 +17,29 @@ const Header = (params) => {
     const [page, setPage] = useState(locationHook.pathname);
     const user = params.user;
     const [isprofilemenu, setIsprofilemenu] = useState(false);
-    const [profilemenuhover, setProfilemenuhover] = useState(false);
     const [isSearchVisible, setIsSearchVisible] = useState(false);
     const [showUpload, setShowUpload] = useState(false);
+    const [notificationsOpen, setNotificationsOpen] = useState(false);
+    const [unreadCount, setUnreadCount] = useState(0);
     const searchRef = useRef(null);
     const profileMenuRef = useRef(null);
+    const notificationBellRef = useRef(null);
 
     const toggleDropdown = () => {
         setIsprofilemenu(!isprofilemenu);
+    };
+
+    const toggleNotifications = () => {
+        setNotificationsOpen(!notificationsOpen);
     };
 
     useEffect(() => {
         const handleClickOutside = (event) => {
             if (profileMenuRef.current && !profileMenuRef.current.contains(event.target)) {
                 setIsprofilemenu(false);
+            }
+            if (notificationBellRef.current && !notificationBellRef.current.contains(event.target)) {
+                setNotificationsOpen(false);
             }
         };
 
@@ -40,6 +51,22 @@ const Header = (params) => {
         const currentpage = locationHook.pathname;
         setPage(currentpage);
     }, [locationHook]);
+
+    useEffect(() => {
+        if (user !== "Guest") {
+            const fetchUnreadCount = async () => {
+                try {
+                    const response = await notificationApi.getUnreadCount(user.channel_id);
+                    setUnreadCount(response.count || 0);
+                } catch (error) {
+                    console.error("Error fetching unread count:", error);
+                }
+            };
+            fetchUnreadCount();
+            const interval = setInterval(fetchUnreadCount, 60000);
+            return () => clearInterval(interval);
+        }
+    }, [user]);
 
     const handleSearch = async (e) => {
         e.preventDefault();
@@ -124,12 +151,26 @@ const Header = (params) => {
                                 title="Create"
                                 onClick={() => setShowUpload(true)}
                             />
-                            <img
-                                className="notifications"
-                                src="https://cdn-icons-png.flaticon.com/128/2645/2645890.png"
-                                alt="Notifications"
-                                title="Notifications"
-                            />
+                            <div className="notification-bell-wrapper" ref={notificationBellRef}>
+                                <button
+                                    className="notification-bell"
+                                    onClick={toggleNotifications}
+                                    aria-label="Notifications"
+                                >
+                                    <img
+                                        src="https://cdn-icons-png.flaticon.com/128/2645/2645890.png"
+                                        alt="Notifications"
+                                    />
+                                    {unreadCount > 0 && (
+                                        <span className="notification-badge">{unreadCount > 99 ? "99+" : unreadCount}</span>
+                                    )}
+                                </button>
+                                <NotificationPanel
+                                    user={user}
+                                    isOpen={notificationsOpen}
+                                    onClose={() => setNotificationsOpen(false)}
+                                />
+                            </div>
                             <img
                                 className="profilepic"
                                 src={user.channel_icon || defaultAvatar}
@@ -140,8 +181,6 @@ const Header = (params) => {
                             <div
                                 ref={profileMenuRef}
                                 className={`dropdown-menu ${isprofilemenu ? 'show' : ''}`}
-                                onMouseEnter={() => setProfilemenuhover(true)}
-                                onMouseLeave={() => setProfilemenuhover(false)}
                             >
                                 <div className="profile-box">
                                     <img

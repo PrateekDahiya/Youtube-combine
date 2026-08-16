@@ -14,6 +14,7 @@ A collection of **one-off SQL migrations** that take an already-provisioned data
 | `004_add_comment_updated_at.sql` | Adds `comments.updated_at` (NULL, `ON UPDATE CURRENT_TIMESTAMP`) so an edited comment can be distinguished from an untouched one. Assumptions: `comments` table exists. |
 | `005_add_youtube_comment_columns.sql` | Widens `comments` so YouTube-imported comments can live alongside native ones: `user_id` becomes nullable, adds `source` (`native`/`youtube`), `external_id` (YouTube's own comment id, unique), `author_name`, `author_avatar`, `like_count`. Populated during `fetchAndStoreVideos` and backfilled lazily by `GET /api/youtubeComments`. Assumptions: `comments` table exists with migration 004 applied. |
 | `006_add_migration_tracking.sql` | Creates `schema_migrations` table to track applied migrations (checksum-based, like Liquibase/Flyway). Enables automatic migration execution on service startup via `src/db/migrationRunner.js`. Assumptions: `schema.sql` applied. |
+| `007_add_notifications_table.sql` | Adds `notifications` table to store user notifications when subscribed channels upload new videos/shorts. Includes denormalized `channel_icon`, `thumbnail_link`, `title`, `channel_name`, `upload_time` for quick display without joins. Assumptions: `channels`, `videos`, `user` tables exist. |
 
 ## Why this migration exists
 
