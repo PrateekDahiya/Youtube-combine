@@ -258,6 +258,44 @@ const VideoPlayer = (params) => {
         params.type,
     ]);
 
+    // When the stream URL changes (quality switch, fresh load), the browser
+    // doesn't always pick up the new src reliably across browsers — especially
+    // for progressive/adaptive modes where we don't recreate the element. Force
+    // a reload of both media elements so the new source actually plays.
+    useEffect(() => {
+        if (mode === "hls") return;
+        const video = videoRef.current;
+        if (!video || !streamUrl) return;
+        const previousTime = video.currentTime || 0;
+        const wasPlaying = !video.paused;
+        video.load();
+        const onLoaded = () => {
+            try {
+                video.currentTime = previousTime;
+            } catch (e) {
+                console.error("Error seeking after quality change:", e);
+            }
+            if (wasPlaying) {
+                video.play().catch((error) => {
+                    console.error("Error playing video after quality change:", error);
+                });
+            }
+            if (hasAudioElement && audioRef.current) {
+                audioRef.current.currentTime = previousTime;
+                if (wasPlaying) {
+                    audioRef.current.play().catch((error) => {
+                        console.error("Error playing audio after quality change:", error);
+                    });
+                }
+            }
+            video.removeEventListener("loadedmetadata", onLoaded);
+        };
+        video.addEventListener("loadedmetadata", onLoaded);
+        return () => {
+            video.removeEventListener("loadedmetadata", onLoaded);
+        };
+    }, [mode, streamUrl, hasAudioElement]);
+
     // Quality menu is driven by hls.js levels in "hls" mode, and by the
     // resolution list Watch.js/Shortbox.js computed server-side otherwise.
     const isHls = mode === "hls";
