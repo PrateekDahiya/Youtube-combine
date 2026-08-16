@@ -121,7 +121,7 @@ async function resolveStream(videoId) {
             }
             last = result;
         } catch (error) {
-            console.log("Error resolving stream for " + videoId + " with PO token: " + error.message);
+            console.log("PO token not available or failed for " + videoId + ": " + error.message);
         }
     }
 

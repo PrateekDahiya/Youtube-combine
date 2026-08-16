@@ -10,23 +10,16 @@ Platform.shim.eval = async (data) => {
 
 let poMinter = null;
 let poMinterExpiry = 0;
-let initPromise = null;
 const PO_TOKEN_TTL_BUFFER = 60000;
 
 async function initializePoMinter() {
-    if (initPromise) {
-        return initPromise;
+    console.log("[PO Token] Initializing PO token minter...");
+    const innertube = await Innertube.create({ cache: new UniversalCache(true) });
+
+    const challengeResponse = await innertube.getAttestationChallenge('ENGAGEMENT_TYPE_UNBOUND');
+    if (!challengeResponse || !challengeResponse.bgChallenge) {
+        throw new Error('Could not get attestation challenge from InnerTube');
     }
-
-    initPromise = (async () => {
-        console.log("[PO Token] Initializing PO token minter...");
-        const innertube = await Innertube.create({ cache: new UniversalCache(true) });
-
-        const challengeResponse = await innertube.getAttestationChallenge('ENGAGEMENT_TYPE_UNBOUND');
-        if (!challengeResponse || !challengeResponse.bgChallenge) {
-            initPromise = null;
-            throw new Error('Could not get attestation challenge from InnerTube');
-        }
 
     const interpreterUrl = challengeResponse.bgChallenge.interpreterUrl.privateDoNotAccessOrElseTrustedResourceUrlWrappedValue;
     const bgScriptResponse = await fetch(`https:${interpreterUrl}`);
@@ -66,24 +59,22 @@ async function initializePoMinter() {
     };
 
     poMinter = await WebPoMinter.create(integrityTokenData, webPoSignalOutput);
-        poMinterExpiry = Date.now() + (estimatedTtlSecs * 1000) - PO_TOKEN_TTL_BUFFER;
-        console.log("[PO Token] PO token minter initialized, expires in " + estimatedTtlSecs + "s");
-    })();
-
-    return initPromise;
+    poMinterExpiry = Date.now() + (estimatedTtlSecs * 1000) - PO_TOKEN_TTL_BUFFER;
+    console.log("[PO Token] PO token minter initialized, expires in " + estimatedTtlSecs + "s");
 }
 
 async function getPoToken(videoId) {
     if (!poMinter || Date.now() >= poMinterExpiry) {
-        try {
-            await initializePoMinter();
-        } catch (error) {
-            console.error("[PO Token] Failed to initialize: " + error.message);
-            initPromise = null;
-            throw error;
-        }
+        throw new Error("PO token minter not initialized");
     }
     return await poMinter.mintAsWebsafeString(videoId);
 }
 
-module.exports = { getPoToken, initializePoMinter };
+function initInBackground() {
+    initializePoMinter().catch((err) => {
+        console.error("[PO Token] Background init failed:", err.message);
+        setTimeout(initInBackground, 60000);
+    });
+}
+
+module.exports = { getPoToken, initializePoMinter, initInBackground };
