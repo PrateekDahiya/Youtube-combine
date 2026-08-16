@@ -43,9 +43,64 @@ async function initializePoMinter() {
             runScripts: 'dangerously',
             pretendToBeVisual: true,
         });
-        try {
-            dom.window.HTMLCanvasElement.prototype.getContext = function () { return null; };
-        } catch (e) {}
+        const mockCtx = {
+            canvas: null,
+            drawImage: () => {},
+            fillRect: () => {},
+            getImageData: () => ({ data: new Uint8ClampedArray(4), width: 1, height: 1 }),
+            putImageData: () => {},
+            measureText: () => ({ width: 0 }),
+            font: '',
+            fillStyle: '',
+            strokeStyle: '',
+            lineWidth: 1,
+            globalAlpha: 1,
+            globalCompositeOperation: 'source-over',
+            save: () => {},
+            restore: () => {},
+            scale: () => {},
+            rotate: () => {},
+            translate: () => {},
+            transform: () => {},
+            setTransform: () => {},
+            beginPath: () => {},
+            closePath: () => {},
+            moveTo: () => {},
+            lineTo: () => {},
+            quadraticCurveTo: () => {},
+            bezierCurveTo: () => {},
+            arc: () => {},
+            arcTo: () => {},
+            rect: () => {},
+            fill: () => {},
+            stroke: () => {},
+            clip: () => {},
+            isPointInPath: () => false,
+            isPointInStroke: () => false,
+            fillText: () => {},
+            strokeText: () => {},
+            createLinearGradient: () => ({ addColorStop: () => {} }),
+            createRadialGradient: () => ({ addColorStop: () => {} }),
+            createPattern: () => null,
+            createImageData: () => ({ data: new Uint8ClampedArray(4), width: 1, height: 1 }),
+            getLineDash: () => [],
+            setLineDash: () => {},
+            lineDashOffset: 0,
+            miterLimit: 10,
+            lineCap: 'butt',
+            lineJoin: 'miter',
+            direction: 'ltr',
+            textAlign: 'start',
+            textBaseline: 'alphabetic',
+            imageSmoothingEnabled: true,
+            imageSmoothingQuality: 'low',
+        };
+        dom.window.HTMLCanvasElement.prototype.getContext = function (type) {
+            if (type === '2d' || type === 'webgl' || type === 'webgl2' || type === 'bitmaprenderer') {
+                return mockCtx;
+            }
+            return null;
+        };
         const scriptEl = dom.window.document.createElement('script');
         scriptEl.textContent = interpreterJavascript;
         dom.window.document.head.appendChild(scriptEl);
@@ -97,7 +152,7 @@ async function getPoToken(videoId) {
 
 function initInBackground() {
     initializePoMinter().catch((err) => {
-        console.error("[PO Token] Background init failed:", err.message);
+        console.error("[PO Token] Background init failed:", err);
         setTimeout(initInBackground, 60000);
     });
 }
