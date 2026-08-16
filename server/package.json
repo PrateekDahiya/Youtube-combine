@@ -26,7 +26,6 @@
         "express-session": "^1.18.0",
         "flask": "^0.2.10",
         "googleapis": "^140.0.1",
-        "jsdom": "^30.0.1",
         "mongodb": "^6.5.0",
         "mongoose": "^8.2.3",
         "mssql": "^10.0.2",
