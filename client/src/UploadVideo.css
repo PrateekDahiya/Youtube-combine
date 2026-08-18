@@ -246,3 +246,73 @@
         padding: 24px 16px;
     }
 }
+
+/* Very small screens (320px - 359px) */
+@media (max-width: 359px) {
+    .upload-form {
+        gap: 14px;
+    }
+    .upload-field {
+        gap: 6px;
+    }
+    .upload-field label {
+        font-size: 12px;
+    }
+    .upload-field input[type="text"],
+    .upload-field textarea,
+    .upload-field select {
+        padding: 10px 12px;
+        font-size: 13px;
+        border-radius: 8px;
+        min-height: 44px;
+    }
+    .upload-field textarea {
+        min-height: 70px;
+    }
+    .dropzone {
+        padding: 20px 12px;
+        border-radius: 12px;
+    }
+    .dropzone-icon {
+        width: 40px;
+        height: 40px;
+    }
+    .dropzone-icon svg {
+        width: 20px;
+        height: 20px;
+    }
+    .dropzone-text {
+        font-size: 13px;
+    }
+    .dropzone-hint {
+        font-size: 11px;
+    }
+    .upload-preview {
+        border-radius: 8px;
+    }
+    .upload-video-preview {
+        max-height: 180px;
+    }
+    .upload-thumb-preview {
+        max-height: 120px;
+    }
+    .upload-progress-block {
+        padding: 10px 12px;
+        border-radius: 8px;
+    }
+    .upload-progress-bar {
+        height: 6px;
+    }
+    .upload-btn {
+        padding: 10px 16px;
+        font-size: 13px;
+        border-radius: 8px;
+        min-height: 44px;
+    }
+    .upload-error,
+    .upload-success {
+        padding: 8px 12px;
+        font-size: 12px;
+        border-radius: 8px;
+    }
+}

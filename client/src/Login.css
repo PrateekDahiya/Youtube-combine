@@ -281,3 +281,54 @@
         font-size: 12px;
     }
 }
+
+/* Very small screens (320px - 359px) */
+@media (max-width: 359px) {
+    .login-box {
+        padding: 10px;
+        min-height: calc(100vh - 56px);
+    }
+    .form-box {
+        padding: 12px;
+        gap: 12px;
+        border-radius: 16px;
+        border-width: 1px;
+    }
+    .form-box form {
+        gap: 10px;
+    }
+    .login-box .box-head {
+        font-size: 22px;
+        margin-bottom: 16px;
+    }
+    .register-box .box-desc {
+        font-size: 13px;
+        margin-bottom: 16px;
+    }
+    .form-box input,
+    .form-box textarea,
+    .form-box select {
+        height: 44px;
+        font-size: 13px;
+        padding: 0 12px;
+        border-radius: 8px;
+    }
+    .form-box button {
+        height: 44px;
+        font-size: 14px;
+        border-radius: 22px;
+    }
+    .login-ques {
+        font-size: 12px;
+        padding-left: 12px;
+    }
+    .error {
+        font-size: 11px;
+        padding-left: 12px;
+    }
+    .pass-eye {
+        width: 24px;
+        height: 24px;
+        right: 12px;
+    }
+}
