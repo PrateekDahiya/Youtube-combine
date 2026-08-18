@@ -25,7 +25,12 @@ const Trendings = lazy(() => import("./Trendings"));
 
 function App() {
     const [crntuser, setCrntuser] = useState("Guest");
-    const [menutype, setMenutype] = useState("Full");
+    const [menutype, setMenutype] = useState(() => {
+        if (typeof window !== "undefined") {
+            return window.innerWidth <= 767 ? "Hidden" : "Full";
+        }
+        return "Full";
+    });
     const [toggle, clickedtoggle] = useState(0);
     const [iswatchlater, setIswatchlater] = useState("true");
     const [islikedvideos, setIslikedvideos] = useState("true");
