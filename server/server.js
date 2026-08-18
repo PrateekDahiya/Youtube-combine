@@ -24,7 +24,6 @@ const feedbackRoutes = require("./src/routes/feedback");
 const commentRoutes = require("./src/routes/comments");
 const streamRoutes = require("./src/routes/stream");
 const notificationRoutes = require("./src/routes/notifications");
-const { initInBackground } = require("./src/youtube/poTokenGenerator");
 
 const app = express();
 const port = process.env.PORT || 5000;
@@ -79,7 +78,6 @@ const server = app.listen(port, async () => {
     }
 
     startNotificationCron();
-    initInBackground();
 });
 
 server.on("error", (error) => {
