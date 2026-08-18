@@ -62,15 +62,15 @@ const Shortbox = (params) => {
             return;
         }
 
-        const progressiveHasMultiple = progressiveResolutions.length > 1;
-        const adaptiveHasMultiple = adaptiveResolutions.length > 1;
-
-        if (streamData.progressive && streamData.progressive.length > 0 && (progressiveHasMultiple || !adaptiveHasMultiple)) {
+        // ALWAYS prefer progressive (muxed video+audio) when available.
+        // Adaptive (separate video+audio) fails on googlevideo.com due to CORS/headers.
+        if (streamData.progressive && streamData.progressive.length > 0) {
             setMode("progressive");
             setVideoUrl(streamData.progressive[0].url);
             return;
         }
 
+        // Fallback to adaptive only if no progressive
         if (streamData.adaptive && streamData.adaptive.video && streamData.adaptive.video.length > 0) {
             setMode("adaptive");
             setVideoUrl(streamData.adaptive.video[0].url);

@@ -227,10 +227,10 @@ const Watch = (params) => {
             ? streamData.adaptive.video.map((f) => f.resolution).filter(Boolean)
             : [];
 
-        // Use the format with more unique resolutions for quality menu
+// Use the format with more unique resolutions for quality menu
         const useAdaptiveForMenu = adaptiveResolutions.length > progressiveResolutions.length;
         const menuResolutions = useAdaptiveForMenu ? adaptiveResolutions : progressiveResolutions;
-setQualityoptions(menuResolutions.length > 0 ? menuResolutions : ["Auto"]);
+        setQualityoptions(menuResolutions.length > 0 ? menuResolutions : ["Auto"]);
 
         if (streamData.hls_url) {
             setMode("hls");
@@ -239,12 +239,9 @@ setQualityoptions(menuResolutions.length > 0 ? menuResolutions : ["Auto"]);
             return;
         }
 
-        // Prefer progressive for playback (single file, simpler), but if it
-        // has <=1 resolution and adaptive has more, use adaptive instead.
-        const progressiveHasMultiple = progressiveResolutions.length > 1;
-        const adaptiveHasMultiple = adaptiveResolutions.length > 1;
-
-        if (streamData.progressive && streamData.progressive.length > 0 && (progressiveHasMultiple || !adaptiveHasMultiple)) {
+        // ALWAYS prefer progressive (muxed video+audio) when available.
+        // Adaptive (separate video+audio) fails on googlevideo.com due to CORS/headers.
+        if (streamData.progressive && streamData.progressive.length > 0) {
             setMode("progressive");
             const match = streamData.progressive.find((f) => f.resolution === video_resolution);
             const chosen = match || streamData.progressive[0];
@@ -253,6 +250,7 @@ setQualityoptions(menuResolutions.length > 0 ? menuResolutions : ["Auto"]);
             return;
         }
 
+        // Fallback to adaptive only if no progressive
         if (streamData.adaptive && streamData.adaptive.video && streamData.adaptive.video.length > 0) {
             setMode("adaptive");
             const match = streamData.adaptive.video.find((f) => f.resolution === video_resolution);
