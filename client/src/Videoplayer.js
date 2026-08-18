@@ -298,16 +298,20 @@ const VideoPlayer = (params) => {
 
     // Quality menu is driven by hls.js levels in "hls" mode, and by the
     // resolution list Watch.js/Shortbox.js computed server-side otherwise.
+    // In HLS mode, fall back to qualityoptions (from progressive/adaptive)
+    // if the manifest has 0 or 1 quality levels.
     const isHls = mode === "hls";
-    const qualityOptions = isHls
-        ? hlsLevels.slice().sort((a, b) => (b.height || 0) - (a.height || 0))
+    const hlsQualityLevels = hlsLevels.slice().sort((a, b) => (b.height || 0) - (a.height || 0));
+    const useHlsLevels = isHls && hlsQualityLevels.length > 1;
+    const qualityOptions = useHlsLevels
+        ? hlsQualityLevels
         : (params.qualityoptions || []).slice();
-    const activeQualityIsAuto = isHls
+    const activeQualityIsAuto = useHlsLevels
         ? hlsActiveLevel === -1
         : params.video_resolution === 0;
 
     const selectQuality = (option) => {
-        if (isHls) {
+        if (useHlsLevels) {
             if (hlsRef.current) hlsRef.current.currentLevel = option;
         } else {
             params.handleQualityChange(option);
@@ -319,7 +323,7 @@ const VideoPlayer = (params) => {
     };
 
     const selectAutoQuality = () => {
-        if (isHls) {
+        if (useHlsLevels) {
             if (hlsRef.current) hlsRef.current.currentLevel = -1;
         } else {
             params.handleQualityChange(0);
@@ -564,11 +568,11 @@ const VideoPlayer = (params) => {
                                                     {"< "} Quality
                                                 </div>
                                                 {qualityOptions.map((option) => {
-                                                    const value = isHls ? option.index : option;
-                                                    const label = isHls
+                                                    const value = useHlsLevels ? option.index : option;
+                                                    const label = useHlsLevels
                                                         ? (option.height ? option.height + "p" : "Unknown")
                                                         : (qualityOptions.length > 1 ? option + "p" : option);
-                                                    const isActive = isHls
+                                                    const isActive = useHlsLevels
                                                         ? hlsActiveLevel === option.index
                                                         : params.video_resolution === option;
                                                     return (
