@@ -198,3 +198,38 @@
         width: 120px;
     }
 }
+
+/* Very small screens (320px - 359px) */
+@media (max-width: 359px) {
+    .outer {
+        padding: 8px;
+        min-height: calc(100vh - 56px);
+    }
+    .channelinfo {
+        padding: 12px;
+        gap: 12px;
+        border-radius: 0 0 16px 16px;
+    }
+    .details .name {
+        font-size: 18px;
+    }
+    .id {
+        font-size: 14px;
+    }
+    .mebuttons {
+        gap: 8px;
+    }
+    .mebuttons button {
+        font-size: 12px;
+        padding: 6px 12px;
+        border-radius: 16px;
+        min-height: 36px;
+    }
+    .mypic {
+        height: 60px;
+    }
+    .banner img {
+        height: 100px;
+        width: 100px;
+    }
+}

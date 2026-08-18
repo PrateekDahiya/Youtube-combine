@@ -412,3 +412,60 @@
         height: 36px;
     }
 }
+
+/* Very small screens (320px - 359px) */
+@media (max-width: 359px) {
+    .outer {
+        padding: 0;
+    }
+    .banner {
+        padding: 12px 12px 0;
+    }
+    .banner img {
+        height: 120px;
+        border-radius: 0;
+    }
+    .channelinfo {
+        padding: 12px;
+        gap: 10px;
+    }
+    .mypic {
+        height: 70px;
+        width: 70px;
+    }
+    .details .name {
+        font-size: 20px;
+    }
+    .id {
+        font-size: 13px;
+    }
+    .desc {
+        font-size: 13px;
+    }
+    .subscribe {
+        width: 100%;
+        height: 36px;
+        font-size: 13px;
+    }
+    .menus {
+        padding: 6px 8px;
+        gap: 8px;
+    }
+    .menubutton {
+        font-size: 13px;
+        padding: 6px 0;
+    }
+    .channelsearch {
+        width: 140px;
+        height: 34px;
+        font-size: 13px;
+    }
+    .chlsearchbtn {
+        width: 44px;
+        height: 34px;
+    }
+    .videos {
+        gap: 12px;
+        padding: 12px;
+    }
+}
