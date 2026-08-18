@@ -34,34 +34,43 @@ function mapCategory(category) {
 }
 
 async function initiateResumableUpload(youtube, metadata) {
-    const response = await youtube.videos.insert({
-        part: ["snippet", "status"],
-        requestBody: {
-            snippet: {
-                title: metadata.title,
-                description: metadata.description,
-                tags: metadata.tags ? metadata.tags.split(",").map(t => t.trim()).filter(Boolean) : [],
-                categoryId: metadata.categoryId,
+    try {
+        const response = await youtube.videos.insert({
+            part: ["snippet", "status"],
+            requestBody: {
+                snippet: {
+                    title: metadata.title,
+                    description: metadata.description,
+                    tags: metadata.tags ? metadata.tags.split(",").map(t => t.trim()).filter(Boolean) : [],
+                    categoryId: metadata.categoryId,
+                },
+                status: {
+                    privacyStatus: "unlisted",
+                    selfDeclaredMadeForKids: false,
+                    embeddable: true,
+                },
             },
-            status: {
-                privacyStatus: "unlisted",
-                selfDeclaredMadeForKids: false,
-                embeddable: true,
+        }, {
+            params: { uploadType: "resumable", notifySubscribers: false },
+            headers: {
+                "X-Upload-Content-Type": "video/*",
+                "X-Upload-Content-Length": metadata.fileSize,
             },
-        },
-    }, {
-        params: { uploadType: "resumable", notifySubscribers: false },
-        headers: {
-            "X-Upload-Content-Type": "video/*",
-            "X-Upload-Content-Length": metadata.fileSize,
-        },
-    });
+        });
 
-    const uploadUrl = response.headers.location || response.data.upload_url;
-    if (!uploadUrl) {
-        throw new Error("Failed to get resumable upload URL");
+        const uploadUrl = response.headers.location || response.data.upload_url;
+        if (!uploadUrl) {
+            throw new Error("Failed to get resumable upload URL");
+        }
+        return uploadUrl;
+    } catch (error) {
+        console.error("YouTube initiate upload error:", error.message);
+        if (error.response) {
+            console.error("YouTube error response:", JSON.stringify(error.response.data, null, 2));
+            console.error("YouTube error status:", error.response.status);
+        }
+        throw error;
     }
-    return uploadUrl;
 }
 
 async function uploadChunked(uploadUrl, filePath, fileSize, onProgress) {
@@ -120,6 +129,7 @@ async function uploadChunked(uploadUrl, filePath, fileSize, onProgress) {
                 await new Promise(r => setTimeout(r, Math.min(2 ** attempt * 1000, 64000)));
             }
         }
+        console.error("Upload chunked failed after all attempts for:", uploadMetadata.title);
 
         const rangeHeader = response?.headers?.get?.("range") || response?.headers?.get?.("Range");
         if (rangeHeader) {
@@ -205,6 +215,8 @@ async function uploadToYouTube(videoFile, thumbFile, metadata, onProgress) {
     if (onProgress) onProgress(0);
 
     const uploadUrl = await initiateResumableUpload(youtube, uploadMetadata);
+
+    console.log("YouTube upload metadata:", JSON.stringify(uploadMetadata, null, 2));
 
     const videoResource = await uploadChunked(uploadUrl, filePath, fileSize, onProgress);
 
