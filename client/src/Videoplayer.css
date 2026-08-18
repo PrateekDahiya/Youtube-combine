@@ -1,8 +1,8 @@
 .videoplayer-wrap {
     position: relative;
     width: 100%;
+    height: 75vh;  /* fixed height for video area */
     max-height: 90vh;
-    min-height: 75vh;  /* ensure visible height when parent is auto */
     border-radius: 20px;
     overflow: hidden;
     background: #000;
@@ -22,7 +22,6 @@
     width: 100%;
     height: 100%;
     object-fit: contain;
-    max-height: 75vh;
 }
 
 .video-layer .hidden-video {
