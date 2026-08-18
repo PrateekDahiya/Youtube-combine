@@ -2,16 +2,18 @@ import React, { useState, useEffect } from "react";
 import "./Shortbox.css";
 import { Link } from "react-router-dom";
 import { streamApi } from "./api";
-import Shortplayer from "./Shortplayer";
+import Videoplayer from "./Videoplayer";
 
 const defaultAvatar = "https://cdn-icons-png.flaticon.com/128/1077/1077063.png";
 
 const Shortbox = (params) => {
-    const [data, setData] = useState("");
-    const [shortdata, setShortdata] = useState(null);
-    const [stream_url, setStream_url] = useState("");
-    const [stream_mode, setStream_mode] = useState(null);
-    const [active, setActive] = useState(false);
+    const [streamData, setStreamData] = useState(null);
+    const [fetchFailed, setFetchFailed] = useState(false);
+    const [mode, setMode] = useState(null);
+    const [videoUrl, setVideoUrl] = useState("");
+    const [qualityoptions, setQualityoptions] = useState(["Auto"]);
+    const [videoResolution, setVideoResolution] = useState(0);
+    
 
     function formatNumber(num) {
         if (num >= 1000000) {
@@ -28,43 +30,90 @@ const Shortbox = (params) => {
             const fetchstreamURL = async () => {
                 try {
                     const response = await streamApi.getStream(params.short.video_id);
-                    setData(response);
+                    const data = response.data || response;
+                    setStreamData(data);
+                    setFetchFailed(data.extraction_ok === false);
                 } catch (error) {
                     console.log("Error in fetching: ", error.message);
-                    setData({ extraction_ok: false });
+                    setFetchFailed(true);
                 }
             };
             fetchstreamURL();
         }
-    }, [params.short.video_id]);
+    }, [params.short?.video_id]);
 
     useEffect(() => {
-        setActive(params.active);
-    }, [params.active, params]);
+        if (!streamData || !streamData.video_id) return;
 
-    useEffect(() => {
-        setShortdata(params.short);
-        if (data && data.hls_url) {
-            setStream_mode("hls");
-            setStream_url(data.hls_url);
-        } else if (data && data.progressive && data.progressive.length > 0) {
-            setStream_mode("progressive");
-            setStream_url(data.progressive[0].url);
-        } else {
-            setStream_mode(null);
-            setStream_url(null);
+        const progressiveResolutions = streamData.progressive
+            ? streamData.progressive.map((f) => f.resolution).filter(Boolean)
+            : [];
+        const adaptiveResolutions = streamData.adaptive?.video
+            ? streamData.adaptive.video.map((f) => f.resolution).filter(Boolean)
+            : [];
+
+        const useAdaptiveForMenu = adaptiveResolutions.length > progressiveResolutions.length;
+        const menuResolutions = useAdaptiveForMenu ? adaptiveResolutions : progressiveResolutions;
+        setQualityoptions(menuResolutions.length > 0 ? menuResolutions : ["Auto"]);
+
+        if (streamData.hls_url) {
+            setMode("hls");
+            setVideoUrl(streamData.hls_url);
+            return;
         }
-    }, [data, params.short]);
+
+        const progressiveHasMultiple = progressiveResolutions.length > 1;
+        const adaptiveHasMultiple = adaptiveResolutions.length > 1;
+
+        if (streamData.progressive && streamData.progressive.length > 0 && (progressiveHasMultiple || !adaptiveHasMultiple)) {
+            setMode("progressive");
+            setVideoUrl(streamData.progressive[0].url);
+            return;
+        }
+
+        if (streamData.adaptive && streamData.adaptive.video && streamData.adaptive.video.length > 0) {
+            setMode("adaptive");
+            setVideoUrl(streamData.adaptive.video[0].url);
+            return;
+        }
+
+        setMode(null);
+    }, [streamData]);
+
+    const handleQualityChange = (option) => {
+        setVideoResolution(parseInt(option));
+    };
+
+    const short = params.short;
 
     return (
         <div className="shortsbox">
-            <Shortplayer
-                type="short"
-                mode={stream_mode}
-                streamUrl={stream_url}
-                active={active}
-                videoId={shortdata?.video_id}
-            />
+            <div className="short-video-wrapper">
+                {fetchFailed ? (
+                    <div className="youtube-container">
+                        <iframe
+                            className="youtube-player"
+                            src={`https://www.youtube.com/embed/${short?.video_id}`}
+                            title="YouTube video player"
+                            frameBorder="0"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                            allowFullScreen
+                        ></iframe>
+                    </div>
+                ) : (
+                    <Videoplayer
+                        mode={mode}
+                        streamUrl={videoUrl}
+                        audioUrl=""
+                        type="short"
+                        muted={false}
+                        handleQualityChange={handleQualityChange}
+                        qualityoptions={qualityoptions}
+                        video_resolution={videoResolution}
+                        thumbnail={short?.thumbnail_link}
+                    />
+                )}
+            </div>
             <div className="short-btns">
                 <div className="shorts-btn">
                     <img
@@ -73,7 +122,7 @@ const Shortbox = (params) => {
                         src="https://cdn-icons-png.flaticon.com/128/739/739231.png"
                     />
                 </div>
-                <p>{shortdata ? formatNumber(shortdata.likes) : "Like"}</p>
+                <p>{short ? formatNumber(short.likes) : "Like"}</p>
 
                 <div className="shorts-btn">
                     <img
@@ -113,17 +162,17 @@ const Shortbox = (params) => {
 
                 <Link
                     to={
-                        shortdata
-                            ? `/channel?channel_id=${shortdata.channel_id}`
+                        short
+                            ? `/channel?channel_id=${short.channel_id}`
                             : ""
                     }
                     className="profile-btn"
                 >
-                    {shortdata ? (
+                    {short ? (
                         <img
                             alt="short-btn"
-                            title={shortdata.channel_name}
-                            src={shortdata.channel_icon || defaultAvatar}
+                            title={short.channel_name}
+                            src={short.channel_icon || defaultAvatar}
                             loading="lazy"
                             decoding="async"
                         />

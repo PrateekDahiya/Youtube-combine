@@ -11,7 +11,7 @@ import Comments from "./Comments";
 const defaultAvatar = "https://cdn-icons-png.flaticon.com/128/1077/1077063.png";
 
 const Watch = (params) => {
-    const [data, setData] = useState("");
+    
     const [isliked, setisliked] = useState(false);
     const [isdisliked, setIsdisliked] = useState(false);
     const [watchdata, setwatchdata] = useState({});
@@ -30,6 +30,7 @@ const Watch = (params) => {
     const [audio_url, setAudio_url] = useState("");
     const [isUploaded, setIsUploaded] = useState(false);
     const [mode, setMode] = useState(null);
+    const [streamData, setStreamData] = useState(null);
 
     const isUploadedLink = (link) =>
         !!link &&
@@ -166,8 +167,8 @@ const Watch = (params) => {
             try {
                 const response = await streamApi.getStream(watchdata.video_id);
                 if (!cancelled) {
-                    setData(response);
-                    setFetchFailed(response.extraction_ok === false);
+                    setStreamData(response.data || response);
+                    setFetchFailed((response.data?.extraction_ok ?? response.extraction_ok) === false);
                 }
             } catch (error) {
                 console.log("Error fetching stream URL:", error.message);
@@ -214,21 +215,16 @@ const Watch = (params) => {
     }, [user, watchdata]);
 
     // Picks the best available playback tier from the stream-resolver
-    // response: HLS (adaptive quality, no sync hack needed) > progressive
-    // (single muxed file, simple src swap) > adaptive video+audio (legacy
-    // dual-element sync, kept only as a fallback for videos with no
-    // progressive format). If none are populated, `mode` stays null and the
-    // fetchFailed/extraction_ok check above already routes to the iframe.
-    // Always populate qualityoptions from all available formats for the
-    // quality menu. Prefer adaptive when it offers more resolutions.
+    // Priority: HLS (adaptive quality) > progressive (single muxed) > adaptive (separate video+audio)
+    // Always populate qualityoptions from all available formats for the quality menu.
     useEffect(() => {
-        if (isUploaded || !data || !data.video_id) return;
+        if (isUploaded || !streamData || !streamData.video_id) return;
 
-        const progressiveResolutions = data.progressive
-            ? data.progressive.map((f) => f.resolution).filter(Boolean)
+        const progressiveResolutions = streamData.progressive
+            ? streamData.progressive.map((f) => f.resolution).filter(Boolean)
             : [];
-        const adaptiveResolutions = data.adaptive?.video
-            ? data.adaptive.video.map((f) => f.resolution).filter(Boolean)
+        const adaptiveResolutions = streamData.adaptive?.video
+            ? streamData.adaptive.video.map((f) => f.resolution).filter(Boolean)
             : [];
 
         // Use the format with more unique resolutions for quality menu
@@ -236,9 +232,9 @@ const Watch = (params) => {
         const menuResolutions = useAdaptiveForMenu ? adaptiveResolutions : progressiveResolutions;
         setQualityoptions(menuResolutions.length > 0 ? menuResolutions : ["Auto"]);
 
-        if (data.hls_url) {
+        if (streamData.hls_url) {
             setMode("hls");
-            setVideo_url(data.hls_url);
+            setVideo_url(streamData.hls_url);
             setAudio_url("");
             return;
         }
@@ -248,27 +244,27 @@ const Watch = (params) => {
         const progressiveHasMultiple = progressiveResolutions.length > 1;
         const adaptiveHasMultiple = adaptiveResolutions.length > 1;
 
-        if (data.progressive && data.progressive.length > 0 && (progressiveHasMultiple || !adaptiveHasMultiple)) {
+        if (streamData.progressive && streamData.progressive.length > 0 && (progressiveHasMultiple || !adaptiveHasMultiple)) {
             setMode("progressive");
-            const match = data.progressive.find((f) => f.resolution === video_resolution);
-            const chosen = match || data.progressive[0];
+            const match = streamData.progressive.find((f) => f.resolution === video_resolution);
+            const chosen = match || streamData.progressive[0];
             setVideo_url(chosen.url);
             setAudio_url("");
             return;
         }
 
-        if (data.adaptive && data.adaptive.video && data.adaptive.video.length > 0) {
+        if (streamData.adaptive && streamData.adaptive.video && streamData.adaptive.video.length > 0) {
             setMode("adaptive");
-            const match = data.adaptive.video.find((f) => f.resolution === video_resolution);
-            const chosenVideo = match || data.adaptive.video[0];
-            const chosenAudio = data.adaptive.audio && data.adaptive.audio[0];
+            const match = streamData.adaptive.video.find((f) => f.resolution === video_resolution);
+            const chosenVideo = match || streamData.adaptive.video[0];
+            const chosenAudio = streamData.adaptive.audio && streamData.adaptive.audio[0];
             setVideo_url(chosenVideo.url);
             setAudio_url(chosenAudio ? chosenAudio.url : "");
             return;
         }
 
         setMode(null);
-    }, [data, video_resolution, isUploaded]);
+    }, [streamData, video_resolution, isUploaded]);
 
     const handleQualityChange = (option) => {
         setVideo_resolution(parseInt(option));
@@ -314,6 +310,7 @@ const Watch = (params) => {
                                 qualityoptions={qualityoptions}
                                 video_resolution={video_resolution}
                                 thumbnail={watchdata.thumbnail_link}
+                                streamData={streamData}
                             />
                         )}
                     </div>

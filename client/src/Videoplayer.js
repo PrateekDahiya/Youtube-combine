@@ -3,141 +3,113 @@ import Hls from "hls.js";
 import "./Videoplayer.css";
 
 const VideoPlayer = (params) => {
-    // "hls" | "progressive" | "adaptive". Defaults to "adaptive" (the
-    // pre-existing dual video+audio sync behavior) for callers that don't
-    // pass mode yet.
-    const mode = params.mode || "adaptive";
+    const mode = params.mode || "progressive";
     const hasAudioElement = mode === "adaptive";
 
     const [muted, setMuted] = useState(false);
-    const [streamUrl, setStreamUrl] = useState("");
-    const [audioUrl, setAudioUrl] = useState("");
-    const [loop, setLoop] = useState("");
+    const [isPlaying, setIsPlaying] = useState(false);
+    const [volume, setVolume] = useState(80);
+    const [playbackSpeed, setPlaybackSpeed] = useState(1);
+    const [currentTime, setCurrentTime] = useState(0);
+    const [duration, setDuration] = useState(0);
+    const [volumeHovered, setVolumeHovered] = useState(false);
+    const [playerHovered, setPlayerHovered] = useState(false);
+    const [showPlaybackSpeed, setShowPlaybackSpeed] = useState(false);
+    const [showQuality, setShowQuality] = useState(false);
+    const [showSettings, setShowSettings] = useState(false);
+    const [hlsLevels, setHlsLevels] = useState([]);
+    const [hlsActiveLevel, setHlsActiveLevel] = useState(-1);
+    const [qualities, setQualities] = useState([]);
+    const [selectedQuality, setSelectedQuality] = useState("auto");
     const videoRef = useRef(null);
     const audioRef = useRef(null);
     const hlsRef = useRef(null);
-    const [isPlaying, setIsPlaying] = useState(false);
-    const [volume, setVolume] = useState(80);
-    const [playback_speed, setPlayback_speed] = useState(1);
-    const [currentTime, setCurrentTime] = useState(0);
-    const [duration, setDuration] = useState(0);
-    const [volumehovered, setVolumehovered] = useState(false);
-    const [playerhovered, setPlayerhovered] = useState(false);
-    const [showPlaybackspeed, setShowPlaybackspeed] = useState(false);
-    const [showQualitychange, setShowQualitychange] = useState(false);
-    const [showsettings, setShowsettings] = useState(false);
-    const [hlsLevels, setHlsLevels] = useState([]);
-    const [hlsActiveLevel, setHlsActiveLevel] = useState(-1);
-    const speeds = [0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0, 2.5, 3.0];
-
-    const speedLabels = {
-        1.0: "Normal",
-    };
     const timeoutRef = useRef(null);
 
-    const formatDuration = (seconds) => {
-        if (!seconds) return "";
+    const speeds = [0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0, 2.5, 3.0];
 
+    const formatDuration = (seconds) => {
+        if (!seconds && seconds !== 0) return "00:00";
         const hours = Math.floor(seconds / 3600);
         const minutes = Math.floor((seconds % 3600) / 60);
-        const remainingSeconds = seconds % 60;
-
+        const secs = Math.floor(seconds % 60);
         if (hours > 0) {
-            return `${hours}:${minutes
-                .toString()
-                .padStart(2, "0")}:${remainingSeconds
-                .toString()
-                .padStart(2, "0")}`;
-        } else {
-            return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
+            return `${hours}:${minutes.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
         }
+        return `${minutes}:${secs.toString().padStart(2, "0")}`;
     };
 
-    // Play/pause/seek/speed wiring. Adaptive mode drives a hidden `<video>` +
-    // separate `<audio>` kept in sync via timeupdate drift correction (the
-    // only mode that still needs this — hls/progressive are single elements
-    // where the browser/hls.js handles audio+video together natively).
+    const isHls = mode === "hls";
+    const streamUrl = params.streamUrl;
+    const audioUrl = params.audioUrl;
+
+    useEffect(() => {
+        setMuted(params.muted);
+    }, [params.muted]);
+
     useEffect(() => {
         const video = videoRef.current;
         const audio = hasAudioElement ? audioRef.current : null;
         if (!video) return;
 
         const handlePlay = () => {
-            video.play().catch((error) => {
-                console.error("Error playing video:", error);
-            });
-            if (audio) {
-                audio.play().catch((error) => {
-                    console.error("Error playing video:", error);
-                });
-                audio.muted = false;
-            }
             setIsPlaying(true);
+            if (audio) audio.muted = false;
         };
-
         const handlePause = () => {
-            video.pause();
-            if (audio) {
-                audio.pause();
-                audio.muted = true;
-            }
             setIsPlaying(false);
+            if (audio) audio.muted = true;
         };
-
-        const syncMedia = () => {
+        const handleTimeUpdate = () => {
             setCurrentTime(video.currentTime);
             if (audio && Math.abs(video.currentTime - audio.currentTime) > 0.3) {
                 audio.currentTime = video.currentTime;
             }
         };
-        const handleLoadedMetadata = () => {
-            setDuration(video.duration);
-        };
+        const handleLoadedMetadata = () => setDuration(video.duration);
 
         video.addEventListener("play", handlePlay);
         video.addEventListener("pause", handlePause);
-        video.addEventListener("timeupdate", syncMedia);
+        video.addEventListener("timeupdate", handleTimeUpdate);
         video.addEventListener("loadedmetadata", handleLoadedMetadata);
         if (audio) {
             audio.addEventListener("play", handlePlay);
             audio.addEventListener("pause", handlePause);
-            audio.addEventListener("timeupdate", syncMedia);
+            audio.addEventListener("timeupdate", handleTimeUpdate);
         }
 
         return () => {
             video.removeEventListener("play", handlePlay);
             video.removeEventListener("pause", handlePause);
-            video.removeEventListener("timeupdate", syncMedia);
+            video.removeEventListener("timeupdate", handleTimeUpdate);
             video.removeEventListener("loadedmetadata", handleLoadedMetadata);
             if (audio) {
                 audio.removeEventListener("play", handlePlay);
                 audio.removeEventListener("pause", handlePause);
-                audio.removeEventListener("timeupdate", syncMedia);
+                audio.removeEventListener("timeupdate", handleTimeUpdate);
             }
         };
     }, [hasAudioElement]);
 
-    // HLS setup/teardown — only relevant in "hls" mode. Safari plays HLS
-    // natively via <video src>, everyone else needs hls.js for MSE-backed
-    // adaptive playback.
     useEffect(() => {
-        if (mode !== "hls" || !streamUrl) return;
+        if (!isHls || !streamUrl) return;
         const video = videoRef.current;
         if (!video) return;
 
         let hls = null;
         if (Hls.isSupported()) {
-            hls = new Hls();
+            hls = new Hls({ startLevel: -1, capLevelToPlayerSize: true });
             hlsRef.current = hls;
             hls.loadSource(streamUrl);
             hls.attachMedia(video);
             hls.on(Hls.Events.MANIFEST_PARSED, (_event, data) => {
-                setHlsLevels(
-                    (data.levels || []).map((level, index) => ({
-                        index,
-                        height: level.height,
-                    }))
-                );
+                const levels = (data.levels || []).map((level, index) => ({
+                    index,
+                    height: level.height,
+                    bitrate: level.bitrate,
+                }));
+                setHlsLevels(levels);
+                setQualities(levels);
             });
             hls.on(Hls.Events.LEVEL_SWITCHED, (_event, data) => {
                 setHlsActiveLevel(data.level);
@@ -147,221 +119,145 @@ const VideoPlayer = (params) => {
         }
 
         return () => {
-            if (hls) {
-                hls.destroy();
-            }
+            if (hls) hls.destroy();
             hlsRef.current = null;
             setHlsLevels([]);
             setHlsActiveLevel(-1);
         };
-    }, [mode, streamUrl]);
+    }, [isHls, streamUrl]);
+
+    useEffect(() => {
+        if (isHls) return;
+        if (!params.qualityoptions || params.qualityoptions.length === 0) return;
+        const opts = params.qualityoptions.filter((q) => q !== "Auto" && q !== "auto");
+        if (opts.length > 0) {
+            setQualities(opts.map((q) => ({ height: parseInt(q), label: q + "p" })));
+            setSelectedQuality("auto");
+        }
+    }, [params.qualityoptions, isHls]);
+
+    useEffect(() => {
+        if (isHls) return;
+        const video = videoRef.current;
+        if (!video || !streamUrl) return;
+        const wasPlaying = !video.paused;
+        const prevTime = video.currentTime;
+        video.load();
+        const onLoaded = () => {
+            try {
+                video.currentTime = prevTime;
+            } catch (e) {
+                console.error("Seek error:", e);
+            }
+            if (wasPlaying) video.play().catch(console.error);
+            if (hasAudioElement && audioRef.current) {
+                audioRef.current.currentTime = prevTime;
+                if (wasPlaying) audioRef.current.play().catch(console.error);
+            }
+            video.removeEventListener("loadedmetadata", onLoaded);
+        };
+        video.addEventListener("loadedmetadata", onLoaded);
+        return () => video.removeEventListener("loadedmetadata", onLoaded);
+    }, [streamUrl, isHls, hasAudioElement]);
+
+    useEffect(() => {
+        if (!hasAudioElement) return;
+        const audio = audioRef.current;
+        if (!audio || !audioUrl) return;
+        audio.src = audioUrl;
+        audio.load();
+    }, [audioUrl, hasAudioElement]);
 
     const handlePlayPause = () => {
         const video = videoRef.current;
         const audio = hasAudioElement ? audioRef.current : null;
+        if (!video) return;
         if (isPlaying) {
             video.pause();
             if (audio) audio.pause();
         } else {
-            video.play().catch((error) => {
-                console.error("Error playing video:", error);
-            });
-            if (audio) {
-                audio.play().catch((error) => {
-                    console.error("Error playing audio:", error);
-                });
-            }
+            video.play().catch(console.error);
+            if (audio) audio.play().catch(console.error);
         }
     };
 
-    const handlefullscreen = () => {
+    const handleFullscreen = () => {
         const video = videoRef.current;
-        video.requestFullscreen();
-        if (!isPlaying) {
-            handlePlayPause();
-        }
+        video?.requestFullscreen();
+        if (!isPlaying) handlePlayPause();
     };
 
     const handleVolumeChange = (e) => {
         const target = hasAudioElement ? audioRef.current : videoRef.current;
-        target.volume = e.target.value / 100;
+        if (target) target.volume = e.target.value / 100;
     };
 
     const handleSpeedChange = (value) => {
         const video = videoRef.current;
         const audio = hasAudioElement ? audioRef.current : null;
-        video.playbackRate = parseFloat(value);
-        if (audio) audio.playbackRate = parseFloat(value);
-        setPlayback_speed(parseFloat(value));
+        const rate = parseFloat(value);
+        if (video) video.playbackRate = rate;
+        if (audio) audio.playbackRate = rate;
+        setPlaybackSpeed(rate);
+        setShowPlaybackSpeed(false);
     };
 
-    const handleRangeChange = (event) => {
-        const newTime = parseFloat(event.target.value);
-        videoRef.current.currentTime = newTime;
-        if (hasAudioElement) audioRef.current.currentTime = newTime;
+    const handleSeek = (e) => {
+        const video = videoRef.current;
+        const audio = hasAudioElement ? audioRef.current : null;
+        const newTime = parseFloat(e.target.value);
+        if (video) video.currentTime = newTime;
+        if (audio) audio.currentTime = newTime;
         setCurrentTime(newTime);
     };
 
-    const handlePlay = () => {
-        if (hasAudioElement) {
-            audioRef.current.muted = false;
-        }
+    const handleMouseMove = () => {
+        setPlayerHovered(true);
+        if (timeoutRef.current) clearTimeout(timeoutRef.current);
+        timeoutRef.current = setTimeout(() => setPlayerHovered(false), 2000);
     };
 
-    const handleMousemove = () => {
-        setPlayerhovered(true);
-
-        if (timeoutRef.current) {
-            clearTimeout(timeoutRef.current);
-        }
-
-        timeoutRef.current = setTimeout(() => {
-            setPlayerhovered(false);
-        }, 2000);
+    const selectHlsQuality = (level) => {
+        if (hlsRef.current) hlsRef.current.currentLevel = level;
+        setShowQuality(false);
     };
 
-    const handleShowsettings = () => {
-        setShowsettings(!showsettings);
-        setShowPlaybackspeed(false);
-        setShowQualitychange(false);
-    };
-
-    const handleshowplayspeed = () => {
-        setShowsettings(false);
-        setShowPlaybackspeed(!showPlaybackspeed);
-        setShowQualitychange(false);
-    };
-    const handleShowquality = () => {
-        setShowsettings(false);
-        setShowPlaybackspeed(false);
-        setShowQualitychange(!showQualitychange);
-    };
-
-    useEffect(() => {
-        return () => {
-            if (timeoutRef.current) {
-                clearTimeout(timeoutRef.current);
-            }
-        };
-    }, []);
-
-    useEffect(() => {
-        setMuted(params.muted);
-        setStreamUrl(params.streamUrl);
-        setAudioUrl(params.audioUrl);
-        setLoop(params.type === "short" ? true : false);
-    }, [
-        params.muted,
-        params.streamUrl,
-        params.audioUrl,
-        params.autovideo,
-        params.type,
-    ]);
-
-    // When the stream URL changes (quality switch, fresh load), the browser
-    // doesn't always pick up the new src reliably across browsers — especially
-    // for progressive/adaptive modes where we don't recreate the element. Force
-    // a reload of both media elements so the new source actually plays.
-    useEffect(() => {
-        if (mode === "hls") return;
-        const video = videoRef.current;
-        if (!video || !streamUrl) return;
-        const previousTime = video.currentTime || 0;
-        const wasPlaying = !video.paused;
-        video.load();
-        const onLoaded = () => {
-            try {
-                video.currentTime = previousTime;
-            } catch (e) {
-                console.error("Error seeking after quality change:", e);
-            }
-            if (wasPlaying) {
-                video.play().catch((error) => {
-                    console.error("Error playing video after quality change:", error);
-                });
-            }
-            if (hasAudioElement && audioRef.current) {
-                audioRef.current.currentTime = previousTime;
-                if (wasPlaying) {
-                    audioRef.current.play().catch((error) => {
-                        console.error("Error playing audio after quality change:", error);
-                    });
-                }
-            }
-            video.removeEventListener("loadedmetadata", onLoaded);
-        };
-        video.addEventListener("loadedmetadata", onLoaded);
-        return () => {
-            video.removeEventListener("loadedmetadata", onLoaded);
-        };
-    }, [mode, streamUrl, hasAudioElement]);
-
-    // Quality menu is driven by hls.js levels in "hls" mode, and by the
-    // resolution list Watch.js/Shortbox.js computed server-side otherwise.
-    // In HLS mode, fall back to qualityoptions (from progressive/adaptive)
-    // if the manifest has 0 or 1 quality levels.
-    const isHls = mode === "hls";
-    const hlsQualityLevels = hlsLevels.slice().sort((a, b) => (b.height || 0) - (a.height || 0));
-    const useHlsLevels = isHls && hlsQualityLevels.length > 1;
-    const qualityOptions = useHlsLevels
-        ? hlsQualityLevels
-        : (params.qualityoptions || []).slice();
-    const activeQualityIsAuto = useHlsLevels
-        ? hlsActiveLevel === -1
-        : params.video_resolution === 0;
-
-    const selectQuality = (option) => {
-        if (useHlsLevels) {
-            if (hlsRef.current) hlsRef.current.currentLevel = option;
-        } else {
-            params.handleQualityChange(option);
-        }
-        if (hasAudioElement) {
-            audioRef.current.muted = true;
-        }
-        setIsPlaying(false);
+    const selectProgressiveQuality = (height) => {
+        params.handleQualityChange(height);
+        setSelectedQuality(height);
+        setShowQuality(false);
     };
 
     const selectAutoQuality = () => {
-        if (useHlsLevels) {
-            if (hlsRef.current) hlsRef.current.currentLevel = -1;
+        if (isHls && hlsRef.current) {
+            hlsRef.current.currentLevel = -1;
         } else {
             params.handleQualityChange(0);
         }
-        if (hasAudioElement) {
-            audioRef.current.muted = true;
-        }
-        setIsPlaying(false);
+        setSelectedQuality("auto");
+        setShowQuality(false);
     };
 
+    const qualityOptions = isHls ? hlsLevels : qualities;
+    const activeIsAuto = isHls ? hlsActiveLevel === -1 : selectedQuality === "auto";
+
     return (
-        <div
-            className="watch-page"
-            onMouseEnter={() => {
-                handlePlay();
-            }}
-        >
-            <div
-                onClick={() => {
-                    handlePlayPause();
-                }}
-                onMouseMove={() => {
-                    handleMousemove();
-                }}
-            >
+        <div className="videoplayer-wrap" onMouseMove={handleMouseMove}>
+            <div className="video-layer" onClick={handlePlayPause}>
                 <video
                     ref={videoRef}
-                    id="myVideo"
-                    className={streamUrl !== "" ? "video" : "hidden-video"}
-                    muted={hasAudioElement ? true : muted}
+                    className={streamUrl ? "video" : "hidden-video"}
                     src={isHls ? undefined : streamUrl}
-                    loop={loop}
+                    muted={hasAudioElement ? true : muted}
+                    loop={params.type === "short"}
+                    playsInline
                 />
                 <video
-                    className={streamUrl !== "" ? "hidden-video" : "video"}
+                    className={streamUrl ? "hidden-video" : "video"}
                     src="/Assets/loading.mp4"
                     autoPlay
                     muted
+                    loop
                 />
                 {hasAudioElement && (
                     <audio
@@ -372,262 +268,114 @@ const VideoPlayer = (params) => {
                 )}
             </div>
 
-            {playerhovered ||
-            !isPlaying ||
-            showsettings ||
-            showPlaybackspeed ||
-            showQualitychange ? (
-                <div className="controls-videop">
-                    <div className="video-progress">
+            {(playerHovered || !isPlaying || showSettings || showPlaybackSpeed || showQuality) && (
+                <div className="controls">
+                    <div className="progress-bar">
                         <input
                             type="range"
                             min="0"
-                            max={duration}
+                            max={duration || 1}
                             step="0.1"
                             value={currentTime}
-                            onChange={handleRangeChange}
+                            onChange={handleSeek}
                         />
                     </div>
-                    <div className="controls">
-                        <div className="controls-part part1">
-                            <button
-                                onClick={() => {
-                                    handlePlayPause();
-                                }}
-                                className="control-btn"
-                            >
+
+                    <div className="controls-row">
+                        <div className="left-controls">
+                            <button className="ctrl-btn" onClick={handlePlayPause}>
                                 {isPlaying ? (
-                                    <img
-                                        src="https://cdn-icons-png.flaticon.com/128/2920/2920686.png"
-                                        alt="Pause"
-                                        title="Pause"
-                                    />
+                                    <svg viewBox="0 0 24 24" width="24" height="24"><rect x="6" y="4" width="4" height="16" /><rect x="14" y="4" width="4" height="16" /></svg>
                                 ) : (
-                                    <img
-                                        src="https://cdn-icons-png.flaticon.com/128/27/27223.png"
-                                        alt="Play"
-                                        title="Play"
-                                    />
+                                    <svg viewBox="0 0 24 24" width="24" height="24"><polygon points="5,3 19,12 5,21" /></svg>
                                 )}
                             </button>
-                            <p className="video-duration">
-                                {formatDuration(Math.round(currentTime))
-                                    ? formatDuration(Math.round(currentTime))
-                                    : "00:00"}{" "}
-                                /{" "}
-                                {formatDuration(Math.round(duration))
-                                    ? formatDuration(Math.round(duration))
-                                    : "00:00"}
-                            </p>
+                            <span className="time">{formatDuration(currentTime)} / {formatDuration(duration)}</span>
 
-                            <div className="volume-range">
-                                <div
-                                    onMouseEnter={() => {
-                                        setVolumehovered(true);
-                                    }}
-                                    onMouseLeave={() => {
-                                        setVolumehovered(false);
-                                    }}
-                                    className="volume-div"
-                                >
-                                    {volume < 5 ? (
-                                        <img
-                                            src="https://cdn-icons-png.flaticon.com/128/7640/7640162.png"
-                                            alt="Volume"
-                                            title="Muted"
-                                            className="volume-icon"
-                                        />
+                            <div className="volume-control">
+                                <button className="ctrl-btn" onClick={() => setMuted(!muted)}>
+                                    {muted || volume === 0 ? (
+                                        <svg viewBox="0 0 24 24" width="20" height="20"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z" /></svg>
+                                    ) : volume < 50 ? (
+                                        <svg viewBox="0 0 24 24" width="20" height="20"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z" /></svg>
                                     ) : (
-                                        <img
-                                            src="https://cdn-icons-png.flaticon.com/128/4024/4024628.png"
-                                            alt="Volume"
-                                            title="Volume"
-                                            className="volume-icon"
-                                        />
+                                        <svg viewBox="0 0 24 24" width="20" height="20"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z" /></svg>
                                     )}
-                                </div>
-
-                                {volumehovered ? (
+                                </button>
+                                {volumeHovered && (
                                     <input
                                         type="range"
                                         min="0"
                                         max="100"
-                                        step="1"
                                         value={volume}
-                                        onChange={(e) => {
-                                            setVolume(e.target.value);
-                                            handleVolumeChange(e);
-                                        }}
-                                        onMouseEnter={() => {
-                                            setVolumehovered(true);
-                                        }}
-                                        onMouseLeave={() => {
-                                            setVolumehovered(false);
-                                        }}
+                                        onChange={(e) => { setVolume(e.target.value); handleVolumeChange(e); }}
+                                        onMouseEnter={() => setVolumeHovered(true)}
+                                        onMouseLeave={() => setVolumeHovered(false)}
                                     />
-                                ) : null}
+                                )}
                             </div>
                         </div>
-                        <div className="controls-part part2">
-                            <div className="video-settings">
-                                <button
-                                    className="control-btn"
-                                    onClick={() => {
-                                        showsettings
-                                            ? handleShowsettings(false)
-                                            : handleShowsettings(true);
-                                    }}
-                                >
-                                    <img
-                                        src="https://cdn-icons-png.flaticon.com/128/2040/2040504.png"
-                                        title="Settings"
-                                        alt="settings"
-                                    />
+
+                        <div className="right-controls">
+                            <div className="settings-menu">
+                                <button className="ctrl-btn" onClick={() => { setShowSettings(!showSettings); setShowPlaybackSpeed(false); setShowQuality(false); }}>
+                                    <svg viewBox="0 0 24 24" width="24" height="24"><circle cx="12" cy="12" r="3" /><circle cx="19" cy="5" r="2" /><circle cx="5" cy="19" r="2" /></svg>
                                 </button>
-                                {showsettings ||
-                                showPlaybackspeed ||
-                                showQualitychange ? (
-                                    <div className="option-box">
-                                        {showsettings ? (
-                                            <>
-                                                <div className="option-head">
-                                                    Settings
-                                                </div>
-                                                <div
-                                                    className="options"
-                                                    onClick={() => {
-                                                        handleshowplayspeed();
-                                                    }}
-                                                >
-                                                    <img
-                                                        src="https://cdn-icons-png.flaticon.com/128/53/53128.png"
-                                                        alt="playback_speed"
-                                                        title="Playback speed"
-                                                        className="options-img"
-                                                    />
-                                                    Playback speed
-                                                </div>
-                                                <div
-                                                    className="options"
-                                                    onClick={() => {
-                                                        handleShowquality();
-                                                    }}
-                                                >
-                                                    <img
-                                                        src="https://cdn-icons-png.flaticon.com/128/70/70115.png"
-                                                        alt="quality"
-                                                        title="Quality"
-                                                        className="options-img"
-                                                    />
-                                                    Quality
-                                                </div>
-                                            </>
-                                        ) : showPlaybackspeed ? (
-                                            <>
-                                                <div
-                                                    className="option-head"
-                                                    onClick={() => {
-                                                        handleShowsettings();
-                                                    }}
-                                                >
-                                                    {"< "} Playback speed
-                                                </div>
-                                                {speeds.map((speed) => (
-                                                    <div
-                                                        key={speed}
-                                                        className="options"
-                                                        onClick={() =>
-                                                            handleSpeedChange(
-                                                                speed
-                                                            )
-                                                        }
-                                                    >
-                                                        <img
-                                                            className={`option-img-tick ${
-                                                                playback_speed ===
-                                                                speed
-                                                                    ? "tick"
-                                                                    : ""
-                                                            }`}
-                                                            src="https://cdn-icons-png.flaticon.com/128/3388/3388530.png"
-                                                            alt="tick"
-                                                        />
-                                                        {speedLabels[speed] ||
-                                                            speed}
-                                                    </div>
-                                                ))}
-                                            </>
-                                        ) : showQualitychange ? (
-                                            <>
-                                                <div
-                                                    className="option-head"
-                                                    onClick={() => {
-                                                        handleShowsettings();
-                                                    }}
-                                                >
-                                                    {"< "} Quality
-                                                </div>
-                                                {qualityOptions.map((option) => {
-                                                    const value = useHlsLevels ? option.index : option;
-                                                    const label = useHlsLevels
-                                                        ? (option.height ? option.height + "p" : "Unknown")
-                                                        : (qualityOptions.length > 1 ? option + "p" : option);
-                                                    const isActive = useHlsLevels
-                                                        ? hlsActiveLevel === option.index
-                                                        : params.video_resolution === option;
-                                                    return (
-                                                        <div
-                                                            key={value}
-                                                            onClick={() => selectQuality(value)}
-                                                            className="options"
-                                                        >
-                                                            <img
-                                                                className={`option-img-tick ${isActive ? "tick" : ""}`}
-                                                                src="https://cdn-icons-png.flaticon.com/128/3388/3388530.png"
-                                                                alt="tick"
-                                                            />
-                                                            {label}
-                                                        </div>
-                                                    );
-                                                })}
-                                                <div
-                                                    onClick={selectAutoQuality}
-                                                    className="options"
-                                                >
-                                                    <img
-                                                        className={`option-img-tick ${
-                                                            activeQualityIsAuto ? "tick" : ""
-                                                        }`}
-                                                        src="https://cdn-icons-png.flaticon.com/128/3388/3388530.png"
-                                                        alt="tick"
-                                                    />
-                                                    Auto
-                                                </div>
-                                            </>
-                                        ) : (
-                                            <></>
-                                        )}
+                                {showSettings && (
+                                    <div className="menu-panel">
+                                        <div className="menu-item" onClick={() => { setShowSettings(false); setShowPlaybackSpeed(true); }}>
+                                            <svg viewBox="0 0 24 24" width="20" height="20"><path d="M4 18h17v-6H4v6zm7-13.25l10 6.5-10 6.5v-13zM20 7.75V12l-6 4v-8l6-4z" /></svg>
+                                            Playback speed
+                                        </div>
+                                        <div className="menu-item" onClick={() => { setShowSettings(false); setShowQuality(true); }}>
+                                            <svg viewBox="0 0 24 24" width="20" height="20"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z" /></svg>
+                                            Quality
+                                        </div>
                                     </div>
-                                ) : null}
+                                )}
+                                {showPlaybackSpeed && (
+                                    <div className="menu-panel speed-panel">
+                                        <div className="menu-header" onClick={() => { setShowPlaybackSpeed(false); setShowSettings(true); }}>
+                                            <svg viewBox="0 0 24 24" width="20" height="20"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z" /></svg>
+                                            Playback speed
+                                        </div>
+                                        {speeds.map((speed) => (
+                                            <div key={speed} className={`menu-item ${playbackSpeed === speed ? "active" : ""}`} onClick={() => handleSpeedChange(speed)}>
+                                                {speed === 1 ? "Normal" : speed + "x"}
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                                {showQuality && (
+                                    <div className="menu-panel quality-panel">
+                                        <div className="menu-header" onClick={() => { setShowQuality(false); setShowSettings(true); }}>
+                                            <svg viewBox="0 0 24 24" width="20" height="20"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z" /></svg>
+                                            Quality
+                                        </div>
+                                        <div key="auto" className={`menu-item ${activeIsAuto ? "active" : ""}`} onClick={selectAutoQuality}>
+                                            Auto
+                                        </div>
+                                        {qualityOptions.map((opt) => {
+                                            const height = opt.height;
+                                            const label = opt.label || (height + "p");
+                                            const isActive = isHls ? hlsActiveLevel === opt.index : selectedQuality === height;
+                                            return (
+                                                <div key={opt.index ?? height} className={`menu-item ${isActive ? "active" : ""}`} onClick={() => isHls ? selectHlsQuality(opt.index) : selectProgressiveQuality(height)}>
+                                                    {label}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
                             </div>
-                            <div className="fullscreen">
-                                <button
-                                    className="control-btn"
-                                    onClick={() => {
-                                        handlefullscreen();
-                                    }}
-                                >
-                                    <img
-                                        src="https://cdn-icons-png.flaticon.com/128/3876/3876090.png"
-                                        alt="fullscreen"
-                                        title="Fullscreen"
-                                    />
-                                </button>
-                            </div>
+
+                            <button className="ctrl-btn" onClick={handleFullscreen}>
+                                <svg viewBox="0 0 24 24" width="24" height="24"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z" /></svg>
+                            </button>
                         </div>
                     </div>
                 </div>
-            ) : null}
+            )}
         </div>
     );
 };
