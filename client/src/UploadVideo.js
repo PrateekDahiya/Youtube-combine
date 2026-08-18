@@ -16,14 +16,10 @@ const UploadVideo = (params) => {
     const [videoPreview, setVideoPreview] = useState("");
     const [thumbPreview, setThumbPreview] = useState("");
     const [thumbnailLink, setThumbnailLink] = useState("");
-    const [videoId, setVideoId] = useState(null);
-    const [startingVideoUpload, setStartingVideoUpload] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState("");
     const videoInputRef = useRef(null);
     const thumbInputRef = useRef(null);
-    const videoUploadPromiseRef = useRef(null);
-    const thumbUploadPromiseRef = useRef(null);
     const user = params.user;
     const navigate = useNavigate();
     const toast = useToast();
@@ -50,35 +46,7 @@ const UploadVideo = (params) => {
         }
         setVideoFile(file);
         setVideoPreview(URL.createObjectURL(file));
-
-        // Start uploading right away — by the time the form is filled in
-        // and submitted, most (or all) of the file is already uploaded.
-        setStartingVideoUpload(true);
-        const promise = (
-            videoId
-                ? uploadApi.replaceVideo(videoId, user.channel_id, file)
-                : uploadApi
-                      .uploadVideo(file, null, {
-                          title: title.trim() || "Untitled",
-                          description,
-                          tags,
-                          category,
-                          type,
-                          user_id: user.channel_id,
-                          duration: 0,
-                      })
-                      .then((res) => {
-                          setVideoId(res.video_id);
-                          return res;
-                      })
-        )
-            .catch((err) => {
-                console.error("Video upload error:", err);
-                setError(err.message || "Video upload failed. Please try again.");
-                throw err;
-            })
-            .finally(() => setStartingVideoUpload(false));
-        videoUploadPromiseRef.current = promise;
+        e.target.value = "";
     };
 
     const onThumbChange = (e) => {
@@ -120,27 +88,31 @@ const UploadVideo = (params) => {
         setError("");
         setSubmitting(true);
         try {
-            let id = videoId;
-            if (!id && videoUploadPromiseRef.current) {
-                const res = await videoUploadPromiseRef.current;
-                id = res && res.video_id;
-            }
-            if (!id) {
-                throw new Error("Video is still preparing to upload. Please try again in a moment.");
-            }
-            if (thumbUploadPromiseRef.current) {
-                await thumbUploadPromiseRef.current.catch(() => {});
-            }
-            await videoApi.updateVideo({
-                video_id: id,
-                user_id: user.channel_id,
-                title,
+            const res = await uploadApi.uploadVideo(videoFile, thumbFile, {
+                title: title.trim() || "Untitled",
                 description,
                 tags,
                 category,
-                isShort: type,
-                thumbnail_link: thumbnailLink,
+                type,
+                user_id: user.channel_id,
+                duration: 0,
             });
+            const id = res.video_id;
+
+            if (thumbFile) {
+                const thumbRes = await uploadApi.uploadImage(thumbFile);
+                await videoApi.updateVideo({
+                    video_id: id,
+                    user_id: user.channel_id,
+                    title,
+                    description,
+                    tags,
+                    category,
+                    isShort: type,
+                    thumbnail_link: thumbRes.url,
+                });
+            }
+
             if (toast) toast.showToast("Video uploaded successfully!", "success");
             if (params.onUploaded) params.onUploaded();
             if (params.onClose) params.onClose();
@@ -206,9 +178,7 @@ const UploadVideo = (params) => {
                                 : "Click to select a video file"}
                         </span>
                         <span className="dropzone-hint">
-                            {startingVideoUpload
-                                ? "Starting upload…"
-                                : "MP4, WebM, MOV, or any format YouTube supports"}
+                            MP4, WebM, MOV, or any format YouTube supports
                         </span>
                     </div>
                     {videoPreview ? (
