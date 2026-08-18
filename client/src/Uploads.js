@@ -30,6 +30,10 @@ const getWatchPath = (u) =>
 
 const getThumb = (u) => {
     if (u.thumbnail_link) return u.thumbnail_link;
+    if (u.link && u.link.includes("youtube.com")) {
+        const videoId = u.link.match(/[?&]v=([^&]+)/)?.[1];
+        if (videoId) return `https://i.ytimg.com/vi/${videoId}/maxresdefault.jpg`;
+    }
     if (u.link && u.link.includes("res.cloudinary.com")) {
         return u.link.replace(/\.[a-zA-Z0-9]+$/, ".jpg");
     }

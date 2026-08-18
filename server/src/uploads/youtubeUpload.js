@@ -78,7 +78,7 @@ async function uploadToYouTube(videoFile, thumbFile, metadata, onProgress) {
                 categoryId: uploadMetadata.categoryId,
             },
             status: {
-                privacyStatus: "unlisted",
+                privacyStatus: "public",
                 selfDeclaredMadeForKids: false,
                 embeddable: true,
             },
