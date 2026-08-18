@@ -1,6 +1,5 @@
 const fs = require("fs");
-const { google } = require("googleapis");
-const { MediaFileUpload } = require("googleapis/build/src/apis/upload");
+const { google, MediaFileUpload } = require("googleapis");
 
 const CATEGORY_MAP = {
     "Music": "10",
