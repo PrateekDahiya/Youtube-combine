@@ -41,7 +41,7 @@ router.get("/uploadStatus", syncHandler((req, res) => {
 
 router.get("/uploadingVideos", syncHandler((req, res) => {
     const channel_id = req.query.channel_id;
-    const query = `SELECT video_id, title, upload_status, upload_progress, upload_error, thumbnail_link, link, video_description, tags, category, isShort FROM videos WHERE channel_id = ? AND (upload_status != 0 OR link LIKE 'https://res.cloudinary.com/%' OR link LIKE '/uploads/%') ORDER BY upload_time DESC LIMIT 100`;
+    const query = `SELECT video_id, title, upload_status, upload_progress, upload_error, thumbnail_link, link, video_description, tags, category, isShort FROM videos WHERE channel_id = ? AND (upload_status != 0 OR link LIKE 'https://www.youtube.com/watch?v=%' OR link LIKE 'https://res.cloudinary.com/%' OR link LIKE '/uploads/%') ORDER BY upload_time DESC LIMIT 100`;
 
     const connection = getConnection();
     connection.query(query, [channel_id], (error, results) => {
