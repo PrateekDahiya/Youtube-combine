@@ -66,11 +66,8 @@ async function uploadToYouTube(videoFile, thumbFile, metadata, onProgress) {
 
     if (onProgress) onProgress(0);
 
-    const media = {
-        mimeType: "video/*",
-        body: fs.createReadStream(filePath),
-    };
-
+    // Use googleapis built-in resumable upload via media.body stream
+    // googleapis-common handles resumable protocol automatically
     const response = await youtube.videos.insert({
         part: ["snippet", "status"],
         requestBody: {
@@ -86,8 +83,15 @@ async function uploadToYouTube(videoFile, thumbFile, metadata, onProgress) {
                 embeddable: true,
             },
         },
-        media,
-        params: { notifySubscribers: false },
+        media: {
+            mimeType: "video/*",
+            body: fs.createReadStream(filePath),
+        },
+        params: { 
+            notifySubscribers: false,
+            // Enable resumable upload for files > 5MB
+            uploadType: "resumable",
+        },
     });
 
     const videoId = response.data.id;
@@ -107,6 +111,8 @@ async function uploadToYouTube(videoFile, thumbFile, metadata, onProgress) {
             console.log("Thumbnail upload failed (using auto-generated):", thumbError.message);
         }
     }
+
+    if (onProgress) onProgress(100);
 
     return {
         videoId,
