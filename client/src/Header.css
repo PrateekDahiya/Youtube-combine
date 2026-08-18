@@ -494,17 +494,176 @@ body.dark .notification-badge {
         width: 24px;
     }
 
-    .sign_in {
-        .toogle-theme {
-            padding: 3px;
-        }
+    .toogle-theme {
+        padding: 3px;
+    }
 
-        .dropdown-menu {
-            width: calc(100vw - 20px);
-            right: 10px;
-        }
+    .dropdown-menu {
+        width: calc(100vw - 20px);
+        right: 10px;
+    }
+
+    .sign_in {
+        padding: 6px 10px;
+        gap: 6px;
+    }
+
+    .sign_in img {
+        width: 18px;
     }
 }
+
+/* 360px - 400px done */
+
+/* Very small screens (320px - 359px) */
+@media (max-width: 359px) {
+    .head {
+        padding: 4px 8px;
+        height: 56px;
+    }
+    
+    .iconntitle img {
+        width: 20px;
+    }
+    
+    .toggle-menu {
+        height: 28px;
+        width: 28px;
+        margin-right: 4px;
+    }
+    
+    .toggle-menu img {
+        width: 16px;
+    }
+    
+    .search-container {
+        max-width: 80px;
+        margin: 0 4px;
+    }
+    
+    .mobile-search-toggle {
+        width: 28px;
+        height: 28px;
+        padding: 3px;
+        margin-left: 4px;
+    }
+    
+    .mobile-search-toggle img {
+        width: 16px;
+    }
+    
+    .search-container.show {
+        background: transparent;
+    }
+    
+    .search-container.show .mobile-search-toggle {
+        display: none;
+    }
+    
+    .search-form {
+        display: none;
+        position: absolute;
+        top: 100%;
+        left: 50%;
+        transform: translateX(-50%);
+        background: var(--background-color);
+        padding: 8px;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        width: calc(100vw - 16px);
+        margin: 0 8px;
+    }
+    
+    .search-form.show {
+        display: flex;
+    }
+    
+    .create {
+        width: 24px;
+        height: 24px;
+        padding: 4px;
+        margin-left: 3px;
+    }
+    
+    .notification-bell {
+        width: 24px;
+        height: 24px;
+        padding: 4px;
+        margin-left: 3px;
+    }
+    
+    .notification-bell img {
+        width: 16px;
+        height: 16px;
+    }
+    
+    .profilepic {
+        width: 22px;
+        margin-left: 3px;
+    }
+    
+    .toogle-theme {
+        width: 28px;
+        height: 28px;
+        padding: 2px;
+    }
+    
+    .toogle-theme img {
+        width: 22px;
+        height: 22px;
+        min-width: 22px;
+        min-height: 22px;
+    }
+    
+    .sign_in {
+        padding: 4px 8px;
+        gap: 4px;
+    }
+    
+    .sign_in img {
+        width: 16px;
+    }
+    
+    .dropdown-menu {
+        width: calc(100vw - 16px);
+        right: 8px;
+        top: 56px;
+        padding: 8px;
+    }
+    
+    .profile-box {
+        padding: 8px;
+    }
+    
+    .profile-box-img {
+        width: 32px;
+        height: 32px;
+        margin-right: 8px;
+    }
+    
+    .profile-box-text {
+        font-size: 12px;
+    }
+    
+    .profile-box-text:last-child {
+        font-size: 11px;
+    }
+    
+    .dropdown-menu-item {
+        padding: 8px 10px;
+    }
+    
+    .dropdown-menu-item-text {
+        font-size: 12px;
+    }
+    
+    .dropdown-menu-item-img {
+        width: 18px;
+        height: 18px;
+        margin-right: 8px;
+    }
+}
+
+/* 360-400px handled above, 320-359px done */
 
 @media (min-width: 401px) and (max-width: 600px) {
     .head {
