@@ -229,3 +229,74 @@
         font-size: 12px;
     }
 }
+
+/* Very small screens (320px - 359px) */
+@media (max-width: 359px) {
+    .watch-page {
+        max-height: 100vh;
+    }
+    .video {
+        max-height: calc(100vh - 120px);
+        border-radius: 0;
+    }
+    .controls-videop {
+        height: 48px;
+        bottom: 0;
+        border-radius: 0;
+        background-color: rgba(0, 0, 0, 0.7);
+    }
+    .video-progress input {
+        height: 4px;
+    }
+    .control-btn {
+        width: 44px;
+        height: 44px;
+        min-width: 44px;
+    }
+    .play-btn img {
+        width: 24px;
+        height: 24px;
+    }
+    .controls {
+        padding: 0 8px;
+    }
+    .controls-part {
+        gap: 8px;
+    }
+    .option-box {
+        width: 140px;
+        bottom: 55px;
+        right: 4px;
+        border-radius: 8px;
+        padding: 6px;
+    }
+    .options {
+        padding: 4px;
+        min-height: 36px;
+    }
+    .options-img {
+        width: 18px;
+        height: 18px;
+    }
+    .tick {
+        width: 18px;
+        height: 18px;
+    }
+    .volume-range input {
+        width: 50px;
+        height: 4px;
+    }
+    .volume-icon {
+        width: 20px;
+        height: 20px;
+    }
+    .video-duration {
+        font-size: 11px;
+    }
+    .playback_speed,
+    .video-settings,
+    .video_quality,
+    .fullscreen {
+        margin-left: 4px;
+    }
+}
