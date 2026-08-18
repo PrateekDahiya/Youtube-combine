@@ -1,5 +1,5 @@
 const fs = require("fs");
-const { google, MediaFileUpload } = require("googleapis");
+const { google } = require("googleapis");
 
 const CATEGORY_MAP = {
     "Music": "10",
@@ -66,18 +66,10 @@ async function uploadToYouTube(videoFile, thumbFile, metadata, onProgress) {
 
     if (onProgress) onProgress(0);
 
-    const media = new MediaFileUpload({
-        filePath,
+    const media = {
         mimeType: "video/*",
-        resumable: true,
-        chunkSize: 256 * 1024,
-    });
-
-    media.on("progress", (evt) => {
-        if (onProgress && fileSize > 0) {
-            onProgress(Math.round((evt.bytesRead / fileSize) * 100));
-        }
-    });
+        body: fs.createReadStream(filePath),
+    };
 
     const response = await youtube.videos.insert({
         part: ["snippet", "status"],
