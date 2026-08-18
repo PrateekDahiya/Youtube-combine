@@ -169,18 +169,30 @@ async function checkProcessingStatus(youtube, videoId) {
     }
 }
 
+function sanitizeMetadata(metadata) {
+    const title = (metadata.title || "Untitled").substring(0, 100);
+    const description = (metadata.description || "").substring(0, 5000);
+    let tags = metadata.tags || "";
+    if (tags) {
+        const tagList = tags.split(",").map(t => t.trim()).filter(Boolean);
+        const limited = tagList.slice(0, 30).map(t => t.substring(0, 500));
+        tags = limited.join(", ");
+    }
+    return {
+        title,
+        description,
+        tags,
+        categoryId: mapCategory(metadata.category),
+    };
+}
+
 async function uploadToYouTube(videoFile, thumbFile, metadata, onProgress) {
     const youtube = getYouTubeClient();
     const filePath = videoFile.path;
     const fileSize = videoFile.size || fs.statSync(filePath).size;
 
-    const uploadMetadata = {
-        title: metadata.title || "Untitled",
-        description: metadata.description || "",
-        tags: metadata.tags || "",
-        categoryId: mapCategory(metadata.category),
-        fileSize,
-    };
+    const uploadMetadata = sanitizeMetadata(metadata);
+    uploadMetadata.fileSize = fileSize;
 
     if (metadata.type === "short") {
         const tagList = uploadMetadata.tags.split(",").map(t => t.trim()).filter(Boolean);
