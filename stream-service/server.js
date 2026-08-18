@@ -3,7 +3,6 @@ const cors = require("cors");
 const compression = require("compression");
 
 const { resolveStream } = require("./src/streamResolver");
-const { initInBackground } = require("./src/poTokenGenerator");
 
 const app = express();
 const port = process.env.PORT || 5001;
@@ -32,7 +31,6 @@ app.get("/api/health", (req, res) => {
 
 app.listen(port, () => {
     console.log(`Stream service running on port ${port}`);
-    initInBackground();
 });
 
 process.on("unhandledRejection", (reason) => {
