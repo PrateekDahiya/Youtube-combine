@@ -96,21 +96,6 @@ const UploadVideo = (params) => {
                 user_id: user.channel_id,
                 duration: 0,
             });
-            const id = res.video_id;
-
-            if (thumbFile) {
-                const thumbRes = await uploadApi.uploadImage(thumbFile);
-                await videoApi.updateVideo({
-                    video_id: id,
-                    user_id: user.channel_id,
-                    title,
-                    description,
-                    tags,
-                    category,
-                    isShort: type,
-                    thumbnail_link: thumbRes.url,
-                });
-            }
 
             if (toast) toast.showToast("Video uploaded successfully!", "success");
             if (params.onUploaded) params.onUploaded();
