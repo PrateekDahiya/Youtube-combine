@@ -2,9 +2,9 @@
   "name": "stream-service",
   "version": "1.0.0",
   "description": "Standalone YouTube stream URL resolver service (simple version, no PO tokens)",
-  "main": "server-simple.js",
+  "main": "server.js",
   "scripts": {
-    "start": "node server-simple.js"
+    "start": "node server.js"
   },
   "license": "ISC",
   "dependencies": {

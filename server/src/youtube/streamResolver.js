@@ -1,6 +1,5 @@
 const { Innertube, Platform, ClientType } = require("youtubei.js");
 const vm = require("vm");
-const { getPoToken } = require("./poTokenGenerator");
 
 Platform.shim.eval = async (data) => {
     return vm.runInNewContext("(function(){" + data.output + "})()", {});
@@ -57,10 +56,9 @@ function dedupeByResolution(list) {
     return Array.from(byResolution.values()).sort((a, b) => (b.resolution || 0) - (a.resolution || 0));
 }
 
-async function resolveWithClient(clientType, videoId, poToken) {
+async function resolveWithClient(clientType, videoId) {
     const client = await getClient(clientType);
-    const options = poToken ? { po_token: poToken } : {};
-    const info = await client.getBasicInfo(videoId, options);
+    const info = await client.getBasicInfo(videoId);
     const streamingData = info.streaming_data;
 
     if (!streamingData) {
@@ -107,21 +105,6 @@ async function resolveStream(videoId) {
             last = result;
         } catch (error) {
             console.log("Error resolving stream for " + videoId + " via " + clientType + ": " + error.message);
-        }
-    }
-
-    if (!last.extraction_ok) {
-        try {
-            console.log("Retrying with PO token for " + videoId);
-            const poToken = await getPoToken(videoId);
-            const result = await resolveWithClient(ClientType.MWEB, videoId, poToken);
-            if (result.extraction_ok) {
-                console.log("PO token succeeded for " + videoId);
-                return result;
-            }
-            last = result;
-        } catch (error) {
-            console.log("PO token not available or failed for " + videoId + ": " + error.message);
         }
     }
 
