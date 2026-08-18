@@ -219,8 +219,22 @@ const Watch = (params) => {
     // dual-element sync, kept only as a fallback for videos with no
     // progressive format). If none are populated, `mode` stays null and the
     // fetchFailed/extraction_ok check above already routes to the iframe.
+    // Always populate qualityoptions from all available formats for the
+    // quality menu. Prefer adaptive when it offers more resolutions.
     useEffect(() => {
         if (isUploaded || !data || !data.video_id) return;
+
+        const progressiveResolutions = data.progressive
+            ? data.progressive.map((f) => f.resolution).filter(Boolean)
+            : [];
+        const adaptiveResolutions = data.adaptive?.video
+            ? data.adaptive.video.map((f) => f.resolution).filter(Boolean)
+            : [];
+
+        // Use the format with more unique resolutions for quality menu
+        const useAdaptiveForMenu = adaptiveResolutions.length > progressiveResolutions.length;
+        const menuResolutions = useAdaptiveForMenu ? adaptiveResolutions : progressiveResolutions;
+        setQualityoptions(menuResolutions.length > 0 ? menuResolutions : ["Auto"]);
 
         if (data.hls_url) {
             setMode("hls");
@@ -229,10 +243,13 @@ const Watch = (params) => {
             return;
         }
 
-        if (data.progressive && data.progressive.length > 0) {
+        // Prefer progressive for playback (single file, simpler), but if it
+        // has <=1 resolution and adaptive has more, use adaptive instead.
+        const progressiveHasMultiple = progressiveResolutions.length > 1;
+        const adaptiveHasMultiple = adaptiveResolutions.length > 1;
+
+        if (data.progressive && data.progressive.length > 0 && (progressiveHasMultiple || !adaptiveHasMultiple)) {
             setMode("progressive");
-            const options = data.progressive.map((f) => f.resolution).filter(Boolean);
-            setQualityoptions(options.length > 0 ? options : ["Auto"]);
             const match = data.progressive.find((f) => f.resolution === video_resolution);
             const chosen = match || data.progressive[0];
             setVideo_url(chosen.url);
@@ -242,8 +259,6 @@ const Watch = (params) => {
 
         if (data.adaptive && data.adaptive.video && data.adaptive.video.length > 0) {
             setMode("adaptive");
-            const options = data.adaptive.video.map((f) => f.resolution).filter(Boolean);
-            setQualityoptions(options.length > 0 ? options : ["Auto"]);
             const match = data.adaptive.video.find((f) => f.resolution === video_resolution);
             const chosenVideo = match || data.adaptive.video[0];
             const chosenAudio = data.adaptive.audio && data.adaptive.audio[0];

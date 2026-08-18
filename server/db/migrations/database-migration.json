@@ -6,6 +6,7 @@
     "004_add_comment_updated_at.sql",
     "005_add_youtube_comment_columns.sql",
     "006_add_migration_tracking.sql",
-    "007_add_notifications_table.sql"
+    "007_add_notifications_table.sql",
+    "009_add_stream_cache_table.sql"
   ]
 }

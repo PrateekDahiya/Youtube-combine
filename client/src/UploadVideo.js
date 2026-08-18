@@ -5,9 +5,6 @@ import { useToast } from "./ToastContext";
 import Modal from "./Modal";
 import "./UploadVideo.css";
 
-const MAX_VIDEO_SIZE_MB = 100;
-const MAX_VIDEO_SIZE_BYTES = MAX_VIDEO_SIZE_MB * 1024 * 1024;
-
 const UploadVideo = (params) => {
     const [title, setTitle] = useState("");
     const [description, setDescription] = useState("");
@@ -48,13 +45,6 @@ const UploadVideo = (params) => {
         setError("");
         if (!/^video\//.test(file.type)) {
             setError("Please select a valid video file.");
-            e.target.value = "";
-            return;
-        }
-        if (file.size > MAX_VIDEO_SIZE_BYTES) {
-            setError(
-                `This video is too large to upload. Please use a file under ${MAX_VIDEO_SIZE_MB}MB.`
-            );
             e.target.value = "";
             return;
         }
@@ -218,7 +208,7 @@ const UploadVideo = (params) => {
                         <span className="dropzone-hint">
                             {startingVideoUpload
                                 ? "Starting upload…"
-                                : "MP4, WebM or MOV"}
+                                : "MP4, WebM, MOV, or any format YouTube supports"}
                         </span>
                     </div>
                     {videoPreview ? (
