@@ -262,8 +262,21 @@ useEffect(() => {
         setMode(null);
     }, [streamData, video_resolution, isUploaded]);
 
-    const handleQualityChange = (option) => {
-        setVideo_resolution(parseInt(option));
+    const handleQualityChange = (resolution, newMode, videoUrl, audioUrl) => {
+        setVideo_resolution(resolution === 0 ? 0 : parseInt(resolution));
+        if (newMode && newMode !== "auto") {
+            setMode(newMode);
+            setVideo_url(videoUrl);
+            setAudio_url(audioUrl || "");
+        } else if (resolution === 0) {
+            // Auto - reset to default progressive
+            const prog = streamData?.progressive || [];
+            if (prog.length > 0) {
+                setMode("progressive");
+                setVideo_url(prog[0].url);
+                setAudio_url("");
+            }
+        }
     };
 
     return loading ? (
@@ -302,7 +315,7 @@ useEffect(() => {
                                 audioUrl={audio_url}
                                 type="video"
                                 muted={false}
-                                handleQualityChange={handleQualityChange}
+                                onQualityChange={handleQualityChange}
                                 qualityoptions={qualityoptions}
                                 video_resolution={video_resolution}
                                 thumbnail={watchdata.thumbnail_link}

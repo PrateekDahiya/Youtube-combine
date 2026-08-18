@@ -79,8 +79,19 @@ const Shortbox = (params) => {
         setMode(null);
     }, [streamData]);
 
-    const handleQualityChange = (option) => {
-        setVideoResolution(parseInt(option));
+    const handleQualityChange = (resolution, newMode, videoUrl, audioUrl) => {
+        setVideoResolution(resolution === 0 ? 0 : parseInt(resolution));
+        if (newMode && newMode !== "auto") {
+            setMode(newMode);
+            setVideoUrl(videoUrl);
+        } else if (resolution === 0) {
+            // Auto - reset to default progressive
+            const prog = streamData?.progressive || [];
+            if (prog.length > 0) {
+                setMode("progressive");
+                setVideoUrl(prog[0].url);
+            }
+        }
     };
 
     const short = params.short;
@@ -106,10 +117,11 @@ const Shortbox = (params) => {
                         audioUrl=""
                         type="short"
                         muted={false}
-                        handleQualityChange={handleQualityChange}
+                        onQualityChange={handleQualityChange}
                         qualityoptions={qualityoptions}
                         video_resolution={videoResolution}
                         thumbnail={short?.thumbnail_link}
+                        streamData={streamData}
                     />
                 )}
             </div>

@@ -5,6 +5,7 @@ import "./Videoplayer.css";
 const VideoPlayer = (params) => {
     const mode = params.mode || "progressive";
     const hasAudioElement = mode === "adaptive";
+    const streamData = params.streamData || {};
 
     const [muted, setMuted] = useState(false);
     const [isPlaying, setIsPlaying] = useState(false);
@@ -223,7 +224,29 @@ const VideoPlayer = (params) => {
     };
 
     const selectProgressiveQuality = (height) => {
-        params.handleQualityChange(height);
+        const prog = streamData.progressive || [];
+        const adapt = streamData.adaptive?.video || [];
+        const allFormats = [...prog, ...adapt];
+        const match = allFormats.find((f) => f.resolution === height);
+        
+        if (match) {
+            // Check if it's from adaptive
+            const isAdaptive = adapt.some((f) => f.resolution === height);
+            
+            if (isAdaptive) {
+                // Switch to adaptive mode
+                const audio = streamData.adaptive?.audio?.[0];
+                if (audio) {
+                    // Need to tell parent to switch mode - use callback
+                    params.onQualityChange?.(height, "adaptive", match.url, audio.url);
+                } else {
+                    // Fallback to progressive
+                    params.onQualityChange?.(height, "progressive", match.url, "");
+                }
+            } else {
+                params.onQualityChange?.(height, "progressive", match.url, "");
+            }
+        }
         setSelectedQuality(height);
         setShowQuality(false);
     };
@@ -232,7 +255,7 @@ const VideoPlayer = (params) => {
         if (isHls && hlsRef.current) {
             hlsRef.current.currentLevel = -1;
         } else {
-            params.handleQualityChange(0);
+            params.onQualityChange?.(0, "auto", "", "");
         }
         setSelectedQuality("auto");
         setShowQuality(false);
