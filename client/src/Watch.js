@@ -219,8 +219,19 @@ const Watch = (params) => {
     // dual-element sync, kept only as a fallback for videos with no
     // progressive format). If none are populated, `mode` stays null and the
     // fetchFailed/extraction_ok check above already routes to the iframe.
+    // Always populate qualityoptions from progressive/adaptive for the
+    // quality menu fallback in HLS mode when manifest has few levels.
     useEffect(() => {
         if (isUploaded || !data || !data.video_id) return;
+
+        // Populate qualityoptions from available formats for quality menu
+        if (data.progressive && data.progressive.length > 0) {
+            const options = data.progressive.map((f) => f.resolution).filter(Boolean);
+            setQualityoptions(options.length > 0 ? options : ["Auto"]);
+        } else if (data.adaptive && data.adaptive.video && data.adaptive.video.length > 0) {
+            const options = data.adaptive.video.map((f) => f.resolution).filter(Boolean);
+            setQualityoptions(options.length > 0 ? options : ["Auto"]);
+        }
 
         if (data.hls_url) {
             setMode("hls");
@@ -231,8 +242,6 @@ const Watch = (params) => {
 
         if (data.progressive && data.progressive.length > 0) {
             setMode("progressive");
-            const options = data.progressive.map((f) => f.resolution).filter(Boolean);
-            setQualityoptions(options.length > 0 ? options : ["Auto"]);
             const match = data.progressive.find((f) => f.resolution === video_resolution);
             const chosen = match || data.progressive[0];
             setVideo_url(chosen.url);
@@ -242,8 +251,6 @@ const Watch = (params) => {
 
         if (data.adaptive && data.adaptive.video && data.adaptive.video.length > 0) {
             setMode("adaptive");
-            const options = data.adaptive.video.map((f) => f.resolution).filter(Boolean);
-            setQualityoptions(options.length > 0 ? options : ["Auto"]);
             const match = data.adaptive.video.find((f) => f.resolution === video_resolution);
             const chosenVideo = match || data.adaptive.video[0];
             const chosenAudio = data.adaptive.audio && data.adaptive.audio[0];
