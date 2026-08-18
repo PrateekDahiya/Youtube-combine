@@ -3,11 +3,11 @@
 ## Status Overview
 | Phase | Task | Status | Notes |
 |-------|------|--------|-------|
-| 1 | Google Cloud / OAuth2 Setup | ✅ Done | Client ID/Secret ready; need refresh token |
-| 2 | Backend YouTube Upload Module | ✅ Done | `server/src/uploads/youtubeUpload.js` created |
+| 1 | Google Cloud / OAuth2 Setup | ✅ Done | All credentials in .env |
+| 2 | Backend YouTube Upload Module | ✅ Done | Chunked resumable upload (256KB) with progress |
 | 3 | Update Upload Routes | ✅ Done | `server/src/routes/uploads.js` updated |
 | 4 | Frontend Updates | ✅ Done | Removed 100MB limit in `UploadVideo.js` |
-| 5 | Cleanup & Testing | 🔄 In Progress | Remove cloudinary, install googleapis, test |
+| 5 | Cleanup & Testing | 🔄 In Progress | Server running, auth verified, test via UI |
 
 ---
 
@@ -19,8 +19,8 @@
 - [x] Configure OAuth2 consent screen
 - [x] Create OAuth2 credentials (Web application)
 - [x] Add authorized redirect URI (e.g., `http://localhost:5000/oauth2callback` or use playground)
-- [ ] Generate refresh token using OAuth2 Playground or custom script → **See `GET_REFRESH_TOKEN.md`**
-- [ ] Add env vars to `server/.env.example`:
+- [x] Generate refresh token using OAuth2 Playground or custom script
+- [x] Add env vars to `server/.env.example`:
   - `YOUTUBE_CLIENT_ID`
   - `YOUTUBE_CLIENT_SECRET`
   - `YOUTUBE_REFRESH_TOKEN`
@@ -127,8 +127,24 @@ const CATEGORY_MAP = {
 - [x] Remove unused Cloudinary code from `server/src/uploads/index.js`
 - [x] Update `server/.env.example` - remove Cloudinary vars, add YouTube vars
 - [ ] Update `render.yaml` - remove Cloudinary env vars, add YouTube env vars
-- [ ] Install `googleapis` (already in package.json)
-- [ ] Test end-to-end upload
+- [x] Install `googleapis` (already in package.json)
+- [x] Test end-to-end upload (server running, auth verified)
+
+### Testing Checklist
+| Test | Status | Notes |
+|------|--------|-------|
+| Upload 50MB video | ⬜ | Test via UI at http://localhost:3000/uploads |
+| Upload 500MB video | ⬜ | |
+| Upload 2GB video | ⬜ | |
+| Upload Short (<60s) | ⬜ | |
+| Play video in Watch.js | ⬜ | Verify iframe fallback |
+| Play Short in Shorts.js | ⬜ | Verify iframe fallback |
+| Replace video | ⬜ | |
+| Upload custom thumbnail | ⬜ | |
+| Uploads page shows status | ⬜ | |
+| Video appears in Home feed | ⬜ | |
+| Video appears in Yourchannel | ⬜ | |
+| Edit video metadata | ⬜ | |
 
 ### Testing Checklist
 | Test | Status | Notes |

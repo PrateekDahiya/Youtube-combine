@@ -1,6 +1,7 @@
 const fs = require("fs");
-const path = require("path");
 const { google } = require("googleapis");
+
+const CHUNK_SIZE = 256 * 1024;
 
 const CATEGORY_MAP = {
     "Music": "10",
@@ -28,16 +29,8 @@ function getYouTubeClient() {
     return google.youtube({ version: "v3", auth: oauth2Client });
 }
 
-async function getAccessToken() {
-    const clientId = process.env.YOUTUBE_CLIENT_ID;
-    const clientSecret = process.env.YOUTUBE_CLIENT_SECRET;
-    const refreshToken = process.env.YOUTUBE_REFRESH_TOKEN;
-
-    const oauth2Client = new google.auth.OAuth2(clientId, clientSecret);
-    oauth2Client.setCredentials({ refresh_token: refreshToken });
-
-    const { credentials } = await oauth2Client.refreshAccessToken();
-    return credentials.access_token;
+function mapCategory(category) {
+    return CATEGORY_MAP[category] || "22";
 }
 
 async function initiateResumableUpload(youtube, metadata) {
@@ -53,99 +46,155 @@ async function initiateResumableUpload(youtube, metadata) {
             status: {
                 privacyStatus: "unlisted",
                 selfDeclaredMadeForKids: false,
+                embeddable: true,
             },
         },
-        media: {
-            body: "",
-        },
     }, {
+        params: { uploadType: "resumable", notifySubscribers: false },
         headers: {
             "X-Upload-Content-Type": "video/*",
             "X-Upload-Content-Length": metadata.fileSize,
         },
     });
 
-    const uploadUrl = response.data.upload_url || response.headers.location;
+    const uploadUrl = response.headers.location || response.data.upload_url;
     if (!uploadUrl) {
         throw new Error("Failed to get resumable upload URL");
     }
     return uploadUrl;
 }
 
-async function uploadVideoFile(uploadUrl, filePath, onProgress) {
-    const fileSize = fs.statSync(filePath).size;
-    const chunkSize = 10 * 1024 * 1024;
-    let bytesSent = 0;
+async function uploadChunked(uploadUrl, filePath, fileSize, onProgress) {
+    let bytesUploaded = 0;
 
-    return new Promise((resolve, reject) => {
-        const readStream = fs.createReadStream(filePath, { highWaterMark: chunkSize });
+    while (bytesUploaded < fileSize) {
+        const chunkEnd = Math.min(bytesUploaded + CHUNK_SIZE, fileSize);
+        const chunkLength = chunkEnd - bytesUploaded;
 
-        readStream.on("data", (chunk) => {
-            bytesSent += chunk.length;
-            if (onProgress && fileSize > 0) {
-                onProgress(Math.round((bytesSent / fileSize) * 100));
-            }
-        });
+        const chunkBuffer = Buffer.alloc(chunkLength);
+        const fd = fs.openSync(filePath, "r");
+        fs.readSync(fd, chunkBuffer, 0, chunkLength, bytesUploaded);
+        fs.closeSync(fd);
 
-        readStream.on("error", reject);
+        const contentRange = `bytes ${bytesUploaded}-${chunkEnd - 1}/${fileSize}`;
 
-        const upload = async () => {
+        let response;
+        let attempt = 0;
+        const MAX_ATTEMPTS = 5;
+
+        while (attempt < MAX_ATTEMPTS) {
             try {
-                const response = await fetch(uploadUrl, {
+                response = await fetch(uploadUrl, {
                     method: "PUT",
-                    body: readStream,
+                    body: chunkBuffer,
                     headers: {
                         "Content-Type": "video/*",
-                        "Content-Length": fileSize,
-                        "Content-Range": `bytes 0-${fileSize - 1}/${fileSize}`,
+                        "Content-Length": chunkLength.toString(),
+                        "Content-Range": contentRange,
                     },
                 });
 
-                if (!response.ok) {
-                    const errorText = await response.text();
-                    throw new Error(`Upload failed: ${response.status} ${errorText}`);
+                if (response.status === 200 || response.status === 201) {
+                    const data = await response.json();
+                    return data;
                 }
 
-                const data = await response.json();
-                resolve(data);
-            } catch (error) {
-                reject(error);
-            }
-        };
+                if (response.status === 308) {
+                    break;
+                }
 
-        upload();
-    });
+                if (response.status >= 500 && response.status < 600) {
+                    attempt++;
+                    if (attempt >= MAX_ATTEMPTS) {
+                        throw new Error(`Upload failed after ${MAX_ATTEMPTS} attempts: ${response.status}`);
+                    }
+                    await new Promise(r => setTimeout(r, Math.min(2 ** attempt * 1000, 64000)));
+                    continue;
+                }
+
+                const errorText = await response.text();
+                throw new Error(`Upload chunk failed: ${response.status} ${errorText}`);
+            } catch (error) {
+                if (attempt >= MAX_ATTEMPTS - 1) throw error;
+                attempt++;
+                await new Promise(r => setTimeout(r, Math.min(2 ** attempt * 1000, 64000)));
+            }
+        }
+
+        const rangeHeader = response?.headers?.get?.("range") || response?.headers?.get?.("Range");
+        if (rangeHeader) {
+            const match = rangeHeader.match(/bytes=0-(\d+)/);
+            if (match) {
+                bytesUploaded = parseInt(match[1]) + 1;
+            } else {
+                bytesUploaded = chunkEnd;
+            }
+        } else {
+            bytesUploaded = chunkEnd;
+        }
+
+        if (onProgress && fileSize > 0) {
+            onProgress(Math.round((bytesUploaded / fileSize) * 100));
+        }
+    }
+
+    throw new Error("Upload completed without response");
 }
 
 async function uploadThumbnail(youtube, videoId, thumbPath) {
-    const response = await youtube.thumbnails.set({
+    await youtube.thumbnails.set({
         videoId,
         media: {
             mimeType: "image/jpeg",
             body: fs.createReadStream(thumbPath),
         },
     });
-    return response.data;
 }
 
-function mapCategory(category) {
-    return CATEGORY_MAP[category] || "22";
+async function checkProcessingStatus(youtube, videoId) {
+    try {
+        const response = await youtube.videos.list({
+            id: [videoId],
+            part: ["status", "processingDetails"],
+        });
+        const video = response.data.items?.[0];
+        if (!video) return { status: "not_found" };
+        return {
+            status: video.status?.uploadStatus,
+            processingStatus: video.processingDetails?.processingStatus,
+            timeLeftMs: video.processingDetails?.processingProgress?.timeLeftMs,
+        };
+    } catch (error) {
+        return { status: "error", error: error.message };
+    }
 }
 
 async function uploadToYouTube(videoFile, thumbFile, metadata, onProgress) {
     const youtube = getYouTubeClient();
+    const filePath = videoFile.path;
+    const fileSize = videoFile.size || fs.statSync(filePath).size;
 
     const uploadMetadata = {
         title: metadata.title || "Untitled",
         description: metadata.description || "",
         tags: metadata.tags || "",
         categoryId: mapCategory(metadata.category),
-        fileSize: videoFile.size || fs.statSync(videoFile.path).size,
+        fileSize,
     };
+
+    if (metadata.type === "short") {
+        const tagList = uploadMetadata.tags.split(",").map(t => t.trim()).filter(Boolean);
+        if (!tagList.some(t => /shorts?/i.test(t))) {
+            tagList.push("shorts");
+        }
+        uploadMetadata.tags = tagList.join(",");
+    }
+
+    if (onProgress) onProgress(0);
 
     const uploadUrl = await initiateResumableUpload(youtube, uploadMetadata);
 
-    const videoResource = await uploadVideoFile(uploadUrl, videoFile.path, onProgress);
+    const videoResource = await uploadChunked(uploadUrl, filePath, fileSize, onProgress);
 
     const videoId = videoResource.id;
     const watchUrl = `https://www.youtube.com/watch?v=${videoId}`;
@@ -177,9 +226,30 @@ async function deleteYouTubeVideo(videoId) {
     }
 }
 
+async function pollProcessingStatus(videoId, maxWaitMs = 180000) {
+    const youtube = getYouTubeClient();
+    const startTime = Date.now();
+
+    while (Date.now() - startTime < maxWaitMs) {
+        const status = await checkProcessingStatus(youtube, videoId);
+        if (status.processingStatus === "succeeded" || status.uploadStatus === "processed") {
+            return { ready: true, status };
+        }
+        if (status.processingStatus === "failed" || status.uploadStatus === "rejected" || status.uploadStatus === "failed") {
+            return { ready: false, status };
+        }
+        const waitMs = Math.min(30000, Math.max(5000, (status.timeLeftMs || 30000) / 2));
+        await new Promise(r => setTimeout(r, waitMs));
+    }
+
+    return { ready: false, status: { processingStatus: "timeout" } };
+}
+
 module.exports = {
     uploadToYouTube,
     deleteYouTubeVideo,
+    pollProcessingStatus,
+    checkProcessingStatus,
     getYouTubeClient,
     CATEGORY_MAP,
 };
