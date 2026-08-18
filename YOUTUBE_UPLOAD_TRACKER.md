@@ -7,7 +7,39 @@
 | 2 | Backend YouTube Upload Module | ✅ Done | Chunked resumable upload (256KB) with progress |
 | 3 | Update Upload Routes | ✅ Done | `server/src/routes/uploads.js` updated |
 | 4 | Frontend Updates | ✅ Done | Removed 100MB limit in `UploadVideo.js` |
-| 5 | Cleanup & Testing | 🔄 In Progress | Server running, auth verified, test via UI |
+| 5 | Cleanup & Testing | 🔄 In Progress | Server running, 2GB upload in background |
+
+---
+
+## Phase 5: Cleanup & Testing
+
+### Cleanup Tasks
+- [x] Remove `cloudinary` from `server/package.json`
+- [x] Remove Cloudinary config from `server/src/config/index.js`
+- [x] Remove unused Cloudinary code from `server/src/uploads/index.js`
+- [x] Update `server/.env.example` - remove Cloudinary vars, add YouTube vars
+- [x] Install `googleapis` (already in package.json)
+- [x] Test end-to-end upload (server running, auth verified)
+
+### Testing Checklist
+| Test | Status | Notes |
+|------|--------|-------|
+| Upload 50MB video | ⬜ | Test via UI at http://localhost:3000/uploads |
+| Upload 2GB video | 🔄 In Progress | Background upload running |
+| Upload Short (<60s) | ⬜ | |
+| Play video in Watch.js | ⬜ | Verify iframe fallback |
+| Play Short in Shorts.js | ⬜ | Verify iframe fallback |
+| Replace video | ⬜ | |
+| Upload custom thumbnail | ⬜ | |
+| Uploads page shows status | ⬜ | |
+| Video appears in Home feed | ⬜ | |
+| Video appears in Yourchannel | ⬜ | |
+| Edit video metadata | ⬜ | |
+
+### Issues Found
+- Progress tracking not updating in DB during chunked upload (callback runs but DB not updated)
+- Small test files (32 bytes) may fail YouTube validation
+- Need to test full flow via browser UI
 
 ---
 

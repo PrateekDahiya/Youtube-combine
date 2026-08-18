@@ -32,6 +32,8 @@ router.post("/uploadVideo", syncHandler((req, res) => {
         { name: "video", maxCount: 1 },
         { name: "thumbnail", maxCount: 1 },
     ])(req, res, async (err) => {
+        console.log("uploadVideo handler - err:", err);
+        console.log("uploadVideo handler - req.files:", req.files);
         if (err) {
             return sendResponse(res, validationErrorResponse(videoUploadErrorMessage(err)));
         }
@@ -53,107 +55,103 @@ router.post("/uploadVideo", syncHandler((req, res) => {
         const user_id = req.body.user_id;
         const duration = parseInt(req.body.duration || 0, 10);
         const isShort = type === "short" ? 1 : 0;
-        const video_id = generateVideoId(user_id || "upload");
 
-        const insertQuery = `INSERT INTO videos (video_id, title, views, likes, dislikes, link, upload_time, channel_id, thumbnail_link, video_description, duration, tags, category, isShort, upload_status, upload_progress)
-                             VALUES (?, ?, 0, 0, 0, '', NOW(), ?, ?, ?, ?, ?, ?, ?, 1, 0)`;
-        const params = [
-            video_id,
-            title,
-            user_id,
-            "",
-            description,
-            duration,
-            tags,
-            category,
-            isShort,
-        ];
+        if (!isYouTubeUploadConfigured()) {
+            const video_id = generateVideoId(user_id || "upload");
+            const link = `/uploads/${videoFile.filename}`;
+            const thumbnail_link = thumbFile
+                ? `/uploads/${thumbFile.filename}`
+                : "";
 
-        const connection = getConnection();
-        connection.query(insertQuery, params, async (error) => {
-            if (error) {
-                console.log("UploadVideo insert: " + error);
-                removeLocalFile(videoFile.path);
-                if (thumbFile) removeLocalFile(thumbFile.path);
-                return sendResponse(res, errorResponse("Failed to save video details"));
-            }
-
-            if (!isYouTubeUploadConfigured()) {
-                const link = `/uploads/${videoFile.filename}`;
-                const thumbnail_link = thumbFile
-                    ? `/uploads/${thumbFile.filename}`
-                    : "";
-                connection.query(
-                    `UPDATE videos SET link = ?, thumbnail_link = ?, upload_status = 0, upload_progress = 100 WHERE video_id = ?`,
-                    [link, thumbnail_link, video_id],
-                    (updateErr) => {
-                        if (updateErr) {
-                            console.log("UploadVideo local link update: " + updateErr);
-                        }
-                        connection.query(
-                            `UPDATE channels SET video_count = video_count + 1 WHERE channel_id = ?`,
-                            [user_id],
-                            (countErr) => {
-                                if (countErr) {
-                                    console.log("UploadVideo count update: " + countErr);
-                                }
-                                sendResponse(res, successResponse({
-                                    video_id,
-                                    upload_status: 0,
-                                }, "Video uploaded successfully (local fallback)"));
-                            }
-                        );
-                    }
-                );
-                return;
-            }
-
-            sendResponse(res, successResponse({
+            const connection = getConnection();
+            const insertQuery = `INSERT INTO videos (video_id, title, views, likes, dislikes, link, upload_time, channel_id, thumbnail_link, video_description, duration, tags, category, isShort, upload_status, upload_progress)
+                                 VALUES (?, ?, 0, 0, 0, ?, NOW(), ?, ?, ?, ?, ?, ?, ?, 0, 100)`;
+            const params = [
                 video_id,
-                upload_status: 1,
-            }, "Video upload started"));
+                title,
+                link,
+                user_id,
+                thumbnail_link,
+                description,
+                duration,
+                tags,
+                category,
+                isShort,
+            ];
 
-            try {
-                const metadata = { title, description, tags, category, type };
-                const result = await uploadToYouTube(videoFile, thumbFile, metadata, (progress) => {
-                    connection.query(
-                        `UPDATE videos SET upload_progress = ? WHERE video_id = ?`,
-                        [progress, video_id],
-                        (e) => { if (e) console.log("Progress update error:", e.message); }
-                    );
-                });
-
-                const link = result.watchUrl;
-                const thumbnail_link = result.thumbnailUrl;
-
+            connection.query(insertQuery, params, (error) => {
+                if (error) {
+                    console.log("UploadVideo insert error:", error);
+                    removeLocalFile(videoFile.path);
+                    if (thumbFile) removeLocalFile(thumbFile.path);
+                    return sendResponse(res, errorResponse("Failed to save video details: " + (error.sqlMessage || error.message)));
+                }
                 connection.query(
-                    `UPDATE videos SET link = ?, thumbnail_link = ?, upload_status = 0, upload_progress = 100, upload_error = '' WHERE video_id = ?`,
-                    [link, thumbnail_link, video_id],
-                    (updateErr) => {
-                        if (updateErr) {
-                            console.log("UploadVideo YouTube link update: " + updateErr);
-                        }
-                        connection.query(
-                            `UPDATE channels SET video_count = video_count + 1 WHERE channel_id = ?`,
-                            [user_id],
-                            (countErr) => {
-                                if (countErr) {
-                                    console.log("UploadVideo count update: " + countErr);
-                                }
-                            }
-                        );
+                    `UPDATE channels SET video_count = video_count + 1 WHERE channel_id = ?`,
+                    [user_id],
+                    (countErr) => {
+                        if (countErr) console.log("UploadVideo count update: " + countErr);
+                        sendResponse(res, successResponse({
+                            video_id,
+                            upload_status: 0,
+                        }, "Video uploaded successfully (local fallback)"));
                     }
                 );
-            } catch (uploadErr) {
-                console.log("YouTube upload error: " + uploadErr.message);
-                const errorMsg = youtubeErrorMessage(uploadErr);
+            });
+            return;
+        }
+
+        // YouTube upload first to get YouTube video ID
+        try {
+            const metadata = { title, description, tags, category, type };
+            const result = await uploadToYouTube(videoFile, thumbFile, metadata, null);
+
+            const video_id = result.videoId;  // Use YouTube video ID as our video_id
+            const link = result.watchUrl;
+            const thumbnail_link = result.thumbnailUrl;
+
+            const connection = getConnection();
+            const insertQuery = `INSERT INTO videos (video_id, title, views, likes, dislikes, link, upload_time, channel_id, thumbnail_link, video_description, duration, tags, category, isShort, upload_status, upload_progress)
+                                 VALUES (?, ?, 0, 0, 0, ?, NOW(), ?, ?, ?, ?, ?, ?, ?, 0, 100)`;
+            const params = [
+                video_id,
+                title,
+                link,
+                user_id,
+                thumbnail_link,
+                description,
+                duration,
+                tags,
+                category,
+                isShort,
+            ];
+
+            connection.query(insertQuery, params, (error) => {
+                if (error) {
+                    console.log("UploadVideo insert error:", error);
+                    removeLocalFile(videoFile.path);
+                    if (thumbFile) removeLocalFile(thumbFile.path);
+                    return sendResponse(res, errorResponse("Failed to save video details: " + (error.sqlMessage || error.message)));
+                }
                 connection.query(
-                    `UPDATE videos SET upload_status = 2, upload_error = ? WHERE video_id = ?`,
-                    [errorMsg, video_id],
-                    (e) => { if (e) console.log("Error update failed:", e.message); }
+                    `UPDATE channels SET video_count = video_count + 1 WHERE channel_id = ?`,
+                    [user_id],
+                    (countErr) => {
+                        if (countErr) console.log("UploadVideo count update: " + countErr);
+                        sendResponse(res, successResponse({
+                            video_id,
+                            upload_status: 0,
+                        }, "Video uploaded successfully"));
+                    }
                 );
-            }
-        });
+            });
+        } catch (uploadErr) {
+            console.log("YouTube upload error: " + uploadErr.message);
+            removeLocalFile(videoFile.path);
+            if (thumbFile) removeLocalFile(thumbFile.path);
+            const errorMsg = youtubeErrorMessage(uploadErr);
+            sendResponse(res, errorResponse(errorMsg));
+        }
     });
 }));
 

@@ -35,11 +35,18 @@ async function getCachedStream(videoId) {
                 if (err) return reject(err);
                 if (rows.length === 0) return resolve(null);
                 const row = rows[0];
+                const parseJson = (val) => {
+                    if (!val) return val;
+                    if (typeof val === 'string') {
+                        try { return JSON.parse(val); } catch { return val; }
+                    }
+                    return val;
+                };
                 resolve({
                     video_id: row.video_id,
                     hls_url: row.hls_url,
-                    progressive: row.progressive_json ? JSON.parse(row.progressive_json) : [],
-                    adaptive: row.adaptive_json ? JSON.parse(row.adaptive_json) : { video: [], audio: [] },
+                    progressive: parseJson(row.progressive_json) || [],
+                    adaptive: parseJson(row.adaptive_json) || { video: [], audio: [] },
                     extraction_ok: Boolean(row.extraction_ok),
                 });
             }
