@@ -8,7 +8,7 @@ function isYouTubeUploadConfigured() {
     );
 }
 
-const MAX_VIDEO_SIZE_MB = 100;
+const MAX_VIDEO_SIZE_MB = 51200;
 
 function youtubeErrorMessage(err) {
     if (!err) return "YouTube upload failed";
