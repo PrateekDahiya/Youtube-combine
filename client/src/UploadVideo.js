@@ -73,7 +73,6 @@ const UploadVideo = (params) => {
                 setError(err.message || "Failed to upload thumbnail.");
                 throw err;
             });
-        thumbUploadPromiseRef.current = promise;
     };
 
     const handleUpload = async () => {
@@ -157,9 +156,7 @@ const UploadVideo = (params) => {
                     <label>Video file</label>
                     <div
                         className="dropzone"
-                        onClick={() =>
-                            !startingVideoUpload && videoInputRef.current?.click()
-                        }
+                        onClick={() => videoInputRef.current?.click()}
                     >
                         <input
                             ref={videoInputRef}
