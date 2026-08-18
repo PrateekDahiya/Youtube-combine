@@ -52,9 +52,9 @@ const Shortbox = (params) => {
             ? streamData.adaptive.video.map((f) => f.resolution).filter(Boolean)
             : [];
 
-        const useAdaptiveForMenu = adaptiveResolutions.length > progressiveResolutions.length;
-        const menuResolutions = useAdaptiveForMenu ? adaptiveResolutions : progressiveResolutions;
-        setQualityoptions(menuResolutions.length > 0 ? menuResolutions : ["Auto"]);
+        // Include both progressive and adaptive for quality menu
+        const allResolutions = [...new Set([...progressiveResolutions, ...adaptiveResolutions])].sort((a, b) => b - a);
+        setQualityoptions(allResolutions.length > 0 ? allResolutions : ["Auto"]);
 
         if (streamData.hls_url) {
             setMode("hls");
@@ -63,7 +63,6 @@ const Shortbox = (params) => {
         }
 
         // ALWAYS prefer progressive (muxed video+audio) when available.
-        // Adaptive (separate video+audio) fails on googlevideo.com due to CORS/headers.
         if (streamData.progressive && streamData.progressive.length > 0) {
             setMode("progressive");
             setVideoUrl(streamData.progressive[0].url);

@@ -217,7 +217,7 @@ const Watch = (params) => {
     // Picks the best available playback tier from the stream-resolver
     // Priority: HLS (adaptive quality) > progressive (single muxed) > adaptive (separate video+audio)
     // Always populate qualityoptions from all available formats for the quality menu.
-    useEffect(() => {
+useEffect(() => {
         if (isUploaded || !streamData || !streamData.video_id) return;
 
         const progressiveResolutions = streamData.progressive
@@ -227,10 +227,9 @@ const Watch = (params) => {
             ? streamData.adaptive.video.map((f) => f.resolution).filter(Boolean)
             : [];
 
-// Use the format with more unique resolutions for quality menu
-        const useAdaptiveForMenu = adaptiveResolutions.length > progressiveResolutions.length;
-        const menuResolutions = useAdaptiveForMenu ? adaptiveResolutions : progressiveResolutions;
-        setQualityoptions(menuResolutions.length > 0 ? menuResolutions : ["Auto"]);
+        // Include both progressive and adaptive for quality menu
+        const allResolutions = [...new Set([...progressiveResolutions, ...adaptiveResolutions])].sort((a, b) => b - a);
+        setQualityoptions(allResolutions.length > 0 ? allResolutions : ["Auto"]);
 
         if (streamData.hls_url) {
             setMode("hls");
@@ -240,7 +239,6 @@ const Watch = (params) => {
         }
 
         // ALWAYS prefer progressive (muxed video+audio) when available.
-        // Adaptive (separate video+audio) fails on googlevideo.com due to CORS/headers.
         if (streamData.progressive && streamData.progressive.length > 0) {
             setMode("progressive");
             const match = streamData.progressive.find((f) => f.resolution === video_resolution);
