@@ -182,3 +182,35 @@
         white-space: nowrap;
     }
 }
+
+/* Very small screens (320px - 359px) */
+@media (max-width: 359px) {
+    .trendingbox {
+        padding: 8px;
+    }
+    .trend-heading {
+        margin-bottom: 12px;
+        padding: 0 8px;
+        gap: 10px;
+    }
+    .caticon {
+        width: 32px;
+        height: 32px;
+    }
+    .trendheading {
+        font-size: 18px;
+    }
+    .short-desc-trend {
+        font-size: 11px;
+        width: 100%;
+        max-width: 200px;
+    }
+    .trend-menus {
+        padding: 0 8px;
+        gap: 12px;
+    }
+    .menubutton {
+        font-size: 12px;
+        padding: 6px 0;
+    }
+}

@@ -180,3 +180,42 @@
         grid-template-columns: 1fr;
     }
 }
+
+/* Very small screens (320px - 359px) */
+@media (max-width: 359px) {
+    .searchPage {
+        padding: 8px;
+        height: calc(100vh - 56px);
+    }
+    .search-heading {
+        font-size: 18px;
+        margin: 8px 0 4px;
+    }
+    .cards.search-cards {
+        gap: 8px;
+        padding: 8px 0;
+    }
+    .channel-find-error {
+        font-size: 11px;
+        padding: 6px 10px;
+        margin: 6px 0;
+    }
+    .channel-results {
+        gap: 10px;
+        padding: 6px 0 15px;
+    }
+    .channel-result {
+        padding: 10px 12px;
+        gap: 10px;
+    }
+    .channel-result img {
+        width: 44px;
+        height: 44px;
+    }
+    .channel-result-name {
+        font-size: 14px;
+    }
+    .channel-result-meta {
+        font-size: 12px;
+    }
+}

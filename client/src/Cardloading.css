@@ -525,3 +525,104 @@
         height: 110px;
     }
 }
+
+/* Very small screens (320px - 359px) - match Card.css breakpoints */
+@media (max-width: 359px) {
+    .sk-cards-grid {
+        gap: 12px;
+        padding: 8px;
+    }
+    .sk-card .sk-thumb {
+        aspect-ratio: 16 / 9;
+        border-radius: 8px;
+        margin-bottom: 8px;
+    }
+    .sk-card .sk-cardicon {
+        width: 30px;
+        height: 30px;
+        margin-bottom: 6px;
+    }
+    .sk-card .sk-cardtext .sk-line:nth-child(1) {
+        width: 85%;
+        height: 14px;
+    }
+    .sk-card .sk-cardtext .sk-line:nth-child(2) {
+        width: 55%;
+        height: 10px;
+    }
+    .sk-trending-row .sk-trendthumb {
+        width: 100%;
+        aspect-ratio: 16 / 9;
+        height: auto;
+    }
+    .sk-watch video,
+    .sk-watch .sk-video {
+        aspect-ratio: 16 / 9;
+        border-radius: 8px;
+    }
+    .sk-watch .sk-title {
+        width: 85%;
+        height: 18px;
+        margin-top: 12px;
+    }
+    .sk-watch .sk-actions .sk-round {
+        width: 32px;
+        height: 32px;
+    }
+    .sk-watch .sk-actions .sk-pill {
+        width: 80px;
+        height: 30px;
+    }
+    .sk-watch .sk-textblock .sk-line:nth-child(1) {
+        width: 140px;
+        height: 12px;
+    }
+    .sk-watch .sk-textblock .sk-line:nth-child(2) {
+        width: 100px;
+        height: 9px;
+    }
+    .sk-chanhero {
+        gap: 12px;
+    }
+    .sk-chanhero .sk-channeltext .sk-line:nth-child(1) {
+        width: 100%;
+        height: 24px;
+    }
+    .sk-chanhero .sk-channeltext .sk-line:nth-child(2) {
+        width: 100%;
+    }
+    .sk-chanhero .sk-channeltext .sk-line:nth-child(3) {
+        width: 100%;
+    }
+    .sk-chanhero .sk-channeltext .sk-line:nth-child(4) {
+        width: 100%;
+    }
+    .sk-buttons .sk-pill {
+        width: 90px;
+        height: 30px;
+    }
+    .sk-avatarpic {
+        width: 80px;
+        height: 80px;
+    }
+    .sk-headerline .sk-round {
+        width: 40px;
+        height: 40px;
+    }
+    .sk-headerline .sk-line {
+        width: 140px;
+        height: 22px;
+    }
+    .sk-channel-card .sk-round {
+        width: 36px;
+        height: 36px;
+    }
+    .sk-channel-card .sk-channeltext .sk-line:nth-child(1) {
+        width: 80%;
+        height: 12px;
+    }
+    .sk-channel-card .sk-channeltext .sk-line:nth-child(2) {
+        width: 50%;
+        height: 10px;
+    }
+}

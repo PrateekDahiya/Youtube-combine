@@ -262,3 +262,60 @@
         height: 20px;
     }
 }
+
+/* Very small screens (320px - 359px) */
+@media (max-width: 359px) {
+    .subsbox {
+        padding: 8px;
+    }
+    .subsbox h1 {
+        font-size: 18px;
+        margin-bottom: 12px;
+        padding: 0 8px;
+    }
+    .subsbox h3 {
+        font-size: 14px;
+        padding: 0 8px;
+    }
+    .menus {
+        padding: 0 8px;
+        gap: 8px;
+    }
+    .menubutton {
+        font-size: 12px;
+        padding: 4px 10px;
+        min-height: 32px;
+        border-radius: 16px;
+    }
+    .channel-strip {
+        padding: 0 8px 12px;
+    }
+    .channel-pill {
+        padding: 6px 10px;
+        gap: 6px;
+    }
+    .channel-pill img {
+        width: 20px;
+        height: 20px;
+    }
+    .guestuser h2 {
+        font-size: 18px;
+    }
+    .guestuser h3 {
+        font-size: 13px;
+        max-width: 280px;
+    }
+    .guestuser .bigicon {
+        width: 80px;
+        height: 80px;
+    }
+    .sign_in {
+        padding: 8px 16px;
+        font-size: 13px;
+        border-radius: 20px;
+    }
+    .sign_in .guesticon {
+        width: 18px;
+        height: 18px;
+    }
+}
