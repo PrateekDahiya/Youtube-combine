@@ -983,3 +983,133 @@ body.dark .settings-guest p {
         width: 100%;
     }
 }
+
+/* Very small screens (320px - 359px) */
+@media (max-width: 359px) {
+    .settings-page {
+        padding: 8px;
+    }
+    
+    .settings-tabs {
+        gap: 1px;
+        padding: 1px;
+        border-radius: 8px;
+    }
+    
+    .settings-tab {
+        padding: 8px 12px;
+        font-size: 12px;
+        min-height: 44px;
+    }
+    
+    .settings-panel {
+        padding: 12px;
+        max-height: calc(100vh - 140px);
+        border-radius: 8px;
+    }
+    
+    .settings-section {
+        padding: 12px 12px;
+        margin: 0 -12px;
+        padding-left: 12px;
+        padding-right: 12px;
+    }
+    
+    .settings-field-row,
+    .settings-toggle-row {
+        padding: 10px 10px;
+        margin: 0 -10px;
+    }
+    
+    .settings-label {
+        font-size: 12px;
+        min-width: auto;
+    }
+    
+    .settings-value {
+        font-size: 12px;
+    }
+    
+    .settings-input {
+        height: 44px;
+        font-size: 13px;
+        padding: 0 10px;
+    }
+    
+    .settings-btn {
+        height: 44px;
+        font-size: 13px;
+        padding: 8px 16px;
+    }
+    
+    .settings-toggle {
+        width: 48px;
+        height: 28px;
+    }
+    
+    .settings-toggle-thumb {
+        width: 24px;
+        height: 24px;
+    }
+    
+    .settings-toggle.on .settings-toggle-thumb {
+        transform: translateX(24px);
+    }
+    
+    .settings-theme-option {
+        padding: 12px 14px;
+        min-height: 44px;
+    }
+    
+    .theme-preview {
+        width: 44px;
+        height: 28px;
+    }
+    
+    .settings-upload-zone:not(:has(img)) {
+        min-height: 100px;
+        padding: 16px;
+    }
+    
+    .settings-modal {
+        max-width: 100%;
+        margin: 8px;
+        border-radius: 16px 16px 12px 12px;
+    }
+    
+    .settings-modal-header {
+        padding: 16px 16px;
+    }
+    
+    .settings-modal-header h3 {
+        font-size: 16px;
+    }
+    
+    .settings-modal-body {
+        padding: 16px;
+    }
+    
+    .settings-danger-zone {
+        padding-left: 12px;
+        padding-right: 12px;
+        margin: 0 -12px;
+        border-radius: 0 0 8px 8px;
+    }
+    
+    .settings-confirm-delete {
+        max-width: 100%;
+    }
+    
+    .settings-guest {
+        padding: 24px 12px;
+        min-height: 300px;
+    }
+    
+    .settings-guest h2 {
+        font-size: 20px;
+    }
+    
+    .settings-guest p {
+        font-size: 14px;
+    }
+}

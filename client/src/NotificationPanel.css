@@ -326,3 +326,48 @@ body.dark .load-more-btn {
 body.dark .load-more-btn:hover {
     background: var(--hover-bg, #2a2a2a);
 }
+
+/* Very small screens (320px - 359px) */
+@media (max-width: 359px) {
+    .notification-panel {
+        max-width: 100%;
+        width: 100%;
+    }
+    .notification-header {
+        padding: 12px 16px;
+    }
+    .notification-header h3 {
+        font-size: 16px;
+    }
+    .mark-all-read {
+        padding: 4px 8px;
+        font-size: 12px;
+    }
+    .notification-item {
+        padding: 10px 12px;
+        gap: 10px;
+    }
+    .notification-avatar {
+        width: 36px;
+        height: 36px;
+    }
+    .notification-title {
+        font-size: 13px;
+    }
+    .notification-meta {
+        font-size: 11px;
+        gap: 6px;
+    }
+    .notification-type {
+        padding: 1px 5px;
+        font-size: 10px;
+    }
+    .notification-thumbnail {
+        width: 120px;
+        height: 68px;
+    }
+    .load-more-btn {
+        padding: 12px;
+        font-size: 13px;
+    }
+}

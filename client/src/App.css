@@ -109,10 +109,9 @@
     .content {
         margin-left: 5px;
     }
-    
 }
 
-/* Small screens (mobile landscape) */
+/* Small screens (mobile landscape 481-767px) - Narrow menu (50px icon-only) */
 @media (max-width: 767px) and (min-width: 481px) {
     .menuncontent {
         flex-direction: column;
@@ -120,11 +119,13 @@
     .menu {
         position: fixed;
         left: -50px;
+        top: 60px;
         z-index: 1000;
         background: var(--background-color);
         height: calc(100vh - 60px);
         width: 50px;
         max-width: 50px;
+        box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
     }
     .menu.show {
         transform: translateX(50px);
@@ -135,25 +136,75 @@
     }
 }
 
-/* Extra small screens (mobile portrait) */
-@media (max-width: 480px) {
+/* Small screens (mobile portrait 360-480px) - Full drawer (280px) */
+@media (max-width: 480px) and (min-width: 360px) {
     .menuncontent {
         flex-direction: column;
     }
     .menu {
         position: fixed;
-        left: -50px;
+        left: -280px;
+        top: 60px;
         z-index: 1000;
         background: var(--background-color);
         height: calc(100vh - 60px);
-        width: 50px;
-        max-width: 50px;
+        width: 280px;
+        max-width: 280px;
+        box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
     }
     .menu.show {
-        transform: translateX(50px);
+        transform: translateX(280px);
     }
     .content {
         margin-left: 0;
         width: 100%;
+    }
+}
+
+/* Very small screens (320-359px) - Full-width drawer, 56px header */
+@media (max-width: 359px) {
+    .App {
+        height: 100vh;
+        overflow-x: hidden;
+    }
+    .head {
+        height: 56px;
+    }
+    .menuncontent {
+        margin-top: 56px;
+        height: calc(100vh - 56px);
+    }
+    .menu {
+        position: fixed;
+        left: -100%;
+        top: 56px;
+        z-index: 1000;
+        background: var(--background-color);
+        width: 100%;
+        max-width: 100%;
+        height: calc(100vh - 56px);
+        box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+    }
+    .menu.show {
+        transform: translateX(100%);
+    }
+    .content {
+        min-width: 0;
+        width: 100vw;
+        max-width: 100vw;
+        overflow-x: hidden;
+    }
+    .guestuserp {
+        font-size: 13px;
+    }
+    .menuguestuser {
+        width: 100%;
+        padding: 8px;
+    }
+    .sign_in {
+        width: 100%;
+        padding: 12px;
+        font-size: 14px;
+        min-height: 44px;
     }
 }

@@ -449,3 +449,81 @@ button img {
         height: 14px;
     }
 }
+
+/* Very small screens (320px - 359px) */
+@media (max-width: 359px) {
+    .watchpage {
+        padding: 8px;
+        margin-top: 56px;
+    }
+    .video_info {
+        padding: 6px 0;
+    }
+    .video_details {
+        padding: 0 8px;
+        margin-top: 8px;
+        border-radius: 20px;
+    }
+    .title {
+        font-size: 13px;
+    }
+    .channelicon {
+        width: 26px;
+    }
+    .box {
+        gap: 8px;
+    }
+    .boxpart1 {
+        margin-bottom: 8px;
+    }
+    .subscribe,
+    .like_btn,
+    .dislike_btn,
+    .share_btn,
+    .download_btn {
+        height: 36px;
+        font-size: 11px;
+        padding: 0 8px;
+        min-width: 44px;
+    }
+    .subscribe {
+        width: auto;
+        flex: 1;
+    }
+    .download_btn {
+        width: auto;
+        flex: 1;
+    }
+    .like_btn {
+        border-radius: 18px 0 0 18px;
+        padding: 0 10px;
+    }
+    .dislike_btn {
+        border-radius: 0 18px 18px 0;
+        padding: 0 10px;
+    }
+    .share_btn {
+        width: auto;
+        padding: 0 10px;
+        flex: 1;
+    }
+    button img {
+        height: 13px;
+    }
+    .video_views_upload_time {
+        font-size: 11px;
+    }
+    .more-btn {
+        padding: 4px;
+    }
+    .relatedvideos {
+        margin: 12px 0;
+    }
+    .relatedvideos h2 {
+        font-size: 16px;
+        margin: 0 0 10px 0;
+    }
+    .cards.related-videos {
+        gap: 8px;
+    }
+}

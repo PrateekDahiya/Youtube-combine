@@ -238,3 +238,34 @@
         padding: 2px;
     }
 }
+
+/* Very small screens (320px - 359px) */
+@media (max-width: 359px) {
+    .item {
+        padding: 12px 12px;
+        margin: 2px 8px;
+        border-radius: 8px;
+        min-height: 44px;
+    }
+    .item p {
+        font-size: 13px;
+        padding: 4px 8px;
+    }
+    .defaultimg, .hiddenimg {
+        width: 20px;
+        height: 20px;
+    }
+    .profileimg {
+        width: 24px;
+        height: 24px;
+    }
+    .hiddenitem {
+        width: 56px;
+        padding: 8px 4px;
+        min-height: 44px;
+    }
+    .hiddenitem p {
+        font-size: 10px;
+        padding: 4px;
+    }
+}

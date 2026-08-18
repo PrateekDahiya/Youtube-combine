@@ -10,7 +10,7 @@ function Menu(params) {
     const [subsdata, setsubsData] = useState("");
     const [selectedItem, setSelectedItem] = useState(null);
     const serverurl = process.env.REACT_APP_SERVER_URL;
-    const [menu, setMenu] = useState(params.menu || "Full");
+    const [menu, setMenu] = useState(params.menu !== undefined ? params.menu : (typeof window !== "undefined" && window.innerWidth <= 767 ? "Hidden" : "Full"));
     const [page, setPage] = useState(locationHook.pathname);
     const [isShorts, setIsShorts] = useState("true");
     const [isMobile, setIsMobile] = useState(window.innerWidth <= 767);

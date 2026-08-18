@@ -226,3 +226,45 @@
         padding: 14px 18px;
     }
 }
+
+/* Very small screens (320px - 359px) */
+@media (max-width: 359px) {
+    .vv-modal-overlay {
+        padding: 8px;
+        align-items: flex-end;
+    }
+
+    .vv-modal {
+        max-height: 94vh;
+        border-radius: 20px 20px 16px 16px;
+    }
+
+    .vv-modal-header {
+        padding: 16px 16px 12px;
+    }
+
+    .vv-modal-title {
+        font-size: 17px;
+    }
+
+    .vv-modal-close {
+        width: 44px;
+        height: 44px;
+        border-radius: 12px;
+    }
+
+    .vv-modal-body {
+        padding: 2px 16px 16px;
+        font-size: 13px;
+    }
+
+    .vv-modal-footer {
+        padding: 12px 16px;
+        gap: 8px;
+    }
+
+    .vv-modal-footer button {
+        min-height: 44px;
+        padding: 10px 16px;
+    }
+}

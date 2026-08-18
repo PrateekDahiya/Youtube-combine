@@ -137,3 +137,23 @@
         margin-left: 8px;
     }
 }
+
+/* Very small screens (320px - 359px) */
+@media (max-width: 359px) {
+    .history-outerbox {
+        padding: 8px;
+    }
+    .remove-history {
+        width: 80%;
+        padding: 6px 10px;
+        border-radius: 16px;
+    }
+    .remove-history img {
+        width: 18px;
+        height: 18px;
+    }
+    .remove-history span {
+        font-size: 12px;
+        margin-left: 6px;
+    }
+}

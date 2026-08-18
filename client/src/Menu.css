@@ -124,19 +124,33 @@ h3 {
     }
 }
 
-/* Extra small screens (mobile portrait) */
-@media (max-width: 480px) {
+/* Extra small screens (mobile portrait 360-480px) */
+@media (max-width: 480px) and (min-width: 360px) {
     .Menu {
         position: fixed;
-        left: -240px;
+        left: -280px;
         top: 60px;
         margin-left: 0;
-        width: 240px;
-        max-width: 240px;
+        width: 280px;
+        max-width: 280px;
         box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
         height: calc(100vh - 60px);
     }
     .Menu.show {
-        transform: translateX(240px);
+        transform: translateX(280px);
+    }
+}
+
+/* Very small screens (320px - 359px) - Full width drawer */
+@media (max-width: 359px) {
+    .Menu {
+        left: -100%;
+        width: 100%;
+        max-width: 100%;
+        top: 56px;
+        height: calc(100vh - 56px);
+    }
+    .Menu.show {
+        transform: translateX(100%);
     }
 }
