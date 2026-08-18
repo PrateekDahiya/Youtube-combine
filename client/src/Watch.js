@@ -36,9 +36,6 @@ const Watch = (params) => {
         !!link &&
         (link.startsWith("/uploads/") || link.includes("res.cloudinary.com"));
 
-const isYouTubeLink = (link) =>
-        !!link && link.includes("youtube.com/watch");
-
     function formatNumber(num) {
         if (num === undefined || num === null) return "0";
         if (num >= 1000000) {
@@ -162,7 +159,7 @@ const isYouTubeLink = (link) =>
 
     useEffect(() => {
         if (!watchdata || !watchdata.video_id) return;
-        if (watchdata.link && (isUploadedLink(watchdata.link) || isYouTubeLink(watchdata.link))) {
+        if (watchdata.link && isUploadedLink(watchdata.link)) {
             return;
         }
         let cancelled = false;
@@ -193,16 +190,12 @@ const isYouTubeLink = (link) =>
                 const response = await videoApi.getWatch(Object.fromEntries(searchParams).video_id);
                 const row = response.data[0];
                 setwatchdata(row || {});
-                if (row && row.link && (isUploadedLink(row.link) || isYouTubeLink(row.link))) {
+                if (row && row.link && isUploadedLink(row.link)) {
                     setIsUploaded(true);
-                    if (isYouTubeLink(row.link)) {
-                        setFetchFailed(true);
-                    } else {
-                        setMode("progressive");
-                        setVideo_url(row.link);
-                        setAudio_url("");
-                        setFetchFailed(false);
-                    }
+                    setMode("progressive");
+                    setVideo_url(row.link);
+                    setAudio_url("");
+                    setFetchFailed(false);
                 }
             } catch (error) {
                 console.log("Error fetching watch data:", error.message);
@@ -237,14 +230,7 @@ const isYouTubeLink = (link) =>
         // Use the format with more unique resolutions for quality menu
         const useAdaptiveForMenu = adaptiveResolutions.length > progressiveResolutions.length;
         const menuResolutions = useAdaptiveForMenu ? adaptiveResolutions : progressiveResolutions;
-        setQualityoptions(menuResolutions.length > 0 ? menuResolutions : ["Auto"]);
-
-// FORCE IFRAME for YouTube videos - googlevideo.com URLs have CORS issues
-        if (watchdata && isYouTubeLink(watchdata.link)) {
-            setMode(null);
-            setFetchFailed(true);
-            return;
-        }
+setQualityoptions(menuResolutions.length > 0 ? menuResolutions : ["Auto"]);
 
         if (streamData.hls_url) {
             setMode("hls");
@@ -291,7 +277,7 @@ const isYouTubeLink = (link) =>
             <div className="watchpage">
                 <div className="vplayer">
                     <div className="video-player">
-                        {(!isUploaded && fetchFailed) || (isUploaded && isYouTubeLink(watchdata?.link)) ? (
+                        {(!isUploaded && fetchFailed) ? (
                             <div style={{
                                 position: 'relative',
                                 width: '100%',
