@@ -32,6 +32,8 @@ router.post("/uploadVideo", syncHandler((req, res) => {
         { name: "video", maxCount: 1 },
         { name: "thumbnail", maxCount: 1 },
     ])(req, res, async (err) => {
+        console.log("uploadVideo handler - err:", err);
+        console.log("uploadVideo handler - req.files:", req.files);
         if (err) {
             return sendResponse(res, validationErrorResponse(videoUploadErrorMessage(err)));
         }
@@ -72,10 +74,14 @@ router.post("/uploadVideo", syncHandler((req, res) => {
         const connection = getConnection();
         connection.query(insertQuery, params, async (error) => {
             if (error) {
-                console.log("UploadVideo insert: " + error);
+                console.log("UploadVideo insert error:", error);
+                console.log("UploadVideo insert error code:", error.code);
+                console.log("UploadVideo insert error errno:", error.errno);
+                console.log("UploadVideo insert error sqlMessage:", error.sqlMessage);
+                console.log("UploadVideo insert error sqlState:", error.sqlState);
                 removeLocalFile(videoFile.path);
                 if (thumbFile) removeLocalFile(thumbFile.path);
-                return sendResponse(res, errorResponse("Failed to save video details"));
+                return sendResponse(res, errorResponse("Failed to save video details: " + (error.sqlMessage || error.message)));
             }
 
             if (!isYouTubeUploadConfigured()) {

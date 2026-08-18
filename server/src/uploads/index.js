@@ -42,9 +42,12 @@ const videoUpload = multer({
     storage: videoStorage,
     limits: { fileSize: MAX_VIDEO_SIZE_MB * 1024 * 1024 },
     fileFilter: (req, file, cb) => {
-        if (/^video\//.test(file.mimetype)) {
-            cb(null, true);
-        } else if (/^image\/(png|jpe?g|gif|webp)$/.test(file.mimetype)) {
+        const videoMime = /^video\//.test(file.mimetype);
+        const videoExt = /\.(mp4|webm|mov|avi|mkv|flv|m4v)$/i.test(file.originalname);
+        const imageMime = /^image\/(png|jpe?g|gif|webp)$/.test(file.mimetype);
+        const imageExt = /\.(png|jpe?g|gif|webp)$/i.test(file.originalname);
+        
+        if (videoMime || videoExt || imageMime || imageExt) {
             cb(null, true);
         } else {
             cb(new Error("Invalid file type"));

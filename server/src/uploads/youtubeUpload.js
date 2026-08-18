@@ -226,6 +226,22 @@ async function deleteYouTubeVideo(videoId) {
     }
 }
 
+function youtubeErrorMessage(err) {
+    if (!err) return "YouTube upload failed";
+    const status = err.response?.status || err.statusCode || err.status;
+    const message = err.message || String(err);
+    if (status === 403 && /quota/.test(message)) {
+        return "YouTube API quota exceeded. Please try again later.";
+    }
+    if (status === 401) {
+        return "YouTube authentication failed. Check OAuth credentials.";
+    }
+    if (message.includes("invalid argument")) {
+        return "YouTube rejected the video metadata. Check title length (max 100 chars), description (max 5000), tags, and category.";
+    }
+    return message;
+}
+
 async function pollProcessingStatus(videoId, maxWaitMs = 180000) {
     const youtube = getYouTubeClient();
     const startTime = Date.now();
@@ -251,5 +267,6 @@ module.exports = {
     pollProcessingStatus,
     checkProcessingStatus,
     getYouTubeClient,
+    youtubeErrorMessage,
     CATEGORY_MAP,
 };
