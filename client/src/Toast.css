@@ -44,3 +44,20 @@
         transform: translateX(0);
     }
 }
+
+/* Very small screens (320px - 359px) */
+@media (max-width: 359px) {
+    .toast-stack {
+        top: 68px;
+        right: 8px;
+        left: 8px;
+        max-width: calc(100vw - 16px);
+    }
+    .toast {
+        min-width: auto;
+        max-width: 100%;
+        padding: 10px 14px;
+        font-size: 13px;
+        border-radius: 6px;
+    }
+}
