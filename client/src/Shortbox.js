@@ -11,6 +11,7 @@ const Shortbox = (params) => {
     const [fetchFailed, setFetchFailed] = useState(false);
     const [mode, setMode] = useState(null);
     const [videoUrl, setVideoUrl] = useState("");
+    const [audioUrl, setAudioUrl] = useState("");
     const [qualityoptions, setQualityoptions] = useState(["Auto"]);
     const [videoResolution, setVideoResolution] = useState(0);
     
@@ -59,13 +60,15 @@ const Shortbox = (params) => {
         if (streamData.hls_url) {
             setMode("hls");
             setVideoUrl(streamData.hls_url);
+            setAudioUrl("");
             return;
         }
 
-        // ALWAYS prefer progressive (muxed video+audio) when available.
+        // Prefer progressive (muxed video+audio) when available.
         if (streamData.progressive && streamData.progressive.length > 0) {
             setMode("progressive");
             setVideoUrl(streamData.progressive[0].url);
+            setAudioUrl("");
             return;
         }
 
@@ -73,24 +76,53 @@ const Shortbox = (params) => {
         if (streamData.adaptive && streamData.adaptive.video && streamData.adaptive.video.length > 0) {
             setMode("adaptive");
             setVideoUrl(streamData.adaptive.video[0].url);
+            setAudioUrl(streamData.adaptive.audio?.[0]?.url || "");
             return;
         }
 
         setMode(null);
-    }, [streamData]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [streamData?.video_id]);
 
     const handleQualityChange = (resolution, newMode, videoUrl, audioUrl) => {
-        setVideoResolution(resolution === 0 ? 0 : parseInt(resolution));
-        if (newMode && newMode !== "auto") {
-            setMode(newMode);
-            setVideoUrl(videoUrl);
-        } else if (resolution === 0) {
-            // Auto - reset to default progressive
+        if (resolution === 0) {
             const prog = streamData?.progressive || [];
             if (prog.length > 0) {
                 setMode("progressive");
                 setVideoUrl(prog[0].url);
+                setAudioUrl("");
+                setVideoResolution(0);
             }
+            return;
+        }
+
+        const prog = streamData?.progressive || [];
+        const adaptV = streamData?.adaptive?.video || [];
+        const adaptA = streamData?.adaptive?.audio || [];
+
+        const progressiveMatch = prog.find((f) => f.resolution === resolution);
+        if (progressiveMatch) {
+            setMode("progressive");
+            setVideoUrl(progressiveMatch.url);
+            setAudioUrl("");
+            setVideoResolution(resolution);
+            return;
+        }
+
+        const adaptiveMatch = adaptV.find((f) => f.resolution === resolution);
+        if (adaptiveMatch) {
+            setMode("adaptive");
+            setVideoUrl(adaptiveMatch.url);
+            setAudioUrl(adaptA[0]?.url || "");
+            setVideoResolution(resolution);
+            return;
+        }
+
+        if (newMode && videoUrl) {
+            setMode(newMode);
+            setVideoUrl(videoUrl);
+            setAudioUrl(audioUrl || "");
+            setVideoResolution(resolution);
         }
     };
 
@@ -114,7 +146,7 @@ const Shortbox = (params) => {
                     <Videoplayer
                         mode={mode}
                         streamUrl={videoUrl}
-                        audioUrl=""
+                        audioUrl={audioUrl}
                         type="short"
                         muted={false}
                         onQualityChange={handleQualityChange}

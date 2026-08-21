@@ -214,10 +214,9 @@ const Watch = (params) => {
         }
     }, [user, watchdata]);
 
-    // Picks the best available playback tier from the stream-resolver
-    // Priority: HLS (adaptive quality) > progressive (single muxed) > adaptive (separate video+audio)
-    // Always populate qualityoptions from all available formats for the quality menu.
-useEffect(() => {
+// Initial setup: picks the best available playback tier from streamData.
+// Runs only when streamData first loads, NOT when user changes quality.
+    useEffect(() => {
         if (isUploaded || !streamData || !streamData.video_id) return;
 
         const progressiveResolutions = streamData.progressive
@@ -238,7 +237,7 @@ useEffect(() => {
             return;
         }
 
-        // ALWAYS prefer progressive (muxed video+audio) when available.
+        // Prefer progressive (muxed video+audio) when available.
         if (streamData.progressive && streamData.progressive.length > 0) {
             setMode("progressive");
             const match = streamData.progressive.find((f) => f.resolution === video_resolution);
@@ -260,22 +259,53 @@ useEffect(() => {
         }
 
         setMode(null);
-    }, [streamData, video_resolution, isUploaded]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [streamData?.video_id, isUploaded]);
 
     const handleQualityChange = (resolution, newMode, videoUrl, audioUrl) => {
-        setVideo_resolution(resolution === 0 ? 0 : parseInt(resolution));
-        if (newMode && newMode !== "auto") {
-            setMode(newMode);
-            setVideo_url(videoUrl);
-            setAudio_url(audioUrl || "");
-        } else if (resolution === 0) {
+        if (resolution === 0) {
             // Auto - reset to default progressive
             const prog = streamData?.progressive || [];
             if (prog.length > 0) {
                 setMode("progressive");
                 setVideo_url(prog[0].url);
                 setAudio_url("");
+                setVideo_resolution(0);
             }
+            return;
+        }
+
+        // User selected a specific resolution - use adaptive (video+audio separate)
+        // if it has the resolution, otherwise progressive.
+        const prog = streamData?.progressive || [];
+        const adaptV = streamData?.adaptive?.video || [];
+        const adaptA = streamData?.adaptive?.audio || [];
+
+        const progressiveMatch = prog.find((f) => f.resolution === resolution);
+        if (progressiveMatch) {
+            setMode("progressive");
+            setVideo_url(progressiveMatch.url);
+            setAudio_url("");
+            setVideo_resolution(resolution);
+            return;
+        }
+
+        const adaptiveMatch = adaptV.find((f) => f.resolution === resolution);
+        if (adaptiveMatch) {
+            const audioMatch = adaptA[0];
+            setMode("adaptive");
+            setVideo_url(adaptiveMatch.url);
+            setAudio_url(audioMatch ? audioMatch.url : "");
+            setVideo_resolution(resolution);
+            return;
+        }
+
+        // Fallback to whatever the caller provided
+        if (newMode && videoUrl) {
+            setMode(newMode);
+            setVideo_url(videoUrl);
+            setAudio_url(audioUrl || "");
+            setVideo_resolution(resolution);
         }
     };
 
