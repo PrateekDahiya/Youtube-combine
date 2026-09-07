@@ -18,4 +18,10 @@ export const channelApi = {
 
     addNewChannel: () =>
         api.get("/addnewchannel"),
+
+    getSchedulerSettings: () =>
+        api.get("/scheduler-settings"),
+
+    updateSchedulerSetting: (settingKey, settingValue) =>
+        api.post("/scheduler-settings", { setting_key: settingKey, setting_value: settingValue }),
 };
