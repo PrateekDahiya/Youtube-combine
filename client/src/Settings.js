@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useContext, useRef } from "react";
 import { Link } from "react-router-dom";
-import { authApi, uploadApi } from "./api";
+import { authApi, uploadApi, channelApi } from "./api";
 import { ThemeContext } from "./ThemeContext";
 
 import "./Settings.css";
@@ -22,6 +22,9 @@ const Settings = (params) => {
     const [passwordForm, setPasswordForm] = useState({ current: "", new: "", confirm: "" });
     const [passwordError, setPasswordError] = useState("");
     const [saving, setSaving] = useState(false);
+    const [schedulerSettings, setSchedulerSettings] = useState({ channel_update_cron: "", new_channel_cron: "" });
+    const [loadingSchedulerSettings, setLoadingSchedulerSettings] = useState(true);
+    const [savingSchedulerSettings, setSavingSchedulerSettings] = useState(false);
     const iconInputRef = useRef(null);
     const bannerInputRef = useRef(null);
 
@@ -123,6 +126,43 @@ const Settings = (params) => {
             console.error("Error updating cookies:", error);
         }
     };
+
+    const loadSchedulerSettings = async () => {
+        try {
+            setLoadingSchedulerSettings(true);
+            const response = await channelApi.getSchedulerSettings();
+            if (response.settings) {
+                setSchedulerSettings(response.settings);
+            }
+        } catch (error) {
+            console.error("Error loading scheduler settings:", error);
+        } finally {
+            setLoadingSchedulerSettings(false);
+        }
+    };
+
+    const handleSchedulerSettingChange = (key, value) => {
+        setSchedulerSettings(prev => ({ ...prev, [key]: value }));
+    };
+
+    const saveSchedulerSettings = async () => {
+        setSavingSchedulerSettings(true);
+        try {
+            for (const [key, value] of Object.entries(schedulerSettings)) {
+                await channelApi.updateSchedulerSetting(key, value);
+            }
+            alert("Scheduler settings saved successfully");
+        } catch (error) {
+            console.error("Error saving scheduler settings:", error);
+            alert("Failed to save scheduler settings");
+        } finally {
+            setSavingSchedulerSettings(false);
+        }
+    };
+
+    useEffect(() => {
+        loadSchedulerSettings();
+    }, []);
 
     const handleSubmit = async (label, value) => {
         const userLabels = { Name: "username", Email: "email", DOB: "DOB" };
@@ -691,6 +731,50 @@ const Settings = (params) => {
                                             <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
                                             <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
                                         </svg>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="settings-section">
+                            <h3 className="settings-section-title">Scheduler Settings</h3>
+                            <p className="settings-section-description">
+                                Configure how often the background jobs run to update channels and discover new channels.
+                            </p>
+                            <div className="settings-field-row">
+                                <label className="settings-label">Channel Update Cron</label>
+                                <div className="settings-value-wrapper">
+                                    <input
+                                        type="text"
+                                        className="settings-input"
+                                        value={schedulerSettings.channel_update_cron || ""}
+                                        onChange={(e) => handleSchedulerSettingChange("channel_update_cron", e.target.value)}
+                                        placeholder="e.g., */15 * * * * (every 15 minutes)"
+                                        disabled={loadingSchedulerSettings}
+                                    />
+                                </div>
+                            </div>
+                            <div className="settings-field-row">
+                                <label className="settings-label">New Channel Discovery Cron</label>
+                                <div className="settings-value-wrapper">
+                                    <input
+                                        type="text"
+                                        className="settings-input"
+                                        value={schedulerSettings.new_channel_cron || ""}
+                                        onChange={(e) => handleSchedulerSettingChange("new_channel_cron", e.target.value)}
+                                        placeholder="e.g., */15 * * * * (every 15 minutes)"
+                                        disabled={loadingSchedulerSettings}
+                                    />
+                                </div>
+                            </div>
+                            <div className="settings-field-row">
+                                <div className="settings-value-wrapper">
+                                    <button 
+                                        className="settings-btn settings-btn-primary"
+                                        onClick={saveSchedulerSettings}
+                                        disabled={savingSchedulerSettings || loadingSchedulerSettings}
+                                    >
+                                        {savingSchedulerSettings ? "Saving..." : "Save Scheduler Settings"}
                                     </button>
                                 </div>
                             </div>

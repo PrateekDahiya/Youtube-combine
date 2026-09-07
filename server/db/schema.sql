@@ -157,6 +157,22 @@ CREATE TABLE IF NOT EXISTS schema_migrations (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ---------------------------------------------------------------------------
+-- scheduler_settings
+-- Stores cron expressions for internal schedulers (channel updates, new channel discovery)
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS scheduler_settings (
+    setting_key     VARCHAR(64)     NOT NULL PRIMARY KEY,
+    setting_value   VARCHAR(255)    NOT NULL,
+    created_at      TIMESTAMP       DEFAULT CURRENT_TIMESTAMP,
+    updated_at      TIMESTAMP       DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Default cron expressions (every 15 minutes)
+INSERT IGNORE INTO scheduler_settings (setting_key, setting_value) VALUES
+    ('channel_update_cron', '*/15 * * * *'),
+    ('new_channel_cron', '*/15 * * * *');
+
+-- ---------------------------------------------------------------------------
 -- comments
 -- Backs the add/edit/delete comment routes in src/routes/comments.js, AND
 -- caches real YouTube commentThreads in the same table (source = 'youtube').

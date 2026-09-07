@@ -9,6 +9,7 @@ const compression = require("compression");
 const { getConnection } = require("./src/db");
 const { runMigrations } = require("./src/db/migrationRunner");
 const { startNotificationCron } = require("./src/youtube/checkNewVideos");
+const { initializeAndStartSchedulers } = require("./src/youtube/channelScheduler");
 const { uploadsDir } = require("./src/uploads");
 const healthRoutes = require("./src/routes/health");
 const feedRoutes = require("./src/routes/feed");
@@ -78,6 +79,7 @@ const server = app.listen(port, async () => {
     }
 
     startNotificationCron();
+    initializeAndStartSchedulers();
 });
 
 server.on("error", (error) => {

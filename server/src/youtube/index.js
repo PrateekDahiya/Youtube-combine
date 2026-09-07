@@ -302,7 +302,7 @@ async function getChannelIdsNeedingUpdate(offset, limit, staleDays = 3) {
     });
 }
 
-async function processChannels(channelIds, totalResults = 5) {
+async function processChannels(channelIds, totalResults = 50) {
     const startingPageToken = null;
 
     // Sequential, not Promise.all: each channel opens its own raw DB
@@ -344,8 +344,8 @@ const getNewChannelId = async () => {
 
 // Keeps drawing candidate channel ids until one isn't already in `channels`,
 // instead of returning on the first (likely already-known) pick.
-async function findNewChannelId(maxAttempts = 15) {
-    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+async function findNewChannelId() {
+    while (true) {
         const channelId = await getNewChannelId();
         if (!channelId) continue;
         try {
@@ -355,7 +355,6 @@ async function findNewChannelId(maxAttempts = 15) {
             console.log("Error checking channel existence:", error.message);
         }
     }
-    return null;
 }
 
 async function channelExists(channelId) {
@@ -372,29 +371,19 @@ async function channelExists(channelId) {
     });
 }
 
-const addNewChannel = async (channelId) => {
-    const totalResults = 50;
+const addNewChannel = async (channelId, totalResults = 50) => {
     const startingPageToken = null;
     if (!channelId || channelId.length <= 20) {
-        return "False";
-    }
-
-    let exists = false;
-    try {
-        exists = await channelExists(channelId);
-    } catch (error) {
-        console.log("Error checking channel existence:", error.message);
-    }
-    if (exists) {
-        return "AlreadyExists";
+        return false;
     }
 
     try {
         await fetchAndStoreVideos(channelId, totalResults, startingPageToken);
+        return true;
     } catch (error) {
         console.log("Error adding new channel " + channelId + ": " + error.message);
+        return false;
     }
-    return "True";
 };
 
 const youtubeCategories = [

@@ -8,7 +8,7 @@ This guide is for AI agents (and humans pairing with them) editing the **VidVaul
   - `db/migrations/` — apply once against an existing DB. See `db/migrations/CONTEXT.md`.
 - `src/` — **modular Express API source** (replaces the old monolithic `server.js`). See `server/CONTEXT.md` for module map.
   - `src/routes/` — Express routers grouped by feature/domain. Add new routes here.
-  - `src/youtube/` — YouTube Data API v3 fetching logic.
+  - `src/youtube/` — YouTube Data API v3 fetching logic (`fetchAndStoreVideos`, `getChannelIdsNeedingUpdate`, `processChannels`, `getNewChannelId`, `findNewChannelId`, `addNewChannel`, API key rotation). Also `streamResolver.js` — resolves a playable stream URL in-process via `youtubei.js`. `channelScheduler.js` — internal cron schedulers for channel updates (hourly) and new channel discovery (every 6 hours).
   - `src/uploads/` — Multer + Cloudinary upload helpers.
   - `src/utils/` — ID generators, feed SQL builder, date/duration helpers, category mappings.
   - `src/feed/` — one handler file per video feed `type` (home, tag, category, trending, subscriptions, personalized, watchlater, liked, history, channel, search, related, watch, videobyid, shorts) + `index.js` registry + `helpers.js` shared plumbing. Add a new type by adding a new file here.
@@ -73,8 +73,12 @@ This guide is for AI agents (and humans pairing with them) editing the **VidVaul
 
 ## When you add a new scheduler / ingestion job
 
-- Several endpoints (`/api/update_channels`, `/api/addnewchannel`) maintain an in-memory `offset` that's incremented per request. Keep that pattern unless you add persistence — note that `offset` resets on every process restart.
-- The repo also has `node-cron` as a dependency but it is not currently used. If you wire up a cron, store its state in the DB rather than module locals.
+- Two internal schedulers now run in-process (see `src/youtube/channelScheduler.js`):
+  - **Channel Update Scheduler** — hourly (`0 * * * *`), processes up to 5 channels per run with 50 videos each.
+  - **New Channel Scheduler** — every 6 hours (`0 */6 * * *`), finds and adds one new channel with 50 videos.
+- Both use hardcoded config (no env vars), `node-cron`, and in-memory guards (`isUpdatingChannels`, `isAddingChannel`) to prevent overlap.
+- The `/api/update_channels` and `/api/addnewchannel` endpoints remain for manual triggering but are no longer the primary execution path.
+- The old pattern of in-memory `offset` in `channels.js` still resets on restart; internal schedulers have their own `offset` in `channelScheduler.js`.
 
 ## Local dev vs. production
 

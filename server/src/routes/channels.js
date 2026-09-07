@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const { getConnection } = require("../db");
 const { getChannelIdsNeedingUpdate, processChannels, findNewChannelId, addNewChannel } = require("../youtube");
+const { getSchedulerSettings, updateSchedulerSetting } = require("../youtube/channelScheduler");
 const { syncHandler, asyncHandler } = require("../utils/asyncHandler");
 const { successResponse, errorResponse, validationErrorResponse, sendResponse } = require("../utils/responseWrapper");
 
@@ -82,7 +83,7 @@ router.get("/update_channels", asyncHandler(async (req, res) => {
         if (channelIds.length === 0) {
             offset = 0;
         } else {
-            await processChannels(channelIds);
+            await processChannels(channelIds, 50);
             offset += batchSize;
         }
 
@@ -106,13 +107,54 @@ router.get("/addnewchannel", asyncHandler(async (req, res) => {
             }, "No new channel found after multiple attempts"));
         }
 
-        const success = await addNewChannel(channelId);
+        const success = await addNewChannel(channelId, 50);
         sendResponse(res, successResponse({
             success: success,
             Channel_id: channelId,
         }, "New channel added successfully"));
     } finally {
         isAddingChannel = false;
+    }
+}));
+
+// Get scheduler settings
+router.get("/scheduler-settings", asyncHandler(async (req, res) => {
+    try {
+        const settings = await getSchedulerSettings();
+        sendResponse(res, successResponse({ settings }, "Scheduler settings retrieved successfully"));
+    } catch (error) {
+        console.error("Error getting scheduler settings:", error.message);
+        sendResponse(res, errorResponse("Failed to get scheduler settings"));
+    }
+}));
+
+// Update scheduler setting
+router.post("/scheduler-settings", asyncHandler(async (req, res) => {
+    const { setting_key, setting_value } = req.body;
+    
+    if (!setting_key || !setting_value) {
+        return sendResponse(res, validationErrorResponse("setting_key and setting_value are required"));
+    }
+    
+    if (!["channel_update_cron", "new_channel_cron"].includes(setting_key)) {
+        return sendResponse(res, validationErrorResponse("Invalid setting_key"));
+    }
+    
+    try {
+        await updateSchedulerSetting(setting_key, setting_value);
+        
+        // Restart the affected scheduler
+        const { startChannelUpdateScheduler, startNewChannelScheduler } = require("../youtube/channelScheduler");
+        if (setting_key === "channel_update_cron") {
+            startChannelUpdateScheduler(setting_value);
+        } else if (setting_key === "new_channel_cron") {
+            startNewChannelScheduler(setting_value);
+        }
+        
+        sendResponse(res, successResponse({ setting_key, setting_value }, "Scheduler setting updated successfully"));
+    } catch (error) {
+        console.error("Error updating scheduler setting:", error.message);
+        sendResponse(res, errorResponse("Failed to update scheduler setting"));
     }
 }));
 

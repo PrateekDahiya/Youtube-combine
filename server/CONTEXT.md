@@ -31,7 +31,7 @@ The **back-end** of VidVault: a Node.js + Express REST API, the MySQL schema, an
 | `src/feed/` | Per-type video feed handlers (`home.js`, `tag.js`, `category.js`, `trending.js`, `subscriptions.js`, `personalized.js`, `watchlater.js`, `liked.js`, `history.js`, `channel.js`, `search.js`, `related.js`, `watch.js`, `videobyid.js`, `shorts.js`), auto-registered by `index.js` and backed by shared helpers in `helpers.js`. See the "Unified video endpoint" section. |
 | `src/email/` | `sendEmail()` via Resend. |
 | `src/uploads/` | Multer config (image + video), Cloudinary upload helpers, background video processing (`processVideoUpload`). |
-| `src/youtube/` | YouTube Data API v3 fetching: `fetchAndStoreVideos`, `getChannelIds`, `processChannels`, `getNewChannelId`, `addNewChannel`, API key rotation. Also `streamResolver.js` — resolves a playable stream URL (progressive/adaptive/HLS) for a video via `youtubei.js`, in-process (see "Stream resolution" below). |
+| `src/youtube/` | YouTube Data API v3 fetching: `fetchAndStoreVideos`, `getChannelIds`, `processChannels`, `getNewChannelId`, `addNewChannel`, API key rotation. Also `streamResolver.js` — resolves a playable stream URL (progressive/adaptive/HLS) for a video via `youtubei.js`, in-process (see "Stream resolution" below). `channelScheduler.js` — internal cron schedulers for channel updates (hourly) and new channel discovery (every 6 hours), replacing external cron jobs. |
 | `src/routes/` | Express routers grouped by feature/domain (see below). |
 
 ## `src/routes/` — route modules
@@ -107,6 +107,10 @@ express()                                            // on port process.env.PORT
   ├── app.get("*") → sendFile(index.html)            // SPA fallback
   ├── error handler
   └── app.listen(port)                               // logs port, handles EADDRINUSE
+        ├── runMigrations()                          // applies DB migrations
+        ├── startNotificationCron()                  // notification checker (every 15 min)
+        ├── startChannelUpdateScheduler()            // channel updates (hourly)
+        └── startNewChannelScheduler()               // new channel discovery (every 6 hrs)
 ```
 
 ## Endpoints (same as before, now organized by route module)
@@ -124,7 +128,34 @@ See the route module table above for the full list. All endpoints retain their e
 - Helpers: `getCategoryName`, `convertImageUrl`, `convertToMySQLDatetime`, `convertDurationToSeconds`.
 - `fetchAndStoreVideos` uses a raw (non-pooled) `createNewConnection()` per call, wrapped with `guardConnection()` (attaches an `'error'` listener — mysql2 emits connection-level failures like "too many connections" as an event separate from any query callback, and an unhandled one crashes the process) and always released via `finally`, even on error.
 - `/api/update_channels` calls `getChannelIdsNeedingUpdate(offset, batchSize, staleDays=3)` instead of scanning every channel — only channels with no videos yet, or whose most-recently-synced video's `upload_time` is older than `staleDays`, are re-processed. `offset` still round-robins through that (shrinking) filtered set and resets to 0 once it's exhausted.
-- `/api/addnewchannel` calls `findNewChannelId()`, which loops `getNewChannelId()` (random category → random pick among the top 50 of that category's `mostPopular` chart, not always slot #1) plus a `channelExists()` check up to 15 times until it finds a channel not already in `channels`, instead of accepting the first (likely already-known) candidate and returning `"AlreadyExists"`. `addNewChannel` still re-checks existence itself before syncing as a defensive double-check; if `findNewChannelId` exhausts its attempts, the route returns `"NotFound"` rather than syncing nothing silently.
+- `/api/addnewchannel` calls `findNewChannelId()`, which loops `getNewChannelId()` (random category → random pick among the top 50 of that category's `mostPopular` chart, not always slot #1) plus a `channelExists()` check indefinitely until it finds a channel not already in `channels`. `addNewChannel` no longer re-checks existence (the check is done in `findNewChannelId`); it returns `true` on success, `false` on failure.
+
+## Internal Schedulers (`src/youtube/channelScheduler.js`)
+
+Two internal cron schedulers run within the Node process, replacing external cron jobs:
+
+1. **Channel Update Scheduler** — runs every 15 minutes (`*/15 * * * *`):
+   - Calls `getChannelIdsNeedingUpdate(offset, 5, 3)` to get up to 5 channels needing update
+   - Processes each channel with `processChannels(channelIds, 50)` to fetch up to 50 videos per channel
+   - Increments `offset` by batch size (5); resets to 0 when no channels need update
+   - Guarded by `isUpdatingChannels` flag to prevent overlap
+
+2. **New Channel Discovery Scheduler** — runs every 15 minutes (`*/15 * * * *`):
+   - Loops `getNewChannelId()` + `channelExists()` indefinitely until a new channel is found
+   - Calls `addNewChannel(channelId, 50)` to sync up to 50 videos from the new channel
+   - Guarded by `isAddingChannel` flag to prevent overlap
+   - No max attempts — runs until YouTube API quota is exhausted or a new channel is found
+
+Both schedulers are started in `server.js` after migrations run. Cron expressions are stored in the `scheduler_settings` table and can be configured via API.
+
+## Scheduler Settings API (`/api/scheduler-settings`)
+
+- `GET /api/scheduler-settings` — Returns current cron expressions for both schedulers
+- `POST /api/scheduler-settings` — Updates a scheduler's cron expression
+  - Body: `{ "setting_key": "channel_update_cron" | "new_channel_cron", "setting_value": "<cron expression>" }`
+  - Restarts the affected scheduler with the new schedule
+
+Settings are persisted in the `scheduler_settings` table and loaded on startup. Default: both run every 15 minutes.
 
 ## Stream resolution (`src/youtube/streamResolver.js`, `src/routes/stream.js`)
 
