@@ -250,13 +250,14 @@ async function notifyNewChannel(channelId) {
         const channel = channelRows[0];
         
         // Get all users to notify about new channel discovery
+        // Note: notifications.user_id FK references channels(channel_id), so we need user.channel_id
         const [users] = await connection.execute(
-            `SELECT user_id FROM user WHERE user_id != 'Guest'`
+            `SELECT channel_id FROM user WHERE user_id != 'Guest' AND channel_id IS NOT NULL`
         );
 
         for (const user of users) {
             await createNotification(
-                user.user_id,
+                user.channel_id,
                 null,
                 channelId,
                 'new_channel',
