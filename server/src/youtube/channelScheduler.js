@@ -238,7 +238,7 @@ async function checkAndNotifyNewVideos(channelId, channelName, channelIcon) {
 }
 
 async function notifyNewChannel(channelId) {
-    const connection = getConnection();
+    const connection = guardConnection(await createNewPromiseConnection(), `notifyNewChannel-${channelId}`);
     try {
         // Get channel details
         const [channelRows] = await connection.execute(
@@ -270,6 +270,12 @@ async function notifyNewChannel(channelId) {
         console.log(`Notified ${users.length} users about new channel: ${channelId}`);
     } catch (error) {
         console.error("Error notifying about new channel:", error.message);
+    } finally {
+        try {
+            await connection.end();
+        } catch (e) {
+            console.error("Error closing connection:", e.message);
+        }
     }
 }
 
@@ -292,15 +298,23 @@ function startChannelUpdateScheduler(cronExpression = DEFAULT_CHANNEL_UPDATE_CRO
                 // Process channels and check for new videos
                 for (const channelId of channelIds) {
                     // Get channel info for notifications
-                    const connection = getConnection();
-                    const [channelRows] = await connection.execute(
-                        `SELECT channel_id, channel_name, channel_icon FROM channels WHERE channel_id = ?`,
-                        [channelId]
-                    );
-                    if (channelRows.length > 0) {
-                        const channel = channelRows[0];
-                        // Check for new videos and notify subscribers
-                        await checkAndNotifyNewVideos(channelId, channel.channel_name, channel.channel_icon);
+                    const connection = guardConnection(await createNewPromiseConnection(), `getChannelInfo-${channelId}`);
+                    try {
+                        const [channelRows] = await connection.execute(
+                            `SELECT channel_id, channel_name, channel_icon FROM channels WHERE channel_id = ?`,
+                            [channelId]
+                        );
+                        if (channelRows.length > 0) {
+                            const channel = channelRows[0];
+                            // Check for new videos and notify subscribers
+                            await checkAndNotifyNewVideos(channelId, channel.channel_name, channel.channel_icon);
+                        }
+                    } finally {
+                        try {
+                            await connection.end();
+                        } catch (e) {
+                            console.error("Error closing connection:", e.message);
+                        }
                     }
                 }
                 

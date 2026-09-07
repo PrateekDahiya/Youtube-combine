@@ -574,6 +574,7 @@ module.exports = {
     getNewChannelId,
     findNewChannelId,
     addNewChannel,
+    channelExists,
     getRandomCategory,
     fetchVideoHistory,
     fetchRelatedVideos,
