@@ -121,8 +121,13 @@ const NotificationPanel = (params) => {
             handleMarkAsRead(notification.notification_id, notifications.findIndex(n => n.notification_id === notification.notification_id));
         }
         
-        const isShort = notification.type === "new_short";
-        const targetUrl = isShort ? `/shorts?video_id=${notification.video_id}` : `/watch?video_id=${notification.video_id}`;
+        let targetUrl;
+        if (notification.type === "new_channel") {
+            targetUrl = `/channel?channel_id=${notification.channel_id}`;
+        } else {
+            const isShort = notification.type === "new_short";
+            targetUrl = isShort ? `/shorts?video_id=${notification.video_id}` : `/watch?video_id=${notification.video_id}`;
+        }
         window.location.href = targetUrl;
         onClose();
     };
@@ -182,15 +187,15 @@ const NotificationPanel = (params) => {
                                                 <span className="notification-title">{notification.title}</span>
                                                 {!notification.is_read && <span className="notification-dot"></span>}
                                             </div>
-                                            <div className="notification-meta">
-                                                <span className="notification-channel">{notification.channel_name}</span>
-                                                <span className="notification-type">
-                                                    {notification.type === "new_short" ? "Short" : "Video"}
-                                                </span>
-                                                <span className="notification-time">
-                                                    {getDateDifference(notification.upload_time || notification.created_at)}
-                                                </span>
-                                            </div>
+<div className="notification-meta">
+                                                    <span className="notification-channel">{notification.channel_name}</span>
+                                                    <span className="notification-type">
+                                                        {notification.type === "new_short" ? "Short" : notification.type === "new_channel" ? "Channel" : "Video"}
+                                                    </span>
+                                                    <span className="notification-time">
+                                                        {getDateDifference(notification.upload_time || notification.created_at)}
+                                                    </span>
+                                                </div>
                                         </div>
                                         <div className="notification-thumbnail">
                                             <img 
