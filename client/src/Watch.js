@@ -252,6 +252,72 @@ const Watch = (params) => {
         }
     };
 
+    const ytIframeRef = useRef(null);
+    const ytPlayerRef = useRef(null);
+    const handleEndedRef = useRef(null);
+
+    useEffect(() => {
+        handleEndedRef.current = handleEnded;
+    });
+
+    useEffect(() => {
+        const showIframe = !isUploaded && fetchFailed && watchdata && watchdata.video_id;
+        if (!showIframe) return;
+        let cancelled = false;
+        let player = null;
+        let timer = null;
+        const destroyPlayer = () => {
+            if (timer) clearInterval(timer);
+            if (player && player.destroy) {
+                try {
+                    player.destroy();
+                } catch (e) {
+                    console.log("Error destroying YT player:", e.message);
+                }
+            }
+            ytPlayerRef.current = null;
+        };
+        const initPlayer = () => {
+            if (cancelled) return;
+            const iframe = ytIframeRef.current;
+            if (!iframe || !window.YT || !window.YT.Player) return;
+            player = new window.YT.Player(iframe, {
+                events: {
+                    onStateChange: (event) => {
+                        if (event.data === window.YT.PlayerState.ENDED) {
+                            if (handleEndedRef.current) handleEndedRef.current();
+                        }
+                    },
+                },
+            });
+            ytPlayerRef.current = player;
+        };
+        if (window.YT && window.YT.Player) {
+            initPlayer();
+        } else {
+            if (!document.querySelector('script[src="https://www.youtube.com/iframe_api"]')) {
+                const tag = document.createElement("script");
+                tag.src = "https://www.youtube.com/iframe_api";
+                document.body.appendChild(tag);
+                window.onYouTubeIframeAPIReady = () => {
+                    initPlayer();
+                };
+            } else {
+                timer = setInterval(() => {
+                    if (window.YT && window.YT.Player) {
+                        clearInterval(timer);
+                        timer = null;
+                        initPlayer();
+                    }
+                }, 500);
+            }
+        }
+        return () => {
+            cancelled = true;
+            destroyPlayer();
+        };
+    }, [fetchFailed, isUploaded, video_id]);
+
 // Initial setup: picks the best available playback tier from streamData.
 // Runs only when streamData first loads, NOT when user changes quality.
     useEffect(() => {
@@ -360,6 +426,7 @@ const Watch = (params) => {
                                 width: '100%',
                             }}>
                                 <iframe
+                                    ref={ytIframeRef}
                                     style={{
                                         position: 'relative',
                                         top: 0,
@@ -367,9 +434,9 @@ const Watch = (params) => {
                                         width: '100%',
                                         height: '75vh',
                                         maxHeight: 'vh',
-                                        
+
                                     }}
-                                    src={`https://www.youtube.com/embed/${watchdata.video_id}`}
+                                    src={`https://www.youtube.com/embed/${watchdata.video_id}?enablejsapi=1`}
                                     title="YouTube video player"
                                     frameBorder="0"
                                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
@@ -377,7 +444,6 @@ const Watch = (params) => {
                                 ></iframe>
                             </div>
                         ) : (
-                            <>
                             <Videoplayer
                                 mode={mode}
                                 streamUrl={video_url}
@@ -391,19 +457,18 @@ const Watch = (params) => {
                                 streamData={streamData}
                                 onEnded={handleEnded}
                             />
-                            <div className="autoplay-row">
-                                <span className="autoplay-label">Autoplay</span>
-                                <button
-                                    className={"autoplay-toggle" + (autoplay ? " on" : "")}
-                                    onClick={toggleAutoplay}
-                                    aria-pressed={autoplay}
-                                    title={autoplay ? "Autoplay is on" : "Autoplay is off"}
-                                >
-                                    <span className="autoplay-knob" />
-                                </button>
-                            </div>
-                            </>
                         )}
+                        <div className="autoplay-row">
+                            <span className="autoplay-label">Autoplay</span>
+                            <button
+                                className={"autoplay-toggle" + (autoplay ? " on" : "")}
+                                onClick={toggleAutoplay}
+                                aria-pressed={autoplay}
+                                title={autoplay ? "Autoplay is on" : "Autoplay is off"}
+                            >
+                                <span className="autoplay-knob" />
+                            </button>
+                        </div>
                     </div>
 
                     <div className="video_info">
