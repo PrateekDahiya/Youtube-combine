@@ -2,6 +2,8 @@ const { fetchVideoHistory } = require("../youtube");
 const { sanitizeTag } = require("../utils");
 const { httpError, runQuery, cachedFetch, flagVideos } = require("./helpers");
 
+const DISCOVERY_CANDIDATE_LIMIT = 3000;
+
 async function newForYouFeed(params) {
     const user_chl_id = params.user_id;
     const page_no = params.page || 1;
@@ -12,8 +14,8 @@ async function newForYouFeed(params) {
 
     const cacheKey = `newforyou-feed:${user_chl_id}:${page_no}`;
 
-    const feed = await cachedFetch(cacheKey, 60, async () => {
-        const videoHistory = await fetchVideoHistory(user_chl_id);
+    const feed = await cachedFetch(cacheKey, 180, async () => {
+        const videoHistory = (await fetchVideoHistory(user_chl_id)).slice(0, 50);
 
         const excludedVideoIds = videoHistory.map((video) => video.video_id);
 
@@ -35,9 +37,30 @@ async function newForYouFeed(params) {
         const frequentWords = Object.entries(wordCount)
             .filter(([word, count]) => count > 1)
             .sort((a, b) => b[1] - a[1])
+            .slice(0, 40)
             .map(([word]) => word);
 
-        const conditions = ["v.isShort = 0", "v.upload_status = 0"];
+        // Phase 1: cheapest popular set via the views index — no scoring yet.
+        const popularRows = await runQuery(
+            `SELECT video_id FROM videos USE INDEX (idx_video_views)
+             WHERE isShort = 0 AND upload_status = 0
+             ORDER BY views DESC
+             LIMIT ?`,
+            [DISCOVERY_CANDIDATE_LIMIT]
+        );
+        const candidateIds = (popularRows || []).map((row) => row.video_id);
+        if (candidateIds.length === 0) {
+            return [];
+        }
+
+        const conditions = [
+            "v.isShort = 0",
+            "v.upload_status = 0",
+            `v.video_id IN (${candidateIds
+                .filter((id) => id && id !== "undefined")
+                .map((id) => `'${sanitizeTag(id)}'`)
+                .join(", ")})`,
+        ];
 
         const filteredExcludedIds = excludedVideoIds
             .filter((id) => id && id !== "undefined")
@@ -53,6 +76,7 @@ async function newForYouFeed(params) {
             conditions.push(`(${outsideTaste})`);
         }
 
+        // Phase 2: exact outside-taste filter + per-channel cap on candidates only.
         const sqlQuery = `
             SELECT
                 v.*, c.*

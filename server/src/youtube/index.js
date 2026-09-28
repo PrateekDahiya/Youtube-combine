@@ -6,8 +6,11 @@ const {
     convertImageUrl,
     convertDurationToSeconds,
     getCategoryName,
+    extractFrequentWords,
+    buildTastePrefilterQuery,
     createFeedAndGenerateSQL,
 } = require("../utils");
+const { checkFullTextAvailability, isFullTextAvailable } = require("../utils/fulltext");
 
 let currentApiKeyIndex = 0;
 
@@ -577,16 +580,45 @@ const fetchRelatedVideos = async (video_id) => {
                 return reject(noTags);
             }
 
-            const sqlQuery = createFeedAndGenerateSQL(tags);
+            const runScoredQuery = (candidateIds) => {
+                const sqlQuery = createFeedAndGenerateSQL(tags, [], 5, 24, null, candidateIds);
 
-            connection.query(sqlQuery, (feedError, relatedVideos) => {
-                if (feedError) {
-                    console.log("Error fetching related videos:", feedError.message);
-                    console.log("Generated SQL Query:", sqlQuery);
-                    return reject(new Error("Database error"));
+                connection.query(sqlQuery, (feedError, relatedVideos) => {
+                    if (feedError) {
+                        console.log("Error fetching related videos:", feedError.message);
+                        console.log("Generated SQL Query:", sqlQuery);
+                        return reject(new Error("Database error"));
+                    }
+
+                    resolve({ page: "related_videos", videos: relatedVideos });
+                });
+            };
+
+            checkFullTextAvailability(() => {
+                if (!isFullTextAvailable()) {
+                    return runScoredQuery(null);
                 }
-
-                resolve({ page: "related_videos", videos: relatedVideos });
+                const ftQuery = buildTastePrefilterQuery(extractFrequentWords(tags));
+                if (!ftQuery) {
+                    return runScoredQuery(null);
+                }
+                connection.query(
+                    `SELECT video_id,
+                            MATCH(title, tags, video_description) AGAINST (? IN BOOLEAN MODE) AS rel
+                     FROM videos
+                     WHERE MATCH(title, tags, video_description) AGAINST (? IN BOOLEAN MODE)
+                     ORDER BY rel DESC, views DESC
+                     LIMIT 1000`,
+                    [ftQuery, ftQuery],
+                    (candidateError, candidateRows) => {
+                        if (candidateError) {
+                            console.log("Error fetching related candidates:", candidateError.message);
+                            return runScoredQuery(null);
+                        }
+                        const candidateIds = (candidateRows || []).map((row) => row.video_id);
+                        runScoredQuery(candidateIds.length > 0 ? candidateIds : null);
+                    }
+                );
             });
         });
     });

@@ -73,6 +73,7 @@ CREATE TABLE IF NOT EXISTS videos (
     KEY idx_video_category (category),
     KEY idx_video_upload_time (upload_time),
     KEY idx_video_isshort (isShort),
+    KEY idx_video_views (views DESC),
     FULLTEXT KEY ft_videos_search (title, tags, video_description),
     CONSTRAINT fk_video_channel FOREIGN KEY (channel_id)
         REFERENCES channels (channel_id) ON DELETE CASCADE

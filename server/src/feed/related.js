@@ -1,5 +1,5 @@
 const { fetchRelatedVideos, fetchVideoHistory } = require("../youtube");
-const { httpError, flagVideos } = require("./helpers");
+const { httpError, cachedFetch, flagVideos } = require("./helpers");
 
 async function relatedFeed(params) {
     const video_id = params.video_id;
@@ -8,7 +8,9 @@ async function relatedFeed(params) {
     }
     let data;
     try {
-        data = await fetchRelatedVideos(video_id);
+        data = await cachedFetch(`related:${video_id}`, 300, async () => {
+            return fetchRelatedVideos(video_id);
+        });
     } catch (error) {
         if (error.statusCode) {
             throw error;

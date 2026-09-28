@@ -16,6 +16,7 @@ A collection of **one-off SQL migrations** that take an already-provisioned data
 | `006_add_migration_tracking.sql` | Creates `schema_migrations` table to track applied migrations (checksum-based, like Liquibase/Flyway). Enables automatic migration execution on service startup via `src/db/migrationRunner.js`. Assumptions: `schema.sql` applied. |
 | `007_add_notifications_table.sql` | Adds `notifications` table to store user notifications when subscribed channels upload new videos/shorts. Includes denormalized `channel_icon`, `thumbnail_link`, `title`, `channel_name`, `upload_time` for quick display without joins. Assumptions: `channels`, `videos`, `user` tables exist. |
 | `012_add_search_suggestions.sql` | Adds `search_suggestions` prefix index (`term`, `kind`, `ref_id`, `popularity`) for search typeahead; written by `fetchAndStoreVideos`, read by `GET /api/suggest`. `ref_id` is `''` (not NULL) so the PK dedupes tag rows. Assumptions: `channels`, `videos` tables exist. |
+| `013_add_videos_views_index.sql` | Adds `idx_video_views (views DESC)` so discovery feeds can pull the most popular candidate set via an index range scan instead of a full-table filesort. Assumptions: `videos` table exists. |
 | `011_add_user_autoplay.sql` | Adds `user.autoplay` (`TINYINT(1)`, default 1) so the Watch page autoplay toggle persists per user across sessions. Guarded `ADD COLUMN IF NOT EXISTS` via procedure. Assumptions: `user` table exists. |
 
 ## Why this migration exists

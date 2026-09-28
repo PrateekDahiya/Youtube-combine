@@ -9,15 +9,35 @@ import InfiniteScroll from "./InfiniteScroll";
 const Home = (params) => {
     const [data, setData] = useState(null);
     const [topTags, setTopTags] = useState([]);
-    const [selectedTag, setSelectedTag] = useState("All");
-    const [selectedType, setSelectedType] = useState("All");
+    const [selectedTags, setSelectedTags] = useState([]);
+    const [selectedTypes, setSelectedTypes] = useState([]);
     const [newForYou, setNewForYou] = useState(false);
     const [page_no, setpage_no] = useState(1);
     const cursorRef = useRef(null);
     const [loadingMore, setLoadingMore] = useState(false);
     const [hasMore, setHasMore] = useState(true);
     const user = params.user;
-    const videoTypes = ["All", "Music", "Gaming", "Movies", "News", "Sports"];
+    const videoTypes = ["Music", "Gaming", "Movies", "News", "Sports"];
+
+    const toggleInList = (list, value) =>
+        list.includes(value) ? list.filter((v) => v !== value) : [...list, value];
+
+    const toggleTag = (tag) => {
+        setSelectedTags((prev) => toggleInList(prev, tag));
+        setNewForYou(false);
+    };
+
+    const toggleType = (type) => {
+        setSelectedTypes((prev) => toggleInList(prev, type));
+        setNewForYou(false);
+    };
+
+    const clearFilters = () => {
+        setSelectedTags([]);
+        setSelectedTypes([]);
+    };
+
+    const hasFilters = selectedTags.length > 0 || selectedTypes.length > 0;
 
     const mergeVideos = (videos, nextCursor) => {
         setData((prev) => {
@@ -42,7 +62,7 @@ const Home = (params) => {
         setpage_no(1);
         cursorRef.current = null;
         setHasMore(true);
-    }, [selectedTag, selectedType, newForYou]);
+    }, [selectedTags, selectedTypes, newForYou]);
 
     useEffect(() => {
         const fetchHomeTags = async () => {
@@ -68,11 +88,8 @@ const Home = (params) => {
         const fetchData = async () => {
             try {
                 let response;
-                if (selectedTag !== "All") {
-                    response = await feedApi.getFeedByTag(selectedTag, page_no, cursorRef.current, user.channel_id);
-                    mergeVideos(response.videos || [], response.nextCursor);
-                } else if (selectedType !== "All") {
-                    response = await feedApi.getFeedByType(selectedType, page_no, cursorRef.current, user.channel_id);
+                if (hasFilters) {
+                    response = await feedApi.getFilteredFeed(selectedTags, selectedTypes, page_no, cursorRef.current, user.channel_id);
                     mergeVideos(response.videos || [], response.nextCursor);
                 } else if (user !== "Guest" && user.channel_id) {
                     if (newForYou) {
@@ -92,7 +109,7 @@ const Home = (params) => {
             }
         };
         fetchData();
-    }, [page_no, user.channel_id, selectedTag, selectedType, newForYou, user]);
+    }, [page_no, user.channel_id, selectedTags, selectedTypes, newForYou, hasFilters, user]);
 
     const loadMore = () => {
         if (loadingMore || !hasMore) return;
@@ -101,75 +118,69 @@ const Home = (params) => {
 
     return (
         <>
-            {data ? (
-                <>
-                    <div className="home-tags">
-                        <div className="home-tag-row">
-                            {topTags.length > 0 ? (
-                                <>
-                                    <span className="home-tag-label">Top tags</span>
-                                    {topTags.map((tag) => (
-                                        <button
-                                            key={tag}
-                                            className={
-                                                "home-tag " +
-                                                (selectedTag === tag ? "active" : "")
-                                            }
-                                            onClick={() => {
-                                                setSelectedTag(tag);
-                                                setSelectedType("All");
-                                                setNewForYou(false);
-                                            }}
-                                        >
-                                            {tag}
-                                        </button>
-                                    ))}
-                                </>
-                            ) : null}
-                            {user !== "Guest" && user.channel_id ? (
-                                <button
-                                    className={"home-tag " + (newForYou ? "active" : "")}
-                                    onClick={() => {
-                                        setNewForYou(!newForYou);
-                                        setSelectedTag("All");
-                                        setSelectedType("All");
-                                    }}
-                                >
-                                    New for you
-                                </button>
-                            ) : null}
-                        </div>
-                        <div className="home-tag-row">
-                            <span className="home-tag-label">Video type</span>
-                            {videoTypes.map((tag) => (
+            <div className="home-tags">
+                <div className="home-tag-row">
+                    {topTags.length > 0 ? (
+                        <>
+                            <span className="home-tag-label">Top tags</span>
+                            {topTags.map((tag) => (
                                 <button
                                     key={tag}
                                     className={
                                         "home-tag " +
-                                        (selectedType === tag ? "active" : "")
+                                        (selectedTags.includes(tag) ? "active" : "")
                                     }
-                                            onClick={() => {
-                                                setSelectedType(tag);
-                                                setSelectedTag("All");
-                                                setNewForYou(false);
-                                            }}
+                                    onClick={() => toggleTag(tag)}
                                 >
                                     {tag}
                                 </button>
                             ))}
-                        </div>
-                    </div>
-                    <CardGrid variant="default">
-                        {data.map((item) => (
-                            <Card key={item.video_id} data={item} />
-                        ))}
-                        <InfiniteScroll
-                            hasMore={hasMore}
-                            loading={loadingMore}
-                            onLoadMore={loadMore}
-                        />
-                    </CardGrid>
-                </>
+                        </>
+                    ) : null}
+                    {user !== "Guest" && user.channel_id ? (
+                        <button
+                            className={"home-tag " + (newForYou ? "active" : "")}
+                            onClick={() => {
+                                setNewForYou(!newForYou);
+                                clearFilters();
+                            }}
+                        >
+                            New for you
+                        </button>
+                    ) : null}
+                    {hasFilters ? (
+                        <button className="home-tag home-tag-clear" onClick={clearFilters}>
+                            Clear
+                        </button>
+                    ) : null}
+                </div>
+                <div className="home-tag-row">
+                    <span className="home-tag-label">Video type</span>
+                    {videoTypes.map((tag) => (
+                        <button
+                            key={tag}
+                            className={
+                                "home-tag " +
+                                (selectedTypes.includes(tag) ? "active" : "")
+                            }
+                            onClick={() => toggleType(tag)}
+                        >
+                            {tag}
+                        </button>
+                    ))}
+                </div>
+            </div>
+            {data ? (
+                <CardGrid variant="default">
+                    {data.map((item) => (
+                        <Card key={item.video_id} data={item} />
+                    ))}
+                    <InfiniteScroll
+                        hasMore={hasMore}
+                        loading={loadingMore}
+                        onLoadMore={loadMore}
+                    />
+                </CardGrid>
             ) : (
                 <Cardloading />
             )}

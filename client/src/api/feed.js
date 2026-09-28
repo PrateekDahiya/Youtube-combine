@@ -8,6 +8,9 @@ export const feedApi = {
     getFeedByTag: (tag, page = 1, cursor, userId) =>
         videosApi.getVideos({ type: "tag", tag, page, cursor, user_id: userId }),
 
+    getFilteredFeed: (tags, categories, page = 1, cursor, userId) =>
+        videosApi.getVideos({ type: "tag", tags, categories, page, cursor, user_id: userId }),
+
     getFeedByType: (category, page = 1, cursor, userId) =>
         videosApi.getVideos({ type: "tag", category, page, cursor, user_id: userId }),
 

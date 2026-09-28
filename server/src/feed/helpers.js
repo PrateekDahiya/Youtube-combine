@@ -55,6 +55,19 @@ const cachedFetch = (cacheKey, ttl, fetcher) =>
         });
     });
 
+const TASTE_CANDIDATE_LIMIT = 1000;
+
+const fetchTasteCandidates = (ftQuery, limit = TASTE_CANDIDATE_LIMIT) =>
+    runQuery(
+        `SELECT video_id,
+                MATCH(title, tags, video_description) AGAINST (? IN BOOLEAN MODE) AS rel
+         FROM videos
+         WHERE MATCH(title, tags, video_description) AGAINST (? IN BOOLEAN MODE)
+         ORDER BY rel DESC, views DESC
+         LIMIT ?`,
+        [ftQuery, ftQuery, limit]
+    ).then((rows) => (rows || []).map((row) => row.video_id));
+
 const flagVideos = (videos, userId) =>
     new Promise((resolve) => {
         if (!Array.isArray(videos) || videos.length === 0) {
@@ -78,10 +91,12 @@ const nextCursorFromVideos = (videos) => {
 
 module.exports = {
     HOME_TTL,
+    TASTE_CANDIDATE_LIMIT,
     httpError,
     runQuery,
     cachedQuery,
     cachedFetch,
+    fetchTasteCandidates,
     flagVideos,
     nextCursorFromVideos,
     encodeCursor,

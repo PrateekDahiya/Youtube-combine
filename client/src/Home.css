@@ -48,6 +48,12 @@
     color: var(--background-color);
 }
 
+.home-tag-clear {
+    background: transparent;
+    border: 1px solid var(--text2-color);
+    color: var(--text2-color);
+}
+
 .home-guestuser {
     width: 43%;
     height: 15%;

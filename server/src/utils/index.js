@@ -34,13 +34,7 @@ function sanitizeTag(tag) {
     return tag.replace(/'/g, "''");
 }
 
-function createFeedAndGenerateSQL(
-    tags,
-    excludedVideoIds = [],
-    maxVideosPerChannel = 5,
-    limit = 24,
-    offset = null
-) {
+function extractFrequentWords(tags) {
     const wordCount = {};
 
     tags.forEach((tag) => {
@@ -54,10 +48,29 @@ function createFeedAndGenerateSQL(
         });
     });
 
-    const multipleOccurrences = Object.entries(wordCount)
+    return Object.entries(wordCount)
         .filter(([word, count]) => count > 1)
         .sort((a, b) => b[1] - a[1])
         .map(([word]) => word);
+}
+
+function buildTastePrefilterQuery(frequentWords) {
+    const terms = frequentWords
+        .map((word) => word.replace(/[+\-<>()~*"@]/g, "").trim())
+        .filter((word) => word.length >= 4)
+        .map((word) => `${word}*`);
+    return terms.length > 0 ? terms.join(" ") : null;
+}
+
+function createFeedAndGenerateSQL(
+    tags,
+    excludedVideoIds = [],
+    maxVideosPerChannel = 5,
+    limit = 24,
+    offset = null,
+    candidateIds = null
+) {
+    const multipleOccurrences = extractFrequentWords(tags);
 
     let scoreCalculations =
         multipleOccurrences.length > 0
@@ -73,16 +86,25 @@ function createFeedAndGenerateSQL(
         .filter((id) => id && id !== "undefined")
         .map((id) => `'${sanitizeTag(id)}'`);
 
+    const candidateClause =
+        Array.isArray(candidateIds) && candidateIds.length > 0
+            ? `AND v.video_id IN (${candidateIds
+                  .filter((id) => id && id !== "undefined")
+                  .map((id) => `'${sanitizeTag(id)}'`)
+                  .join(", ")})`
+            : "";
+
     let sqlQuery = "";
     if (filteredExcludedIds.length === 0) {
         sqlQuery = `
-            SELECT 
+            SELECT
                 v.*, c.*, (${scoreCalculations}) AS score
             FROM (
                 SELECT v.*, ROW_NUMBER() OVER(PARTITION BY v.channel_id ORDER BY v.video_id) AS channel_row_number
                 FROM videos v
                 WHERE v.isShort = 0
                 AND v.upload_status = 0
+                ${candidateClause}
             ) AS v
             JOIN channels c ON v.channel_id = c.channel_id
             WHERE v.channel_row_number <= ${maxVideosPerChannel}
@@ -92,14 +114,15 @@ function createFeedAndGenerateSQL(
     } else {
         const excludearray = filteredExcludedIds.join(", ");
         sqlQuery = `
-            SELECT 
+            SELECT
                 v.*, c.*, (${scoreCalculations}) AS score
             FROM (
                 SELECT v.*, ROW_NUMBER() OVER(PARTITION BY v.channel_id ORDER BY v.video_id) AS channel_row_number
                 FROM videos v
-                WHERE v.video_id NOT IN (${excludearray}) 
+                WHERE v.video_id NOT IN (${excludearray})
                 AND v.isShort = 0
                 AND v.upload_status = 0
+                ${candidateClause}
             ) AS v
             JOIN channels c ON v.channel_id = c.channel_id
             WHERE v.channel_row_number <= ${maxVideosPerChannel}
@@ -313,6 +336,8 @@ module.exports = {
     generateChannelId,
     generateVideoId,
     sanitizeTag,
+    extractFrequentWords,
+    buildTastePrefilterQuery,
     createFeedAndGenerateSQL,
     getCategoryName,
     convertImageUrl,
