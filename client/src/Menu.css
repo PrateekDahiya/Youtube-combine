@@ -2,11 +2,12 @@
     height: 100%;
     width: 240px;
     max-width: 240px;
+    min-width: 0;
     overflow-y: auto;
     overflow-x: hidden;
     margin-left: 0;
     background: var(--background-color);
-    transition: transform 0.3s ease, width 0.3s ease;
+    transition: transform 0.3s ease, width 0.3s ease, max-width 0.3s ease;
     position: relative;
     box-sizing: border-box;
     flex-shrink: 0;
@@ -53,8 +54,12 @@ h3 {
 }
 
 .HiddenMenu {
-    padding: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 4px 0;
     width: 100%;
+    box-sizing: border-box;
 }
 
 .blabla {
@@ -79,14 +84,19 @@ h3 {
 }
 
 .Menu[data-menu="Hidden"] {
-    width: 50px;
-    max-width: 50px;
+    width: 0;
+    max-width: 0;
+    min-width: 0;
+    padding: 0;
+    border: none;
+    overflow: hidden;
     transform: translateX(0);
 }
 
 .Menu[data-menu="Narrow"] {
-    width: 50px;
-    max-width: 50px;
+    width: 76px;
+    max-width: 76px;
+    min-width: 76px;
     transform: translateX(0);
 }
 
@@ -96,6 +106,22 @@ h3 {
     .Menu[data-menu="Full"] {
         width: 240px;
         max-width: 240px;
+    }
+}
+
+@media (min-width: 1550px) {
+    .Menu[data-menu="Narrow"] {
+        width: 84px;
+        max-width: 84px;
+        min-width: 84px;
+    }
+}
+
+@media (max-width: 1199px) and (min-width: 768px) {
+    .Menu[data-menu="Narrow"] {
+        width: 68px;
+        max-width: 68px;
+        min-width: 68px;
     }
 }
 
