@@ -6,7 +6,7 @@ const { generateChannelId } = require("../utils");
 const { syncHandler, asyncHandler } = require("../utils/asyncHandler");
 const { successResponse, errorResponse, validationErrorResponse, notFoundResponse, forbiddenResponse, sendResponse } = require("../utils/responseWrapper");
 
-const userDetailFields = ["username", "email", "DOB"];
+const userDetailFields = ["username", "email", "DOB", "autoplay"];
 
 router.get("/login", syncHandler((req, res) => {
     const username = req.query.username;

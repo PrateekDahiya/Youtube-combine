@@ -34,7 +34,6 @@ const fetchAndStoreVideos = async (
     try {
         connection = guardConnection(await createNewPromiseConnection(), "fetchAndStoreVideos");
         let nextPageToken = startingPageToken;
-        let fetchedResults = 0;
 
         const apiKey = API_KEYS[currentApiKeyIndex];
         currentApiKeyIndex = (currentApiKeyIndex + 1) % API_KEYS.length;
@@ -85,6 +84,26 @@ const fetchAndStoreVideos = async (
                 "N/A",
         };
 
+        // Known video ids for this channel, so the paging loop below can skip
+        // already-synced videos and keep walking into older history until it
+        // has collected `totalResults` NEW videos (backfill), instead of
+        // stopping after the newest page.
+        const [knownRows] = await connection.execute(
+            `SELECT video_id FROM videos WHERE channel_id = ?`,
+            [channelId]
+        );
+        const knownIds = new Set(knownRows.map((row) => row.video_id));
+        let newCount = 0;
+        let pagesFetched = 0;
+        const BACKFILL_MAX_PAGES = 10;
+        // Scale the per-run target with channel size (10% of the channel's
+        // total videos, minimum 50) so large channels backfill faster while
+        // small channels keep the cheap single-page behavior.
+        const dynamicTotal = Math.max(
+            totalResults,
+            Math.min(Math.ceil((channelDetails.videoCount || 0) * 0.1), BACKFILL_MAX_PAGES * 50)
+        );
+
         await connection.execute(
             `INSERT INTO channels (channel_id, channel_name, subscribers, date_created, short_desc, location, channel_icon, channel_banner, video_count, total_views, custom_url,keywords)
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?)
@@ -105,9 +124,8 @@ const fetchAndStoreVideos = async (
             ]
         );
 
-        while (fetchedResults < totalResults) {
-            const remainingResults = totalResults - fetchedResults;
-            const maxResults = remainingResults > 50 ? 50 : remainingResults;
+        while (newCount < dynamicTotal && pagesFetched < BACKFILL_MAX_PAGES) {
+            const maxResults = 50;
 
             try {
                 const searchResponse = await axios.get(
@@ -173,7 +191,12 @@ const fetchAndStoreVideos = async (
                     };
                 });
 
-                const videoPromises = videos.map((video) => {
+                // Skip videos we already have so each run pages further into
+                // older history instead of re-writing the newest page.
+                const freshVideos = videos.filter((video) => !knownIds.has(video.videoId));
+                freshVideos.forEach((video) => knownIds.add(video.videoId));
+
+                const videoPromises = freshVideos.map((video) => {
                     return connection.execute(
                         `INSERT INTO videos (video_id, title, views, likes, dislikes, link, upload_time, channel_id, thumbnail_link, video_description, duration, tags, category, isShort)
                          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -204,9 +227,10 @@ const fetchAndStoreVideos = async (
                 // (private/deleted/restricted). Comment caching happens
                 // after this connection is released (see below) — it uses
                 // the pool, not this raw connection, and can be slow.
-                syncedVideos.push(...videos);
+                syncedVideos.push(...freshVideos);
 
-                fetchedResults += videos.length;
+                newCount += freshVideos.length;
+                pagesFetched += 1;
                 nextPageToken = searchResponse.data.nextPageToken;
 
                 if (!nextPageToken) {

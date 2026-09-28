@@ -193,7 +193,7 @@ const NotificationPanel = (params) => {
                                                         {notification.type === "new_short" ? "Short" : notification.type === "new_channel" ? "Channel" : "Video"}
                                                     </span>
                                                     <span className="notification-time">
-                                                        {getDateDifference(notification.upload_time || notification.created_at)}
+                                                        {getDateDifference(new Date(), new Date(notification.upload_time || notification.created_at)) + " ago"}
                                                     </span>
                                                 </div>
                                         </div>

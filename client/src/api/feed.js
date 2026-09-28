@@ -16,4 +16,7 @@ export const feedApi = {
 
     getPersonalizedFeed: (userId, page = 1, cursor) =>
         videosApi.getVideos({ type: "personalized", user_id: userId, page, cursor }),
+
+    getNewForYou: (userId, page = 1, cursor) =>
+        videosApi.getVideos({ type: "newforyou", user_id: userId, page, cursor }),
 };

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import "./Watch.css";
-import { videoApi, subscriptionApi, likeApi, historyApi, streamApi } from "./api";
+import { videoApi, subscriptionApi, likeApi, historyApi, streamApi, authApi } from "./api";
 import Videoplayer from "./Videoplayer";
 import Card from "./Card";
 import CardGrid from "./CardGrid";
@@ -31,6 +31,12 @@ const Watch = (params) => {
     const [isUploaded, setIsUploaded] = useState(false);
     const [mode, setMode] = useState(null);
     const [streamData, setStreamData] = useState(null);
+    const [autoplay, setAutoplay] = useState(() => {
+        if (user && user !== "Guest" && user.autoplay !== undefined && user.autoplay !== null) {
+            return Number(user.autoplay) === 1;
+        }
+        return localStorage.getItem("autoplay") !== "0";
+    });
 
     const isUploadedLink = (link) =>
         !!link &&
@@ -214,6 +220,38 @@ const Watch = (params) => {
         }
     }, [user, watchdata]);
 
+    useEffect(() => {
+        if (user && user !== "Guest" && user.autoplay !== undefined && user.autoplay !== null) {
+            setAutoplay(Number(user.autoplay) === 1);
+        }
+    }, [user]);
+
+    const toggleAutoplay = async () => {
+        const next = !autoplay;
+        setAutoplay(next);
+        if (user && user !== "Guest") {
+            try {
+                await authApi.updateUserDetail("autoplay", next ? 1 : 0, user.user_id);
+                if (params.setUser) {
+                    params.setUser({ ...user, autoplay: next ? 1 : 0 });
+                }
+            } catch (error) {
+                console.log("Error saving autoplay:", error.message);
+            }
+        } else {
+            localStorage.setItem("autoplay", next ? "1" : "0");
+        }
+    };
+
+    const handleEnded = () => {
+        if (!autoplay) return;
+        const list = (relateddata && relateddata.videos) || [];
+        const next = list.find((v) => v.video_id !== video_id);
+        if (next) {
+            window.location.href = `/watch?video_id=${next.video_id}`;
+        }
+    };
+
 // Initial setup: picks the best available playback tier from streamData.
 // Runs only when streamData first loads, NOT when user changes quality.
     useEffect(() => {
@@ -339,6 +377,7 @@ const Watch = (params) => {
                                 ></iframe>
                             </div>
                         ) : (
+                            <>
                             <Videoplayer
                                 mode={mode}
                                 streamUrl={video_url}
@@ -350,7 +389,20 @@ const Watch = (params) => {
                                 video_resolution={video_resolution}
                                 thumbnail={watchdata.thumbnail_link}
                                 streamData={streamData}
+                                onEnded={handleEnded}
                             />
+                            <div className="autoplay-row">
+                                <span className="autoplay-label">Autoplay</span>
+                                <button
+                                    className={"autoplay-toggle" + (autoplay ? " on" : "")}
+                                    onClick={toggleAutoplay}
+                                    aria-pressed={autoplay}
+                                    title={autoplay ? "Autoplay is on" : "Autoplay is off"}
+                                >
+                                    <span className="autoplay-knob" />
+                                </button>
+                            </div>
+                            </>
                         )}
                     </div>
 

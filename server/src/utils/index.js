@@ -86,7 +86,7 @@ function createFeedAndGenerateSQL(
             ) AS v
             JOIN channels c ON v.channel_id = c.channel_id
             WHERE v.channel_row_number <= ${maxVideosPerChannel}
-            ORDER BY score DESC
+            ORDER BY score DESC, v.views DESC, v.upload_time DESC, v.video_id
             LIMIT ${limit}${offset !== null ? ` OFFSET ${offset}` : ""}
         `;
     } else {
@@ -103,7 +103,7 @@ function createFeedAndGenerateSQL(
             ) AS v
             JOIN channels c ON v.channel_id = c.channel_id
             WHERE v.channel_row_number <= ${maxVideosPerChannel}
-            ORDER BY score DESC
+            ORDER BY score DESC, v.views DESC, v.upload_time DESC, v.video_id
             LIMIT ${limit}${offset !== null ? ` OFFSET ${offset}` : ""}
         `;
     }

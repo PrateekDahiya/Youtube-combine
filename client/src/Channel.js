@@ -111,6 +111,7 @@ const Channel = (params) => {
             } finally {
                 if (!cancelled) {
                     setLoadingMore(false);
+                    isInitialLoadRef.current = false;
                 }
             }
         };

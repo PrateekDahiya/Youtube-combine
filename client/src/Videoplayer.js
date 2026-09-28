@@ -274,6 +274,7 @@ const VideoPlayer = (params) => {
                     muted={hasAudioElement ? true : muted}
                     loop={params.type === "short"}
                     playsInline
+                    onEnded={params.onEnded}
                 />
                 <video
                     className={streamUrl ? "hidden-video" : "video"}

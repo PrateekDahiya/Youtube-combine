@@ -39,6 +39,7 @@ CREATE TABLE IF NOT EXISTS user (
     pass        VARCHAR(255)  NOT NULL,
     DOB         DATE          NULL,
     channel_id  VARCHAR(32)   NULL,
+    autoplay    TINYINT(1)    NOT NULL DEFAULT 1,
     PRIMARY KEY (user_id),
     UNIQUE KEY uniq_email (email),
     KEY idx_user_channel_id (channel_id),

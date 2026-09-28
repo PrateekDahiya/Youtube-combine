@@ -147,6 +147,7 @@ function App() {
                                     <Watch
                                         onClick={toggleMenu}
                                         user={crntuser}
+                                        setUser={setUser}
                                     />
                                 }
                             />

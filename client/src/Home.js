@@ -11,6 +11,7 @@ const Home = (params) => {
     const [topTags, setTopTags] = useState([]);
     const [selectedTag, setSelectedTag] = useState("All");
     const [selectedType, setSelectedType] = useState("All");
+    const [newForYou, setNewForYou] = useState(false);
     const [page_no, setpage_no] = useState(1);
     const cursorRef = useRef(null);
     const [loadingMore, setLoadingMore] = useState(false);
@@ -41,7 +42,7 @@ const Home = (params) => {
         setpage_no(1);
         cursorRef.current = null;
         setHasMore(true);
-    }, [selectedTag, selectedType]);
+    }, [selectedTag, selectedType, newForYou]);
 
     useEffect(() => {
         const fetchHomeTags = async () => {
@@ -74,7 +75,11 @@ const Home = (params) => {
                     response = await feedApi.getFeedByType(selectedType, page_no, cursorRef.current, user.channel_id);
                     mergeVideos(response.videos || [], response.nextCursor);
                 } else if (user !== "Guest" && user.channel_id) {
-                    response = await feedApi.getPersonalizedFeed(user.channel_id, page_no, cursorRef.current);
+                    if (newForYou) {
+                        response = await feedApi.getNewForYou(user.channel_id, page_no, cursorRef.current);
+                    } else {
+                        response = await feedApi.getPersonalizedFeed(user.channel_id, page_no, cursorRef.current);
+                    }
                     mergeVideos(response.videos || [], response.nextCursor);
                 } else {
                     response = await feedApi.getHome(page_no, cursorRef.current, user.channel_id);
@@ -87,7 +92,7 @@ const Home = (params) => {
             }
         };
         fetchData();
-    }, [page_no, user.channel_id, selectedTag, selectedType, user]);
+    }, [page_no, user.channel_id, selectedTag, selectedType, newForYou, user]);
 
     const loadMore = () => {
         if (loadingMore || !hasMore) return;
@@ -113,6 +118,7 @@ const Home = (params) => {
                                             onClick={() => {
                                                 setSelectedTag(tag);
                                                 setSelectedType("All");
+                                                setNewForYou(false);
                                             }}
                                         >
                                             {tag}
@@ -121,6 +127,20 @@ const Home = (params) => {
                                 </>
                             ) : null}
                         </div>
+                        {user !== "Guest" && user.channel_id ? (
+                            <div className="home-tag-row">
+                                <button
+                                    className={"home-tag " + (newForYou ? "active" : "")}
+                                    onClick={() => {
+                                        setNewForYou(!newForYou);
+                                        setSelectedTag("All");
+                                        setSelectedType("All");
+                                    }}
+                                >
+                                    New for you
+                                </button>
+                            </div>
+                        ) : null}
                         <div className="home-tag-row">
                             <span className="home-tag-label">Video type</span>
                             {videoTypes.map((tag) => (
@@ -130,10 +150,11 @@ const Home = (params) => {
                                         "home-tag " +
                                         (selectedType === tag ? "active" : "")
                                     }
-                                    onClick={() => {
-                                        setSelectedType(tag);
-                                        setSelectedTag("All");
-                                    }}
+                                            onClick={() => {
+                                                setSelectedType(tag);
+                                                setSelectedTag("All");
+                                                setNewForYou(false);
+                                            }}
                                 >
                                     {tag}
                                 </button>

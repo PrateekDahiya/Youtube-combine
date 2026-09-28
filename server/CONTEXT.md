@@ -80,6 +80,7 @@ Body: `{ type, user_id?, page?, cursor?, isShort?, tag?, category?, tab?, query?
 | `shorts` | `/api/shorts` | video_id?, needmore | `shorts_vIds` |
 | `watch` | `/api/watch` | video_id | `data` |
 | `videobyid` | `/api/getvideobyid` | video_id | `video` |
+| `newforyou` | *(new)* | `user_id`, page | `videos` outside the viewer's taste keywords (`LOCATE` miss on all frequent history words), unwatched only, `ORDER BY views DESC` |
 
 **Important:** the `user_id` in the request body is the caller's **channel_id** (consistent with the join-table convention — see root `CONTEXT.md`). When absent, videos are returned without a meaningful flag. The flag is attached centrally via `attachWatchlaterFlag` (`src/utils/watchlaterFlag.js`) inside `helpers.js`, so no handler needs to call it itself. Feed caches store raw rows; the flag is stamped on a shallow copy per request to avoid cache pollution.
 
@@ -120,10 +121,10 @@ See the route module table above for the full list. All endpoints retain their e
 ## YouTube Data API fetching
 
 - Keys come from `API_KEYS` (a JSON env array). `src/youtube/index.js` indexes them with a `currentApiKeyIndex` that is rotated after each fetch inside `fetchAndStoreVideos`.
-- `fetchAndStoreVideos(channelId, totalResults, pageToken)`:
+- `fetchAndStoreVideos(channelId, totalResults, pageToken)` (`totalResults` = minimum count of **new** videos wanted; scaled up to 10% of the channel's `video_count`, capped by the 10-page walk limit):
   1. `channels.list` for channel details → upsert into `channels`.
-  2. Loop `search.list` (50 per page) by `date`, collecting video IDs.
-  3. `videos.list` (`snippet,statistics,contentDetails`) → upsert into `videos`. Sets `isShort = duration <= 61` seconds.
+  2. Preload known `video_id`s for the channel, then loop `search.list` (50 per page) by `date`, **skipping already-synced IDs and paging further into older history** until `totalResults` new videos are collected (or `nextPageToken` runs out, or 10 pages are walked as a quota cap).
+  3. `videos.list` (`snippet,statistics,contentDetails`) → upsert only the new videos into `videos`. Sets `isShort = duration <= 61` seconds.
   4. After its raw connection is released, sequentially (not `Promise.all`, to avoid InnoDB deadlocks under concurrent channel processing) caches a page of YouTube comments per just-synced video — see Comments below.
 - Helpers: `getCategoryName`, `convertImageUrl`, `convertToMySQLDatetime`, `convertDurationToSeconds`.
 - `fetchAndStoreVideos` uses a raw (non-pooled) `createNewConnection()` per call, wrapped with `guardConnection()` (attaches an `'error'` listener — mysql2 emits connection-level failures like "too many connections" as an event separate from any query callback, and an unhandled one crashes the process) and always released via `finally`, even on error.
