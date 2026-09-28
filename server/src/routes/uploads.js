@@ -3,6 +3,7 @@ const router = express.Router();
 const { getConnection } = require("../db");
 const { generateVideoId } = require("../utils");
 const { upload, videoUpload, removeLocalFile } = require("../uploads");
+const { uploadImageToCloudinary } = require("../uploads/cloudinary");
 const { uploadToYouTube, youtubeErrorMessage } = require("../uploads/youtubeUpload");
 const { isYouTubeUploadConfigured } = require("../config");
 const { syncHandler } = require("../utils/asyncHandler");
@@ -16,12 +17,21 @@ function videoUploadErrorMessage(err) {
 }
 
 router.post("/upload", syncHandler((req, res) => {
-    upload.single("file")(req, res, (err) => {
+    upload.single("file")(req, res, async (err) => {
         if (err) {
             return sendResponse(res, validationErrorResponse(err.message || "Upload failed"));
         }
         if (!req.file) {
             return sendResponse(res, validationErrorResponse("No file uploaded"));
+        }
+        try {
+            const cloudUrl = await uploadImageToCloudinary(req.file.path);
+            if (cloudUrl) {
+                removeLocalFile(req.file.path);
+                return sendResponse(res, successResponse({ url: cloudUrl }, "File uploaded successfully"));
+            }
+        } catch (uploadError) {
+            console.log("Cloudinary upload failed, keeping local file: " + uploadError.message);
         }
         sendResponse(res, successResponse({ url: `/uploads/${req.file.filename}` }, "File uploaded successfully"));
     });

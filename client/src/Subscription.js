@@ -98,6 +98,7 @@ const Subscription = (params) => {
                 <div className="subsbox">
                     <h1>Subscriptions</h1>
                     <h3>Latest</h3>
+                    <div className="sticky-filters">
                     {channels.length > 0 ? (
                         <div className="channel-strip">
                             <button
@@ -155,6 +156,7 @@ const Subscription = (params) => {
                         >
                             Shorts
                         </p>
+                    </div>
                     </div>
                     {filteredVideos.length > 0 ? (
                         <CardGrid variant="fluid">

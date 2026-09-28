@@ -83,6 +83,7 @@ const Trendings = (params) => {
                         />
                         <p className="trendheading">Trendings</p>
                     </div>
+                    <div className="sticky-filters">
                     <div className="menus trend-menus">
                         <p
                             className={
@@ -127,6 +128,7 @@ const Trendings = (params) => {
                     </div>
                     <div>
                         <hr className="line"></hr>
+                    </div>
                     </div>
                     <CardGrid variant="trending" className="trendings">
                         {data.videos.map((item) => (

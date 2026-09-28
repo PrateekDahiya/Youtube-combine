@@ -99,32 +99,34 @@ const Category = (params) => {
                         />
                         <p className="catheading">{Heading(data.category)}</p>
                     </div>
-                    <div className="menus">
-                        <p
-                            className={
-                                "menubutton " +
-                                (typeShort === 0 ? "active" : "")
-                            }
-                            onClick={() => {
-                                setType(0);
-                            }}
-                        >
-                            Videos
-                        </p>
-                        <p
-                            className={
-                                "menubutton " +
-                                (typeShort === 1 ? "active" : "")
-                            }
-                            onClick={() => {
-                                setType(1);
-                            }}
-                        >
-                            Shorts
-                        </p>
-                    </div>
-                    <div>
-                        <hr className="line"></hr>
+                    <div className="sticky-filters">
+                        <div className="menus">
+                            <p
+                                className={
+                                    "menubutton " +
+                                    (typeShort === 0 ? "active" : "")
+                                }
+                                onClick={() => {
+                                    setType(0);
+                                }}
+                            >
+                                Videos
+                            </p>
+                            <p
+                                className={
+                                    "menubutton " +
+                                    (typeShort === 1 ? "active" : "")
+                                }
+                                onClick={() => {
+                                    setType(1);
+                                }}
+                            >
+                                Shorts
+                            </p>
+                        </div>
+                        <div>
+                            <hr className="line"></hr>
+                        </div>
                     </div>
                     <CardGrid variant="category" className="category">
                         {data.videos.map((item) => (

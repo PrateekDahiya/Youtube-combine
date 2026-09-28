@@ -2,19 +2,33 @@
     height: calc(100vh - 60px);
     width: 100%;
     max-width: 100%;
-    overflow: hidden;
+    overflow-y: auto;
+    overflow-x: hidden;
     display: flex;
     flex-direction: column;
-    padding: 20px;
+    padding: 0 20px 20px;
     background-color: var(--background-color);
     box-sizing: border-box;
+}
+
+.subsbox .sticky-filters {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    background-color: var(--background-color);
+    margin: 0 -20px;
+    padding: 12px 0 0;
+}
+
+.subsbox .cards {
+    overflow: visible;
 }
 
 .subsbox h1 {
     font-size: 24px;
     font-weight: 600;
     color: var(--text-color);
-    margin: 0 0 16px;
+    margin: 20px 0 16px;
     padding: 0 20px;
     flex-shrink: 0;
 }
@@ -192,43 +206,61 @@
 /* Responsive breakpoints */
 @media (min-width: 1550px) {
     .subsbox {
-        padding: 30px;
+        padding: 0 30px 30px;
+    }
+    .subsbox .sticky-filters {
+        margin: 0 -30px;
     }
     .subsbox h1 {
         font-size: 28px;
         margin-bottom: 30px;
+        margin-top: 30px;
     }
 }
 
 @media (min-width: 1200px) and (max-width: 1549px) {
     .subsbox {
-        padding: 25px;
+        padding: 0 25px 25px;
+    }
+    .subsbox .sticky-filters {
+        margin: 0 -25px;
+    }
+    .subsbox h1 {
+        margin-top: 25px;
     }
 }
 
 @media (min-width: 992px) and (max-width: 1199px) {
     .subsbox {
-        padding: 20px;
+        padding: 0 20px 20px;
     }
 }
 
 @media (min-width: 768px) and (max-width: 991px) {
     .subsbox {
-        padding: 15px;
+        padding: 0 15px 15px;
+    }
+    .subsbox .sticky-filters {
+        margin: 0 -15px;
     }
     .subsbox h1 {
         font-size: 22px;
         margin-bottom: 20px;
+        margin-top: 15px;
     }
 }
 
 @media (max-width: 767px) {
     .subsbox {
-        padding: 10px;
+        padding: 0 10px 10px;
+    }
+    .subsbox .sticky-filters {
+        margin: 0 -10px;
     }
     .subsbox h1 {
         font-size: 20px;
         margin-bottom: 16px;
+        margin-top: 10px;
         padding: 0 10px;
     }
     .subsbox h3 {
@@ -266,11 +298,15 @@
 /* Very small screens (320px - 359px) */
 @media (max-width: 359px) {
     .subsbox {
-        padding: 8px;
+        padding: 0 8px 8px;
+    }
+    .subsbox .sticky-filters {
+        margin: 0 -8px;
     }
     .subsbox h1 {
         font-size: 18px;
         margin-bottom: 12px;
+        margin-top: 8px;
         padding: 0 8px;
     }
     .subsbox h3 {

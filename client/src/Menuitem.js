@@ -1,5 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
+import { avatarFallback, handleImgError } from "./imgFallback";
 import "./Menuitem.css";
 
 const Menuitem = (params) => {
@@ -24,16 +25,18 @@ const Menuitem = (params) => {
                                 alt={params.title}
                                 title={params.title}
                                 className="hiddenimg"
+                                onError={handleImgError(avatarFallback)}
                             />
                             <p>{params.title}</p>
                         </>
                     ) : (
                         <>
                             <img
-                                src={params.imgpath}
+                                src={params.imgpath || avatarFallback()}
                                 alt={params.title}
                                 title={params.title}
                                 className={imgClass}
+                                onError={handleImgError(avatarFallback)}
                             />
                             <p>{params.title}</p>
                         </>

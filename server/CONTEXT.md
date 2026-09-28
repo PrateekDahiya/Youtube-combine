@@ -30,7 +30,7 @@ The **back-end** of VidVault: a Node.js + Express REST API, the MySQL schema, an
 | `src/utils/` | ID generators (`generateChannelId`, `generateVideoId`), `sanitizeTag`, `createFeedAndGenerateSQL`, date/duration converters, category mappings, YouTube category helpers, `watchlaterFlag` (attaches `is_watchlater` per row). Feed type handlers live in `src/feed/`, not here. |
 | `src/feed/` | Per-type video feed handlers (`home.js`, `tag.js`, `category.js`, `trending.js`, `subscriptions.js`, `personalized.js`, `watchlater.js`, `liked.js`, `history.js`, `channel.js`, `search.js`, `related.js`, `watch.js`, `videobyid.js`, `shorts.js`), auto-registered by `index.js` and backed by shared helpers in `helpers.js`. See the "Unified video endpoint" section. |
 | `src/email/` | `sendEmail()` via Resend. |
-| `src/uploads/` | Multer config (image + video), Cloudinary upload helpers, background video processing (`processVideoUpload`). |
+| `src/uploads/` | Multer config (image + video), Cloudinary helper (`cloudinary.js` — `uploadImageToCloudinary`, no-op without `CLOUDINARY_*`), background video processing (`processVideoUpload`). |
 | `src/youtube/` | YouTube Data API v3 fetching: `fetchAndStoreVideos`, `getChannelIds`, `processChannels`, `getNewChannelId`, `addNewChannel`, API key rotation. Also `streamResolver.js` — resolves a playable stream URL (progressive/adaptive/HLS) for a video via `youtubei.js`, in-process (see "Stream resolution" below). `channelScheduler.js` — internal cron schedulers for channel updates (hourly) and new channel discovery (every 6 hours), replacing external cron jobs. |
 | `src/routes/` | Express routers grouped by feature/domain (see below). |
 
@@ -46,7 +46,7 @@ The **back-end** of VidVault: a Node.js + Express REST API, the MySQL schema, an
 | `history.js` | `/api` | `/api/addtohistory`, `/api/removefromhistory` |
 | `subscriptions.js` | `/api` | `/api/addtosubs`, `/api/removefromsubs`, `/api/issub`, `/api/get-subs` |
 | `auth.js` | `/api` | `/api/login`, `/api/register`, `/api/getUser`, `/api/updateUserDetail`, `/api/updateChannelDetail`, `/api/deleteUser` |
-| `uploads.js` | `/api` | `/api/upload`, `/api/uploadVideo`, `/api/replaceVideo` |
+| `uploads.js` | `/api` | `/api/upload` (profile/banner images → Cloudinary `vidvault/photos` when `CLOUDINARY_*` is set, local `/uploads/` fallback otherwise), `/api/uploadVideo`, `/api/replaceVideo` |
 | `channels.js` | `/api` | `/api/yourchannel`, `/api/channel`, `/api/getallchannels`, `/api/get-channel-ids`, `/api/update_channels`, `/api/addnewchannel` |
 | `feedback.js` | `/api` | `/api/feedback` |
 | `comments.js` | `/api` | `GET /api/comments`, `/api/addComment`, `/api/editComment`, `/api/deleteComment`, `GET /api/youtubeComments` |

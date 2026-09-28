@@ -3,6 +3,7 @@
     align-items: center;
     gap: 16px;
     margin-bottom: 24px;
+    margin-top: 20px;
     padding: 0 20px;
     flex-shrink: 0;
 }
@@ -24,12 +25,26 @@
     height: calc(100vh - 60px);
     width: 100%;
     max-width: 100%;
-    overflow: hidden;
+    overflow-y: auto;
+    overflow-x: hidden;
     display: flex;
     flex-direction: column;
-    padding: 20px;
+    padding: 0 20px 20px;
     background-color: var(--background-color);
     box-sizing: border-box;
+}
+
+.trendingbox .sticky-filters {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    background-color: var(--background-color);
+    margin: 0 -20px;
+    padding: 12px 0 0;
+}
+
+.trendingbox .cards {
+    overflow: visible;
 }
 
 .trendingbox::-webkit-scrollbar {
@@ -117,10 +132,14 @@
 /* Responsive breakpoints */
 @media (min-width: 1550px) {
     .trendingbox {
-        padding: 30px;
+        padding: 0 30px 30px;
+    }
+    .trendingbox .sticky-filters {
+        margin: 0 -30px;
     }
     .trend-heading {
         margin-bottom: 30px;
+        margin-top: 30px;
     }
     .trendheading {
         font-size: 28px;
@@ -129,22 +148,32 @@
 
 @media (min-width: 1200px) and (max-width: 1549px) {
     .trendingbox {
-        padding: 25px;
+        padding: 0 25px 25px;
+    }
+    .trendingbox .sticky-filters {
+        margin: 0 -25px;
+    }
+    .trend-heading {
+        margin-top: 25px;
     }
 }
 
 @media (min-width: 992px) and (max-width: 1199px) {
     .trendingbox {
-        padding: 20px;
+        padding: 0 20px 20px;
     }
 }
 
 @media (min-width: 768px) and (max-width: 991px) {
     .trendingbox {
-        padding: 15px;
+        padding: 0 15px 15px;
+    }
+    .trendingbox .sticky-filters {
+        margin: 0 -15px;
     }
     .trend-heading {
         margin-bottom: 20px;
+        margin-top: 15px;
     }
     .trendheading {
         font-size: 22px;
@@ -153,10 +182,14 @@
 
 @media (max-width: 767px) {
     .trendingbox {
-        padding: 10px;
+        padding: 0 10px 10px;
+    }
+    .trendingbox .sticky-filters {
+        margin: 0 -10px;
     }
     .trend-heading {
         margin-bottom: 16px;
+        margin-top: 10px;
         padding: 0 10px;
     }
     .caticon {
@@ -186,10 +219,14 @@
 /* Very small screens (320px - 359px) */
 @media (max-width: 359px) {
     .trendingbox {
-        padding: 8px;
+        padding: 0 8px 8px;
+    }
+    .trendingbox .sticky-filters {
+        margin: 0 -8px;
     }
     .trend-heading {
         margin-bottom: 12px;
+        margin-top: 8px;
         padding: 0 8px;
         gap: 10px;
     }
