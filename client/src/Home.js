@@ -126,9 +126,7 @@ const Home = (params) => {
                                     ))}
                                 </>
                             ) : null}
-                        </div>
-                        {user !== "Guest" && user.channel_id ? (
-                            <div className="home-tag-row">
+                            {user !== "Guest" && user.channel_id ? (
                                 <button
                                     className={"home-tag " + (newForYou ? "active" : "")}
                                     onClick={() => {
@@ -139,8 +137,8 @@ const Home = (params) => {
                                 >
                                     New for you
                                 </button>
-                            </div>
-                        ) : null}
+                            ) : null}
+                        </div>
                         <div className="home-tag-row">
                             <span className="home-tag-label">Video type</span>
                             {videoTypes.map((tag) => (
