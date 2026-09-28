@@ -158,6 +158,22 @@ CREATE TABLE IF NOT EXISTS schema_migrations (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ---------------------------------------------------------------------------
+-- search_suggestions
+-- Materialized prefix index for search typeahead (channel names, video
+-- titles, tags) ranked by popularity. Written by fetchAndStoreVideos,
+-- read by GET /api/suggest via term LIKE '<prefix>%' on idx_suggest_term.
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS search_suggestions (
+    term        VARCHAR(128)    NOT NULL,
+    kind        ENUM('video','channel','tag') NOT NULL,
+    ref_id      VARCHAR(32)     NOT NULL DEFAULT '',
+    popularity  BIGINT          NOT NULL DEFAULT 0,
+    PRIMARY KEY (kind, term, ref_id),
+    KEY idx_suggest_term (term),
+    KEY idx_suggest_pop (popularity)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ---------------------------------------------------------------------------
 -- scheduler_settings
 -- Stores cron expressions for internal schedulers (channel updates, new channel discovery)
 -- ---------------------------------------------------------------------------

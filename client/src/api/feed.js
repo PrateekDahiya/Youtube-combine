@@ -14,6 +14,9 @@ export const feedApi = {
     getHomeTags: (userId) =>
         api.get("/home-tags", { params: { user_id: userId } }),
 
+    getSuggestions: (q, signal) =>
+        api.get("/suggest", { params: { q }, signal }),
+
     getPersonalizedFeed: (userId, page = 1, cursor) =>
         videosApi.getVideos({ type: "personalized", user_id: userId, page, cursor }),
 

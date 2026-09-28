@@ -24,6 +24,59 @@ function guardConnection(connection, label) {
     return connection;
 }
 
+// Batched upsert of typeahead terms for freshly synced videos: full titles
+// (popularity refreshed to latest views) plus individual tags (popularity
+// accumulated across videos). Inserted in chunks to bound statement size.
+async function upsertSuggestionTerms(connection, freshVideos) {
+    const seen = new Set();
+    const titleRows = [];
+    const tagRows = [];
+    for (const video of freshVideos) {
+        const views = Number(video.views) || 0;
+        const title = String(video.title || "").trim().substring(0, 128);
+        if (title && title !== "N/A") {
+            const key = `video|${title}|${video.videoId}`;
+            if (!seen.has(key)) {
+                seen.add(key);
+                titleRows.push([title, "video", video.videoId, views]);
+            }
+        }
+        const tags = String(video.tags || "")
+            .split(",")
+            .map((tag) => tag.trim().toLowerCase().substring(0, 128))
+            .filter((tag) => tag);
+        for (const tag of tags.slice(0, 10)) {
+            const key = `tag|${tag}|`;
+            if (!seen.has(key)) {
+                seen.add(key);
+                tagRows.push([tag, "tag", "", views]);
+            }
+        }
+    }
+
+    const CHUNK = 500;
+    for (let i = 0; i < titleRows.length; i += CHUNK) {
+        const chunk = titleRows.slice(i, i + CHUNK);
+        const placeholders = chunk.map(() => "(?, ?, ?, ?)").join(", ");
+        await connection.execute(
+            `INSERT INTO search_suggestions (term, kind, ref_id, popularity)
+             VALUES ${placeholders}
+             ON DUPLICATE KEY UPDATE popularity = VALUES(popularity)`,
+            chunk.flat()
+        );
+    }
+    for (let i = 0; i < tagRows.length; i += CHUNK) {
+        const chunk = tagRows.slice(i, i + CHUNK);
+        const placeholders = chunk.map(() => "(?, ?, ?, ?)").join(", ");
+        await connection.execute(
+            `INSERT INTO search_suggestions (term, kind, ref_id, popularity)
+             VALUES ${placeholders}
+             ON DUPLICATE KEY UPDATE popularity = popularity + VALUES(popularity)`,
+            chunk.flat()
+        );
+    }
+}
+
 const fetchAndStoreVideos = async (
     channelId,
     totalResults,
@@ -124,6 +177,49 @@ const fetchAndStoreVideos = async (
             ]
         );
 
+        // Keep the typeahead index warm. Best-effort: a missing table (old
+        // DB without migration 012) must never break the video sync.
+        try {
+            const subs = Number(channelDetails.subscribers) || 0;
+            await connection.execute(
+                `INSERT INTO search_suggestions (term, kind, ref_id, popularity)
+                 VALUES (?, 'channel', ?, ?)
+                 ON DUPLICATE KEY UPDATE popularity = VALUES(popularity)`,
+                [
+                    String(channelDetails.name || "").substring(0, 128),
+                    channelDetails.id,
+                    subs,
+                ]
+            );
+            const keywordTerms = new Set();
+            for (const piece of String(channelDetails.keywords || "").split(",")) {
+                const cleaned = piece.replace(/["'#]/g, " ").trim().toLowerCase();
+                if (cleaned.length >= 3) {
+                    keywordTerms.add(cleaned.substring(0, 128));
+                }
+                for (const word of cleaned.split(/[\s,]+/)) {
+                    if (word.length >= 3) {
+                        keywordTerms.add(word.substring(0, 128));
+                    }
+                }
+            }
+            keywordTerms.delete("n/a");
+            const keywordRows = Array.from(keywordTerms)
+                .slice(0, 30)
+                .map((kw) => [kw, "channel", channelDetails.id, subs]);
+            if (keywordRows.length > 0) {
+                const placeholders = keywordRows.map(() => "(?, ?, ?, ?)").join(", ");
+                await connection.execute(
+                    `INSERT INTO search_suggestions (term, kind, ref_id, popularity)
+                     VALUES ${placeholders}
+                     ON DUPLICATE KEY UPDATE popularity = VALUES(popularity)`,
+                    keywordRows.flat()
+                );
+            }
+        } catch (suggestError) {
+            console.log("Error caching channel suggestion for " + channelId + ": " + suggestError.message);
+        }
+
         while (newCount < dynamicTotal && pagesFetched < BACKFILL_MAX_PAGES) {
             const maxResults = 50;
 
@@ -221,6 +317,14 @@ const fetchAndStoreVideos = async (
                 });
 
                 await Promise.all(videoPromises);
+
+                // Feed the typeahead index with titles + tags. Best-effort:
+                // failures here must not fail the video sync.
+                try {
+                    await upsertSuggestionTerms(connection, freshVideos);
+                } catch (suggestError) {
+                    console.log("Error caching video suggestions: " + suggestError.message);
+                }
 
                 // Only videos that were actually just inserted have a row to
                 // FK against; videoIds can include ones videos.list dropped

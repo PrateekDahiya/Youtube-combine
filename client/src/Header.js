@@ -2,16 +2,18 @@ import React, { useContext, useEffect, useState, useRef } from "react";
 import { useLocation } from "react-router-dom";
 import { ThemeContext } from "./ThemeContext.js";
 import { Link } from "react-router-dom";
-import { notificationApi } from "./api";
+import { feedApi, notificationApi } from "./api";
 import "./Header.css";
 import "./themes.css";
 import UploadVideo from "./UploadVideo";
 import NotificationPanel from "./NotificationPanel";
-import { avatarFallback, handleImgError } from "./imgFallback";
+import { avatarFallback, thumbFallback, handleImgError } from "./imgFallback";
 
 const Header = (params) => {
     const locationHook = useLocation();
-    const [query, setQuery] = useState("");
+    const [query, setQuery] = useState(
+        () => new URLSearchParams(window.location.search).get("query") || ""
+    );
     const { theme, toggleTheme } = useContext(ThemeContext);
     const [page, setPage] = useState(locationHook.pathname);
     const user = params.user;
@@ -20,6 +22,11 @@ const Header = (params) => {
     const [showUpload, setShowUpload] = useState(false);
     const [notificationsOpen, setNotificationsOpen] = useState(false);
     const [unreadCount, setUnreadCount] = useState(0);
+    const [suggestions, setSuggestions] = useState([]);
+    const [showSuggestions, setShowSuggestions] = useState(false);
+    const [activeSuggestion, setActiveSuggestion] = useState(-1);
+    const suggestAbortRef = useRef(null);
+    const suggestTimerRef = useRef(null);
     const searchRef = useRef(null);
     const profileMenuRef = useRef(null);
     const notificationBellRef = useRef(null);
@@ -40,6 +47,9 @@ const Header = (params) => {
             if (notificationBellRef.current && !notificationBellRef.current.contains(event.target)) {
                 setNotificationsOpen(false);
             }
+            if (searchRef.current && !searchRef.current.contains(event.target)) {
+                setShowSuggestions(false);
+            }
         };
 
         document.addEventListener('mousedown', handleClickOutside);
@@ -49,6 +59,9 @@ const Header = (params) => {
     useEffect(() => {
         const currentpage = locationHook.pathname;
         setPage(currentpage);
+        if (currentpage === "/search") {
+            setQuery(new URLSearchParams(locationHook.search).get("query") || "");
+        }
     }, [locationHook]);
 
     useEffect(() => {
@@ -70,8 +83,72 @@ const Header = (params) => {
     const handleSearch = async (e) => {
         e.preventDefault();
         if (query !== "") {
-            window.location.href = "/search?query=" + query;
+            window.location.href = "/search?query=" + encodeURIComponent(query);
             setIsSearchVisible(false);
+            setShowSuggestions(false);
+        }
+    };
+
+    const goToSuggestion = (item) => {
+        setShowSuggestions(false);
+        setIsSearchVisible(false);
+        if (item.kind === "channel" && item.ref_id) {
+            window.location.href = `/channel?channel_id=${item.ref_id}`;
+        } else if (item.kind === "video" && item.ref_id) {
+            window.location.href = item.isShort === 1
+                ? `/shorts?video_id=${item.ref_id}`
+                : `/watch?video_id=${item.ref_id}`;
+        } else {
+            window.location.href = "/search?query=" + encodeURIComponent(item.term);
+        }
+    };
+
+    useEffect(() => {
+        if (suggestTimerRef.current) clearTimeout(suggestTimerRef.current);
+        if (suggestAbortRef.current) suggestAbortRef.current.abort();
+        const term = query.trim();
+        if (term.length < 2) {
+            setSuggestions([]);
+            setShowSuggestions(false);
+            setActiveSuggestion(-1);
+            return;
+        }
+        const controller = new AbortController();
+        suggestAbortRef.current = controller;
+        suggestTimerRef.current = setTimeout(async () => {
+            try {
+                const response = await feedApi.getSuggestions(term, controller.signal);
+                if (!controller.signal.aborted) {
+                    setSuggestions(response.suggestions || []);
+                    setShowSuggestions(true);
+                    setActiveSuggestion(-1);
+                }
+            } catch (error) {
+                if (!controller.signal.aborted) {
+                    console.log("Error fetching suggestions:", error.message);
+                }
+            }
+        }, 250);
+        return () => {
+            clearTimeout(suggestTimerRef.current);
+            controller.abort();
+        };
+    }, [query]);
+
+    const handleSearchKeyDown = (e) => {
+        if (!showSuggestions || suggestions.length === 0) return;
+        if (e.key === "ArrowDown") {
+            e.preventDefault();
+            setActiveSuggestion((prev) => (prev + 1) % suggestions.length);
+        } else if (e.key === "ArrowUp") {
+            e.preventDefault();
+            setActiveSuggestion((prev) => (prev - 1 + suggestions.length) % suggestions.length);
+        } else if (e.key === "Enter" && activeSuggestion >= 0) {
+            e.preventDefault();
+            goToSuggestion(suggestions[activeSuggestion]);
+        } else if (e.key === "Escape") {
+            setShowSuggestions(false);
+            setActiveSuggestion(-1);
         }
     };
 
@@ -116,9 +193,64 @@ const Header = (params) => {
                         type="text"
                         value={query}
                         onChange={(e) => setQuery(e.target.value)}
+                        onKeyDown={handleSearchKeyDown}
+                        onFocus={() => {
+                            if (suggestions.length > 0 && query.trim().length >= 2) {
+                                setShowSuggestions(true);
+                            }
+                        }}
                         placeholder="Search"
                         className="search"
+                        autoComplete="off"
                     />
+                    {showSuggestions && suggestions.length > 0 ? (
+                        <div className="suggest-dropdown">
+                            {suggestions.map((item, index) => (
+                                <div
+                                    key={`${item.kind}-${item.term}-${index}`}
+                                    className={"suggest-item suggest-" + item.kind + (index === activeSuggestion ? " active" : "")}
+                                    onMouseDown={(e) => {
+                                        e.preventDefault();
+                                        goToSuggestion(item);
+                                    }}
+                                    onMouseEnter={() => setActiveSuggestion(index)}
+                                >
+                                    {item.kind === "channel" ? (
+                                        <img
+                                            className="suggest-avatar"
+                                            src={item.channel_icon || avatarFallback()}
+                                            alt=""
+                                            onError={handleImgError(avatarFallback)}
+                                        />
+                                    ) : item.kind === "video" ? (
+                                        <img
+                                            className="suggest-thumb"
+                                            src={item.thumbnail_link || thumbFallback()}
+                                            alt=""
+                                            onError={handleImgError(thumbFallback)}
+                                        />
+                                    ) : (
+                                        <span className="suggest-search-icon">
+                                            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                                                <path d="M15.5 14h-.79l-.28-.27a6.5 6.5 0 1 0-.7.7l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0A4.5 4.5 0 1 1 14 9.5 4.5 4.5 0 0 1 9.5 14z" />
+                                            </svg>
+                                        </span>
+                                    )}
+                                    <span className="suggest-term">
+                                        <b>{item.term.substring(0, query.trim().length)}</b>
+                                        {item.term.substring(query.trim().length)}
+                                    </span>
+                                    <span className="suggest-kind-label">
+                                        {item.kind === "channel"
+                                            ? "Channel"
+                                            : item.kind === "video"
+                                                ? (item.isShort === 1 ? "Short" : "Video")
+                                                : "Search"}
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
+                    ) : null}
                     <button type="submit" className="searchbutton">
                         <img
                             src="https://cdn-icons-png.flaticon.com/128/2811/2811806.png"
