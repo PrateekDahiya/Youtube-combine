@@ -13,6 +13,7 @@ body.light {
     color: var(--text-color);
     --image-filter: none;
     --alt-color: #d9d6d6;
+    --btn-hover: #c2bfbf;
     --text2-color: #3f3f3f;
     --highlight-color: #0e4eb5;
     --error-msg: rgb(250, 95, 95);
@@ -25,6 +26,7 @@ body.dark {
     color: var(--text-color);
     --image-filter: invert(1);
     --alt-color: #262929;
+    --btn-hover: #3d4141;
     --text2-color: #a0a0a0;
     --highlight-color: #0e4eb5;
     --error-msg: rgb(194, 87, 87);

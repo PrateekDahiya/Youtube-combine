@@ -95,6 +95,22 @@
     font-weight: 300;
     cursor: pointer;
     vertical-align: middle;
+    transition: background-color 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
+}
+
+.subscribe:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+}
+
+.subscribe:active {
+    transform: translateY(0) scale(0.96);
+    box-shadow: none;
+}
+
+.subscribe:focus-visible {
+    outline: 2px solid #3ea6ff;
+    outline-offset: 2px;
 }
 
 .subscribe:hover {
@@ -124,6 +140,7 @@
     font-weight: 300;
     cursor: pointer;
     vertical-align: middle;
+    transition: background-color 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
 }
 
 .dislike_btn {
@@ -138,16 +155,21 @@
     font-weight: 300;
     cursor: pointer;
     vertical-align: middle;
+    transition: background-color 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
 }
 
-.like_btn:hover {
-    background-color: var(--background-color);
-    color: var(--text-color);
-}
-
+.like_btn:hover,
 .dislike_btn:hover {
-    background-color: var(--background-color);
+    background-color: var(--btn-hover);
     color: var(--text-color);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+}
+
+.like_btn:active,
+.dislike_btn:active {
+    transform: translateY(0) scale(0.96);
+    box-shadow: none;
 }
 
 .share_btn {
@@ -163,6 +185,7 @@
     font-weight: 300;
     cursor: pointer;
     vertical-align: middle;
+    transition: background-color 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
 }
 
 .download_btn {
@@ -177,16 +200,29 @@
     font-size: 13px;
     cursor: pointer;
     vertical-align: middle;
+    transition: background-color 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
 }
 
-.share_btn:hover {
-    background-color: var(--background-color);
-    color: var(--text-color);
-}
-
+.share_btn:hover,
 .download_btn:hover {
-    background-color: var(--background-color);
+    background-color: var(--btn-hover);
     color: var(--text-color);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+}
+
+.share_btn:active,
+.download_btn:active {
+    transform: translateY(0) scale(0.96);
+    box-shadow: none;
+}
+
+.like_btn:focus-visible,
+.dislike_btn:focus-visible,
+.share_btn:focus-visible,
+.download_btn:focus-visible {
+    outline: 2px solid #3ea6ff;
+    outline-offset: 2px;
 }
 
 button img {
@@ -194,6 +230,14 @@ button img {
     vertical-align: middle;
     filter: var(--image-filter);
     margin-right: 3px;
+    transition: transform 0.15s ease;
+}
+
+.like_btn:hover img,
+.dislike_btn:hover img,
+.share_btn:hover img,
+.download_btn:hover img {
+    transform: scale(1.15);
 }
 
 .video_details {

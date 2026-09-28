@@ -8,6 +8,8 @@ import Card from "./Card";
 import CardGrid from "./CardGrid";
 import Cardloading from "./Cardloading";
 import Comments from "./Comments";
+import Modal from "./Modal";
+import { useToast } from "./ToastContext";
 
 const Watch = (params) => {
     
@@ -19,6 +21,9 @@ const Watch = (params) => {
     const [fetchFailed, setFetchFailed] = useState(false);
     const [loading, setLoading] = useState(true);
     const user = params.user;
+    const { showToast } = useToast();
+    const [showShare, setShowShare] = useState(false);
+    const [showNoDownload, setShowNoDownload] = useState(false);
     const [issubed, setissubed] = useState(false);
     const [channel_id, setChannel_id] = useState(null);
     const [video_id, setVideo_id] = useState(null);
@@ -249,6 +254,48 @@ const Watch = (params) => {
         if (next) {
             window.location.href = `/watch?video_id=${next.video_id}`;
         }
+    };
+
+    const getShareUrl = () => window.location.href;
+
+    const copyShareUrl = async () => {
+        try {
+            await navigator.clipboard.writeText(getShareUrl());
+            showToast("Link copied to clipboard");
+            setShowShare(false);
+        } catch (error) {
+            console.log("Error copying link:", error.message);
+            showToast("Copy failed — select the link manually", "error");
+        }
+    };
+
+    const nativeShare = async () => {
+        if (!navigator.share) return;
+        try {
+            await navigator.share({ title: watchdata.title || "VidVault video", url: getShareUrl() });
+        } catch (error) {
+            console.log("Native share dismissed:", error.message);
+        }
+    };
+
+    const handleDownload = () => {
+        if (isUploaded && watchdata.link) {
+            const a = document.createElement("a");
+            a.href = watchdata.link;
+            a.download = "";
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            showToast("Download started");
+            return;
+        }
+        const progressive = (streamData && streamData.progressive) || [];
+        if (progressive.length > 0 && progressive[0].url) {
+            window.open(progressive[0].url, "_blank", "noopener");
+            showToast("Opening video file in a new tab");
+            return;
+        }
+        setShowNoDownload(true);
     };
 
     const ytIframeRef = useRef(null);
@@ -573,7 +620,7 @@ const Watch = (params) => {
                                         />
                                     )}
                                 </button>
-                                <button className="share_btn">
+                                <button className="share_btn" onClick={() => setShowShare(true)}>
                                     <img
                                         src="https://cdn-icons-png.flaticon.com/128/2958/2958783.png"
                                         alt="share"
@@ -581,7 +628,7 @@ const Watch = (params) => {
                                     />
                                     Share
                                 </button>
-                                <button className="download_btn">
+                                <button className="download_btn" onClick={handleDownload}>
                                     <img
                                         src="https://cdn-icons-png.flaticon.com/128/9131/9131795.png"
                                         alt="download"
@@ -653,6 +700,52 @@ const Watch = (params) => {
                     </div>
                 )}
             </div>
+            <Modal
+                isOpen={showShare}
+                onClose={() => setShowShare(false)}
+                title="Share"
+                size="small"
+            >
+                <input
+                    type="text"
+                    readOnly
+                    value={getShareUrl()}
+                    onFocus={(e) => e.target.select()}
+                    style={{ width: "100%", padding: "8px", marginBottom: "12px" }}
+                />
+                <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end" }}>
+                    <button className="subscribe" onClick={copyShareUrl}>
+                        Copy link
+                    </button>
+                    {navigator.share ? (
+                        <button className="subscribe ed" onClick={nativeShare}>
+                            More options
+                        </button>
+                    ) : null}
+                </div>
+            </Modal>
+            <Modal
+                isOpen={showNoDownload}
+                onClose={() => setShowNoDownload(false)}
+                title="Download unavailable"
+                size="small"
+            >
+                <p>This video can't be downloaded. You can watch it here or open it on YouTube instead.</p>
+                <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end", marginTop: "12px" }}>
+                    <button className="subscribe" onClick={copyShareUrl}>
+                        Copy link
+                    </button>
+                    <a
+                        className="subscribe ed"
+                        href={`https://www.youtube.com/watch?v=${video_id}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ textDecoration: "none" }}
+                    >
+                        Open on YouTube
+                    </a>
+                </div>
+            </Modal>
         </>
     );
 };
