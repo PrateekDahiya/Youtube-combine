@@ -3,8 +3,7 @@ import "./Shortbox.css";
 import { Link } from "react-router-dom";
 import { streamApi } from "./api";
 import Videoplayer from "./Videoplayer";
-
-const defaultAvatar = "https://cdn-icons-png.flaticon.com/128/1077/1077063.png";
+import { avatarFallback, handleImgError } from "./imgFallback";
 
 const Shortbox = (params) => {
     const [streamData, setStreamData] = useState(null);
@@ -215,9 +214,10 @@ const Shortbox = (params) => {
                         <img
                             alt="short-btn"
                             title={short.channel_name}
-                            src={short.channel_icon || defaultAvatar}
+                            src={short.channel_icon || avatarFallback()}
                             loading="lazy"
                             decoding="async"
+                            onError={handleImgError(avatarFallback)}
                         />
                     ) : (
                         ""

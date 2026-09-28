@@ -2,9 +2,8 @@ import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { watchlaterApi } from "./api";
 import Cookies from "js-cookie";
+import { avatarFallback, thumbFallback, handleImgError } from "./imgFallback";
 import "./Card.css";
-
-const defaultAvatar = "https://cdn-icons-png.flaticon.com/128/1077/1077063.png";
 
 const Card = React.memo((params) => {
     const navigate = useNavigate();
@@ -166,31 +165,35 @@ const Card = React.memo((params) => {
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
         >
-            {isHovered ? (
-                <div
-                    className={`watch-later ${isHovered ? "show" : ""}`}
-                    onClick={(e) => {
+            <div
+                className={`watch-later ${isHovered ? "show" : ""} ${watchlater ? "active" : ""}`}
+                role="button"
+                tabIndex={0}
+                onClick={(e) => {
+                    e.preventDefault();
+                    handleWatchlater();
+                }}
+                onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
                         e.preventDefault();
                         handleWatchlater();
-                    }}
-                >
-                    {watchlater ? (
-                        <img
-                            alt="removeWatchlater"
-                            title="Remove from Watch Later"
-                            src="https://cdn-icons-png.flaticon.com/128/15641/15641363.png"
-                        />
-                    ) : (
-                        <img
-                            alt="addWatchlater"
-                            title="Add to Watch Later"
-                            src="https://cdn-icons-png.flaticon.com/128/15469/15469061.png"
-                        />
-                    )}
-                </div>
-            ) : (
-                <></>
-            )}
+                    }
+                }}
+            >
+                {watchlater ? (
+                    <img
+                        alt="removeWatchlater"
+                        title="Remove from Watch Later"
+                        src="https://cdn-icons-png.flaticon.com/128/15641/15641363.png"
+                    />
+                ) : (
+                    <img
+                        alt="addWatchlater"
+                        title="Add to Watch Later"
+                        src="https://cdn-icons-png.flaticon.com/128/15469/15469061.png"
+                    />
+                )}
+            </div>
             {params.onEdit ? (
                 <span
                     className="card-edit"
@@ -229,30 +232,37 @@ const Card = React.memo((params) => {
                     </svg>
                 </span>
             ) : null}
-            <img
+            <div
                 className={
-                    forrelated ? "thumbnail forrelated-thumbnail" : "thumbnail"
+                    forrelated
+                        ? "card-thumb forrelated-thumbnail"
+                        : "card-thumb thumbnail"
                 }
-                title={params.data.channel_name}
-                src={thumbnailSrc}
-                alt={params.data.title || ""}
-                loading="lazy"
-                decoding="async"
-            />
-            {forTrending || forrelated ? null : (
+            >
+                <img
+                    title={params.data.channel_name}
+                    src={thumbnailSrc}
+                    alt={params.data.title || ""}
+                    loading="lazy"
+                    decoding="async"
+                    onError={handleImgError(thumbFallback)}
+                />
+                {forTrending || forrelated ? null : (
                     <span className="duration">
                         {formatDuration(params.data.duration)}
                     </span>
                 )}
+            </div>
 
                 <div className="info">
                     {forrelated ? null : (
                         <img
-                            src={params.data.channel_icon || defaultAvatar}
+                            src={params.data.channel_icon || avatarFallback()}
                             alt={params.data.channel_name || ""}
                             title={params.data.channel_name || ""}
                             loading="lazy"
                             decoding="async"
+                            onError={handleImgError(avatarFallback)}
                             onClick={(e) => {
                                 e.preventDefault();
                                 handleChannelClick(e, params.data.channel_id);
@@ -260,10 +270,8 @@ const Card = React.memo((params) => {
                         />
                     )}
                     <div className="text">
-                        <p className="videotitle">
-                            {params.data.title.length >= 100
-                                ? params.data.title.substring(0, 50) + "..."
-                                : params.data.title || ""}
+                        <p className="videotitle" title={params.data.title || ""}>
+                            {params.data.title || ""}
                         </p>
                         <div
                             className="channelname"

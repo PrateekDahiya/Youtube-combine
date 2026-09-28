@@ -5,6 +5,7 @@ import { videoApi } from "./api";
 import UploadVideo from "./UploadVideo";
 import EditVideo from "./EditVideo";
 import DeleteVideoModal from "./DeleteVideoModal";
+import { thumbFallback, handleImgError } from "./imgFallback";
 
 const STATUS = {
     UPLOADING: "uploading",
@@ -206,6 +207,7 @@ const Uploads = (params) => {
                                             src={getThumb(u)}
                                             alt=""
                                             loading="lazy"
+                                            onError={handleImgError(thumbFallback)}
                                         />
                                     ) : (
                                         <span

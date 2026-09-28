@@ -250,3 +250,34 @@
         height: 44px;
     }
 }
+
+.short-video-wrapper .youtube-container {
+    width: 330px;
+    height: 590px;
+    position: relative;
+    border-radius: 20px;
+    overflow: hidden;
+    background-color: #000;
+}
+
+.short-video-wrapper .youtube-player {
+    width: 100%;
+    height: 100%;
+    border: none;
+    border-radius: 20px;
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+
+@media (max-width: 359px) {
+    .short-video-wrapper .youtube-container {
+        width: 100%;
+        aspect-ratio: 9 / 16;
+        height: auto;
+        border-radius: 0;
+    }
+    .short-video-wrapper .youtube-player {
+        border-radius: 0;
+    }
+}

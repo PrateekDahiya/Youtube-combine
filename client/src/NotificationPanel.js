@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef, useCallback } from "react";
 import { notificationApi } from "./api";
+import { avatarFallback, thumbFallback, handleImgError } from "./imgFallback";
 import "./NotificationPanel.css";
 
 const getDateDifference = (date1, date2) => {
@@ -177,8 +178,9 @@ const NotificationPanel = (params) => {
                                 >
                                     <div className="notification-avatar">
                                         <img 
-                                            src={notification.channel_icon || "https://cdn-icons-png.flaticon.com/128/1077/1077063.png"} 
+                                            src={notification.channel_icon || avatarFallback()} 
                                             alt={notification.channel_name}
+                                            onError={handleImgError(avatarFallback)}
                                         />
                                     </div>
                                     <div className="notification-content">
@@ -201,6 +203,7 @@ const NotificationPanel = (params) => {
                                             <img 
                                                 src={notification.thumbnail_link} 
                                                 alt={notification.title}
+                                                onError={handleImgError(thumbFallback)}
                                             />
                                         </div>
                                     </div>

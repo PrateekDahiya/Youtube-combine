@@ -3,8 +3,7 @@ import { Link } from "react-router-dom";
 import { channelApi } from "./api";
 import "./You.css";
 import Cardloading from "./Cardloading";
-
-const defaultAvatar = "https://cdn-icons-png.flaticon.com/128/1077/1077063.png";
+import { avatarFallback, handleImgError, hideImgOnError } from "./imgFallback";
 
 const You = (params) => {
     const [data, setData] = useState("");
@@ -52,6 +51,7 @@ const You = (params) => {
                                             alt="channel_banner"
                                             src={data.channel_banner}
                                             title="Channel Banner"
+                                            onError={hideImgOnError}
                                         />
                                     </div>
                                 ) : (
@@ -65,7 +65,8 @@ const You = (params) => {
                                     className="mypic"
                                     alt="Profile"
                                     title={data.channel_name}
-                                    src={data.channel_icon || defaultAvatar}
+                                    src={data.channel_icon || avatarFallback()}
+                                    onError={handleImgError(avatarFallback)}
                                 />
                                 <div className="details">
                                     <p className="name">{data.channel_name}</p>

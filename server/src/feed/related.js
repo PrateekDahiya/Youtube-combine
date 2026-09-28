@@ -1,4 +1,4 @@
-const { fetchRelatedVideos } = require("../youtube");
+const { fetchRelatedVideos, fetchVideoHistory } = require("../youtube");
 const { httpError, flagVideos } = require("./helpers");
 
 async function relatedFeed(params) {
@@ -15,7 +15,19 @@ async function relatedFeed(params) {
         }
         throw httpError(500, error.message);
     }
-    const videos = await flagVideos(data.videos, params.user_id);
+    // Never suggest the video that's currently playing.
+    let videos = (data.videos || []).filter((v) => v.video_id !== video_id);
+    // Never suggest videos the viewer already watched (Guests have no history).
+    if (params.user_id) {
+        try {
+            const history = await fetchVideoHistory(params.user_id);
+            const watched = new Set(history.map((h) => h.video_id));
+            videos = videos.filter((v) => !watched.has(v.video_id));
+        } catch (error) {
+            console.log("Error excluding watched videos from related:", error.message);
+        }
+    }
+    videos = await flagVideos(videos, params.user_id);
     return { ...data, videos };
 }
 

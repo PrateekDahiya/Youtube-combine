@@ -4,10 +4,9 @@ import "./Channel.css";
 import { channelApi, subscriptionApi, videoApi } from "./api";
 import Card from "./Card";
 import Cardloading from "./Cardloading";
+import { avatarFallback, handleImgError, hideImgOnError } from "./imgFallback";
 import InfiniteScroll from "./InfiniteScroll";
 import Modal from "./Modal";
-
-const defaultAvatar = "https://cdn-icons-png.flaticon.com/128/1077/1077063.png";
 
 const Channel = (params) => {
     const locationHook = useLocation();
@@ -29,11 +28,13 @@ const Channel = (params) => {
     const user = params.user;
 
     const addSubscriber = async () => {
+        if (user === "Guest") return;
         await subscriptionApi.addSubscription(user_chl_id, channel_id);
         setissubed(true);
     };
 
     const unsub = async () => {
+        if (user === "Guest") return;
         await subscriptionApi.removeSubscription(user_chl_id, channel_id);
         setissubed(false);
     };
@@ -188,6 +189,7 @@ const Channel = (params) => {
                                 alt="channel_banner"
                                 title="Channel Banner"
                                 src={data.channel_banner}
+                                onError={hideImgOnError}
                             />
                         </div>
                     ) : (
@@ -199,7 +201,8 @@ const Channel = (params) => {
                             className="mypic"
                             title={data.channel_name}
                             alt="Profile"
-                            src={data.channel_icon || defaultAvatar}
+                            src={data.channel_icon || avatarFallback()}
+                            onError={handleImgError(avatarFallback)}
                         />
                         <div className="details">
                             <p className="name">{data.channel_name}</p>

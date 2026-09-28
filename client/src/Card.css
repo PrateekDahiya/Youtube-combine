@@ -11,23 +11,35 @@
     cursor: pointer;
 }
 
-.card img {
+.card-thumb {
+    position: relative;
     width: 100%;
-    height: 230px;
-    object-fit: cover;
+    aspect-ratio: 16 / 9;
     border-radius: 10px;
+    overflow: hidden;
+    background-color: var(--alt-color);
+    flex-shrink: 0;
+}
+
+.card-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
     object-position: center;
+    display: block;
 }
 
 .duration {
-    position: relative;
-    bottom: 35px;
-    left: 85%;
-    background-color: rgba(0, 0, 0, 0.7);
+    position: absolute;
+    right: 8px;
+    bottom: 8px;
+    background-color: rgba(0, 0, 0, 0.8);
     color: white;
     padding: 2px 5px;
     border-radius: 5px;
     font-size: 12px;
+    line-height: 1.4;
+    z-index: 1;
 }
 
 .trending-card {
@@ -37,19 +49,16 @@
     width: 100%;
 }
 
-.card .thumbnail {
-    position: relative;
-}
-
-.card .forrelated-thumbnail {
+.card-thumb.forrelated-thumbnail {
     width: 160px;
     height: 120px;
+    aspect-ratio: auto;
 }
 
-.card.trending-card .thumbnail {
+.card.trending-card .card-thumb.thumbnail {
     width: 260px;
     height: 146px;
-    flex-shrink: 0;
+    aspect-ratio: auto;
 }
 
 .card.trending-card .info {
@@ -66,7 +75,7 @@
     min-width: 0;
 }
 
-.card .thumbnail:hover {
+.card-thumb img:hover {
     border-radius: 0px;
 }
 
@@ -92,6 +101,14 @@
     margin: 0;
     font-size: 16px;
     font-weight: 500;
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-height: calc(1.4em * 2);
 }
 
 .text {
@@ -143,7 +160,9 @@
 }
 
 .card:hover .watch-later,
-.watch-later.show {
+.watch-later.show,
+.watch-later.active,
+.watch-later:focus-visible {
     opacity: 1;
 }
 
@@ -199,9 +218,6 @@
 
 /* Responsive breakpoints */
 @media (min-width: 1550px) {
-    .card img {
-        height: 280px;
-    }
     .card .info img {
         width: 45px;
         height: 45px;
@@ -216,13 +232,10 @@
         font-size: 15px;
     }
 
-    .card.trending-card .thumbnail { width: 300px; height: 169px; }
+    .card.trending-card .card-thumb.thumbnail { width: 300px; height: 169px; }
 }
 
 @media (min-width: 1200px) and (max-width: 1549px) {
-    .card img {
-        height: 250px;
-    }
     .card .info img {
         width: 42px;
         height: 42px;
@@ -231,13 +244,10 @@
         font-size: 17px;
     }
 
-    .card.trending-card .thumbnail { width: 280px; height: 158px; }
+    .card.trending-card .card-thumb.thumbnail { width: 280px; height: 158px; }
 }
 
 @media (min-width: 992px) and (max-width: 1199px) {
-    .card img {
-        height: 230px;
-    }
     .card .info img {
         width: 40px;
         height: 40px;
@@ -246,13 +256,10 @@
         font-size: 16px;
     }
 
-    .card.trending-card .thumbnail { width: 260px; height: 146px; }
+    .card.trending-card .card-thumb.thumbnail { width: 260px; height: 146px; }
 }
 
 @media (min-width: 768px) and (max-width: 991px) {
-    .card img {
-        height: 200px;
-    }
     .card .info img {
         width: 35px;
         height: 35px;
@@ -271,16 +278,13 @@
         flex-direction: column;
     }
 
-    .card.trending-card .thumbnail {
+    .card.trending-card .card-thumb.thumbnail {
         width: 100%;
         height: 200px;
     }
 }
 
 @media (min-width: 576px) and (max-width: 767px) {
-    .card img {
-        height: 180px;
-    }
     .card .info {
         padding: 8px;
     }
@@ -307,16 +311,13 @@
         flex-direction: column;
     }
 
-    .card.trending-card .thumbnail {
+    .card.trending-card .card-thumb.thumbnail {
         width: 100%;
         height: 180px;
     }
 }
 
 @media (max-width: 575px) {
-    .card img {
-        height: 200px;
-    }
     .card .info {
         flex-direction: column;
         padding: 8px;
@@ -354,7 +355,7 @@
         flex-direction: column;
     }
 
-    .card.trending-card .thumbnail {
+    .card.trending-card .card-thumb.thumbnail {
         width: 100%;
         height: 180px;
     }
@@ -366,8 +367,7 @@
         margin: 3px;
         border-radius: 0 0 10px 10px;
     }
-    .card img {
-        height: 170px;
+    .card-thumb {
         border-radius: 8px;
     }
     .card .info {
@@ -393,8 +393,8 @@
     .duration {
         font-size: 10px;
         padding: 1px 3px;
-        bottom: 28px;
-        left: 80%;
+        right: 6px;
+        bottom: 6px;
     }
     .watch-later {
         width: 44px;
@@ -420,7 +420,7 @@
         left: 48px;
     }
 
-    .card.trending-card .thumbnail {
+    .card.trending-card .card-thumb.thumbnail {
         height: 150px;
     }
 }

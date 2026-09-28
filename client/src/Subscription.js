@@ -6,8 +6,7 @@ import "./Subscription.css";
 import CardGrid from "./CardGrid";
 import Cardloading from "./Cardloading";
 import InfiniteScroll from "./InfiniteScroll";
-
-const defaultAvatar = "https://cdn-icons-png.flaticon.com/128/1077/1077063.png";
+import { avatarFallback, handleImgError } from "./imgFallback";
 
 const Subscription = (params) => {
     const [videos, setVideos] = useState({ data: [] });
@@ -124,8 +123,9 @@ const Subscription = (params) => {
                                     }
                                 >
                                     <img
-                                        src={item.channel_icon || defaultAvatar}
+                                        src={item.channel_icon || avatarFallback()}
                                         alt={item.channel_name}
+                                        onError={handleImgError(avatarFallback)}
                                     />
                                     <span>{item.channel_name}</span>
                                 </button>

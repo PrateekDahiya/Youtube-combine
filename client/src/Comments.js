@@ -2,8 +2,7 @@ import React, { useEffect, useState } from "react";
 import { commentApi } from "./api";
 import { useToast } from "./ToastContext";
 import "./Comments.css";
-
-const defaultAvatar = "https://cdn-icons-png.flaticon.com/128/1077/1077063.png";
+import { avatarFallback, handleImgError } from "./imgFallback";
 
 const getDateDifference = (date1, date2) => {
     if (!date1 || !date2) return "";
@@ -199,7 +198,7 @@ const Comments = (params) => {
 
             {!isGuest ? (
                 <div className="comment-composer">
-                    <img className="comment-avatar" src={user.channel_icon || defaultAvatar} alt="" />
+                    <img className="comment-avatar" src={user.channel_icon || avatarFallback()} alt="" onError={handleImgError(avatarFallback)} />
                     <div className="comment-composer-input">
                         <textarea
                             value={newText}
@@ -242,8 +241,9 @@ const Comments = (params) => {
                             <div className="comment-item" key={comment.key}>
                                 <img
                                     className="comment-avatar"
-                                    src={comment.avatar || defaultAvatar}
+                                    src={comment.avatar || avatarFallback()}
                                     alt=""
+                                    onError={handleImgError(avatarFallback)}
                                 />
                                 <div className="comment-body">
                                     <div className="comment-meta">

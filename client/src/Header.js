@@ -7,8 +7,7 @@ import "./Header.css";
 import "./themes.css";
 import UploadVideo from "./UploadVideo";
 import NotificationPanel from "./NotificationPanel";
-
-const defaultAvatar = "https://cdn-icons-png.flaticon.com/128/1077/1077063.png";
+import { avatarFallback, handleImgError } from "./imgFallback";
 
 const Header = (params) => {
     const locationHook = useLocation();
@@ -173,10 +172,11 @@ const Header = (params) => {
                             </div>
                             <img
                                 className="profilepic"
-                                src={user.channel_icon || defaultAvatar}
+                                src={user.channel_icon || avatarFallback()}
                                 title={user.username}
                                 alt="Profile"
                                 onClick={toggleDropdown}
+                                onError={handleImgError(avatarFallback)}
                             />
                             <div
                                 ref={profileMenuRef}
@@ -185,8 +185,9 @@ const Header = (params) => {
                                 <div className="profile-box">
                                     <img
                                         className="profile-box-img"
-                                        src={user.channel_icon || defaultAvatar}
+                                        src={user.channel_icon || avatarFallback()}
                                         alt="profile"
+                                        onError={handleImgError(avatarFallback)}
                                     ></img>
                                     <div>
                                         <p className="profile-box-text">

@@ -6,8 +6,7 @@ import Card from "./Card";
 import EditVideo from "./EditVideo";
 import DeleteVideoModal from "./DeleteVideoModal";
 import Modal from "./Modal";
-
-const defaultAvatar = "https://cdn-icons-png.flaticon.com/128/1077/1077063.png";
+import { avatarFallback, handleImgError, hideImgOnError } from "./imgFallback";
 
 const Yourchannel = (params) => {
     const [data, setData] = useState("");
@@ -81,6 +80,7 @@ const Yourchannel = (params) => {
                                 alt="channel_banner"
                                 src={data.channel_banner}
                                 title="Channel Banner"
+                                onError={hideImgOnError}
                             />
                         </div>
                     ) : (
@@ -90,8 +90,9 @@ const Yourchannel = (params) => {
                         <img
                             className="mypic"
                             alt="Profile"
-                            src={data.channel_icon || defaultAvatar}
+                            src={data.channel_icon || avatarFallback()}
                             title={data.channel_name}
+                            onError={handleImgError(avatarFallback)}
                         />
                         <div className="details">
                             <p className="name">{data.channel_name}</p>

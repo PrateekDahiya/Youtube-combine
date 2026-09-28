@@ -3,12 +3,11 @@ import { Link } from "react-router-dom";
 import "./Watch.css";
 import { videoApi, subscriptionApi, likeApi, historyApi, streamApi, authApi } from "./api";
 import Videoplayer from "./Videoplayer";
+import { avatarFallback, handleImgError } from "./imgFallback";
 import Card from "./Card";
 import CardGrid from "./CardGrid";
 import Cardloading from "./Cardloading";
 import Comments from "./Comments";
-
-const defaultAvatar = "https://cdn-icons-png.flaticon.com/128/1077/1077063.png";
 
 const Watch = (params) => {
     
@@ -480,9 +479,10 @@ const Watch = (params) => {
                                 >
                                     <img
                                         className="channelicon"
-                                        src={watchdata.channel_icon || defaultAvatar}
+                                        src={watchdata.channel_icon || avatarFallback()}
                                         title="channel"
                                         alt="channel"
+                                        onError={handleImgError(avatarFallback)}
                                     />
                                 </Link>
 

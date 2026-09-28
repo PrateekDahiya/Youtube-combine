@@ -7,8 +7,7 @@ import "./Search.css";
 import CardGrid from "./CardGrid";
 import Cardloading from "./Cardloading";
 import InfiniteScroll from "./InfiniteScroll";
-
-const defaultAvatar = "https://cdn-icons-png.flaticon.com/128/1077/1077063.png";
+import { avatarFallback, handleImgError } from "./imgFallback";
 
 const Search = (params) => {
     const locationHook = useLocation();
@@ -90,8 +89,9 @@ const Search = (params) => {
                                     className="channel-result"
                                 >
                                     <img
-                                        src={item.channel_icon || defaultAvatar}
+                                        src={item.channel_icon || avatarFallback()}
                                         alt={item.channel_name || "channel"}
+                                        onError={handleImgError(avatarFallback)}
                                     />
                                     <div className="channel-result-text">
                                         <p className="channel-result-name">

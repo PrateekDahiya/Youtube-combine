@@ -4,8 +4,7 @@ import { authApi, uploadApi, channelApi } from "./api";
 import { ThemeContext } from "./ThemeContext";
 
 import "./Settings.css";
-
-const defaultAvatar = "https://cdn-icons-png.flaticon.com/128/1077/1077063.png";
+import { avatarFallback, handleImgError } from "./imgFallback";
 
 const Settings = (params) => {
     const user = params.user;
@@ -383,9 +382,10 @@ const Settings = (params) => {
                             </p>
                             <div className="settings-channel-preview">
                                 <img 
-                                    src={user.channel_icon || defaultAvatar} 
+                                    src={user.channel_icon || avatarFallback()} 
                                     alt={user.channel_name} 
                                     className="settings-channel-avatar"
+                                    onError={handleImgError(avatarFallback)}
                                 />
                                 <div>
                                     <h4>{user.channel_name || "Your Channel"}</h4>
