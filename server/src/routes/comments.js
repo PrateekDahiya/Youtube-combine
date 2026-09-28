@@ -174,6 +174,13 @@ router.get("/youtubeComments", asyncHandler(async (req, res) => {
             : await fetchYoutubeComments(video_id, page_token);
         sendResponse(res, successResponse(result, "YouTube comments retrieved successfully"));
     } catch (error) {
+        if (error && error.isQuotaExhausted) {
+            return sendResponse(res, successResponse({
+                comments: [],
+                nextPageToken: null,
+                disabled: false,
+            }, "YouTube quota exhausted, try again later"));
+        }
         console.log(
             "YoutubeComments: " +
                 (error.response ? JSON.stringify(error.response.data) : error.message)

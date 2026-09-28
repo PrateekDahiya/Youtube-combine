@@ -1,8 +1,17 @@
 const express = require("express");
 const router = express.Router();
 const { getConnection } = require("../db");
-const { getChannelIdsNeedingUpdate, processChannels, findNewChannelId, addNewChannel } = require("../youtube");
+const { fetchAndStoreVideos, findNewChannelId, addNewChannel } = require("../youtube");
 const { getSchedulerSettings, updateSchedulerSetting } = require("../youtube/channelScheduler");
+const {
+    QuotaExhaustedError,
+    loadQuotaState,
+    ensureQueueSeeded,
+    claimNextChannel,
+    completeChannel,
+    failChannel,
+    releaseLease,
+} = require("../youtube/syncQueue");
 const { syncHandler, asyncHandler } = require("../utils/asyncHandler");
 const { successResponse, errorResponse, validationErrorResponse, sendResponse } = require("../utils/responseWrapper");
 
@@ -58,9 +67,7 @@ router.get("/get-channel-ids", syncHandler((req, res) => {
     });
 }));
 
-let offset = 0;
 let batchSize = 5;
-let totalResults = 5;
 
 // These routes are hit on a cron schedule and each invocation can run long
 // (multiple sequential YouTube API calls + fresh DB connections per channel).
@@ -76,18 +83,30 @@ router.get("/update_channels", asyncHandler(async (req, res) => {
     }
     isUpdatingChannels = true;
     try {
-        // Only channels whose most recently synced video is >3 days old (or
-        // that have no videos yet) are re-processed — skips channels that were
-        // already refreshed recently, instead of blindly re-syncing every batch.
-        const channelIds = await getChannelIdsNeedingUpdate(offset, batchSize, 3);
-        if (channelIds.length === 0) {
-            offset = 0;
-        } else {
-            await processChannels(channelIds, 50);
-            offset += batchSize;
+        await loadQuotaState();
+        await ensureQueueSeeded();
+        const updatedChannelIds = [];
+        let quotaHalted = false;
+        for (let i = 0; i < batchSize; i += 1) {
+            const claimed = await claimNextChannel();
+            if (!claimed) {
+                break;
+            }
+            try {
+                await fetchAndStoreVideos(claimed.channel_id, 50);
+                await completeChannel(claimed.channel_id, false);
+                updatedChannelIds.push(claimed.channel_id);
+            } catch (error) {
+                if (error && error.isQuotaExhausted) {
+                    await releaseLease(claimed.channel_id);
+                    quotaHalted = true;
+                    break;
+                }
+                await failChannel(claimed.channel_id, error);
+            }
         }
 
-        sendResponse(res, successResponse({ Channels_updated_successfully: channelIds }, "Channels updated successfully"));
+        sendResponse(res, successResponse({ Channels_updated_successfully: updatedChannelIds, quotaHalted }, "Channels updated successfully"));
     } finally {
         isUpdatingChannels = false;
     }

@@ -1,22 +1,13 @@
 const cron = require("node-cron");
-const axios = require("axios");
 const { getConnection, createNewConnection, createNewPromiseConnection } = require("../db");
-const { API_KEYS } = require("../config");
 const { convertToMySQLDatetime, convertImageUrl, convertDurationToSeconds, getCategoryName } = require("../utils");
-
-let currentApiKeyIndex = 0;
+const { apiGet } = require("./syncQueue");
 
 function guardConnection(connection, label) {
     connection.on("error", (err) => {
         console.log(`MySQL connection error (${label}):`, err.message);
     });
     return connection;
-}
-
-function getNextApiKey() {
-    const apiKey = API_KEYS[currentApiKeyIndex];
-    currentApiKeyIndex = (currentApiKeyIndex + 1) % API_KEYS.length;
-    return apiKey;
 }
 
 async function checkSubscribedChannelsForNewVideos() {
@@ -49,6 +40,9 @@ async function checkSubscribedChannelsForNewVideos() {
             try {
                 await checkUserSubscriptions(userId);
             } catch (error) {
+                if (error && error.isQuotaExhausted) {
+                    throw error;
+                }
                 console.error(`Error checking subscriptions for user ${userId}:`, error.message);
             }
         }
@@ -85,13 +79,15 @@ async function checkUserSubscriptions(userId) {
         try {
             await checkChannelForNewVideos(userId, sub.channel_id, sub.channel_name, sub.channel_icon);
         } catch (error) {
+            if (error && error.isQuotaExhausted) {
+                throw error;
+            }
             console.error(`Error checking channel ${sub.channel_id}:`, error.message);
         }
     }
 }
 
 async function checkChannelForNewVideos(userId, channelId, channelName, channelIcon) {
-    const apiKey = getNextApiKey();
     const connection = getConnection();
     
     // Get the latest video upload time we have for this channel
@@ -110,17 +106,15 @@ async function checkChannelForNewVideos(userId, channelId, channelName, channelI
     
     // Fetch latest videos from YouTube API
     try {
-        const searchResponse = await axios.get(
+        const searchResponse = await apiGet(
             "https://www.googleapis.com/youtube/v3/search",
             {
-                params: {
-                    key: apiKey,
-                    channelId: channelId,
-                    part: "snippet",
-                    order: "date",
-                    maxResults: 5,
-                },
-            }
+                channelId: channelId,
+                part: "snippet",
+                order: "date",
+                maxResults: 5,
+            },
+            "search"
         );
         
         const videoIds = searchResponse.data.items
@@ -132,15 +126,13 @@ async function checkChannelForNewVideos(userId, channelId, channelName, channelI
         }
         
         // Get video details
-        const videoStatsResponse = await axios.get(
+        const videoStatsResponse = await apiGet(
             "https://www.googleapis.com/youtube/v3/videos",
             {
-                params: {
-                    key: apiKey,
-                    id: videoIds.join(","),
-                    part: "snippet,statistics,contentDetails",
-                },
-            }
+                id: videoIds.join(","),
+                part: "snippet,statistics,contentDetails",
+            },
+            "pool"
         );
         
         const videos = videoStatsResponse.data.items.map((item) => {
@@ -219,6 +211,9 @@ async function checkChannelForNewVideos(userId, channelId, channelName, channelI
         await videoConn.end();
         
     } catch (error) {
+        if (error && error.isQuotaExhausted) {
+            throw error;
+        }
         if (error.response) {
             console.log(`YouTube API error for channel ${channelId}:`, error.response.data);
         } else {

@@ -3,7 +3,7 @@
 -- video titles (capped at 128 chars) and individual tags, ranked by
 -- popularity (subscribers / views / accumulated views).
 -- Read path: WHERE term LIKE '<prefix>%' ORDER BY popularity DESC LIMIT 8
--- (btree range scan on idx_suggest_term; always parameterized).
+-- (btree range scan on idx_suggest_term and always parameterized).
 
 CREATE TABLE IF NOT EXISTS search_suggestions (
     term        VARCHAR(128)    NOT NULL,

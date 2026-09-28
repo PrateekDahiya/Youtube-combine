@@ -1,24 +1,30 @@
 const cron = require("node-cron");
 const {
-    getChannelIdsNeedingUpdate,
-    processChannels,
     getNewChannelId,
     channelExists,
     addNewChannel,
     fetchAndStoreVideos,
 } = require("./index");
+const {
+    QuotaExhaustedError,
+    apiGet,
+    loadQuotaState,
+    ensureQueueSeeded,
+    claimNextChannel,
+    completeChannel,
+    failChannel,
+    releaseLease,
+} = require("./syncQueue");
 const { getConnection, createNewPromiseConnection } = require("../db");
 const { convertToMySQLDatetime, convertImageUrl, convertDurationToSeconds, getCategoryName } = require("../utils");
 
 const DEFAULT_CHANNEL_UPDATE_CRON = "*/15 * * * *";
 const DEFAULT_NEW_CHANNEL_CRON = "*/15 * * * *";
 const CHANNEL_UPDATE_BATCH_SIZE = 5;
-const CHANNEL_STALE_DAYS = 3;
 const NEW_CHANNEL_TOTAL_RESULTS = 50;
 
 let isUpdatingChannels = false;
 let isAddingChannel = false;
-let offset = 0;
 
 let channelUpdateCronJob = null;
 let newChannelCronJob = null;
@@ -114,28 +120,15 @@ async function checkAndNotifyNewVideos(channelId, channelName, channelIcon) {
         const lastUpload = latestVideoResult[0]?.last_upload || null;
 
         // Fetch latest videos from YouTube API
-        const { API_KEYS } = require("../config");
-        let currentApiKeyIndex = 0;
-        function getNextApiKey() {
-            const apiKey = API_KEYS[currentApiKeyIndex];
-            currentApiKeyIndex = (currentApiKeyIndex + 1) % API_KEYS.length;
-            return apiKey;
-        }
-
-        const apiKey = getNextApiKey();
-        const axios = require("axios");
-
-        const searchResponse = await axios.get(
+        const searchResponse = await apiGet(
             "https://www.googleapis.com/youtube/v3/search",
             {
-                params: {
-                    key: apiKey,
-                    channelId: channelId,
-                    part: "snippet",
-                    order: "date",
-                    maxResults: 10,
-                },
-            }
+                channelId: channelId,
+                part: "snippet",
+                order: "date",
+                maxResults: 10,
+            },
+            "search"
         );
 
         const videoIds = searchResponse.data.items
@@ -144,15 +137,13 @@ async function checkAndNotifyNewVideos(channelId, channelName, channelIcon) {
 
         if (videoIds.length === 0) return;
 
-        const videoStatsResponse = await axios.get(
+        const videoStatsResponse = await apiGet(
             "https://www.googleapis.com/youtube/v3/videos",
             {
-                params: {
-                    key: apiKey,
-                    id: videoIds.join(","),
-                    part: "snippet,statistics,contentDetails",
-                },
-            }
+                id: videoIds.join(","),
+                part: "snippet,statistics,contentDetails",
+            },
+            "pool"
         );
 
         const videos = videoStatsResponse.data.items.map((item) => {
@@ -280,6 +271,59 @@ async function notifyNewChannel(channelId) {
     }
 }
 
+async function syncOneChannelFromQueue() {
+    const claimed = await claimNextChannel();
+    if (!claimed) {
+        return null;
+    }
+    const channelId = claimed.channel_id;
+    try {
+        const connection = guardConnection(await createNewPromiseConnection(), `getChannelInfo-${channelId}`);
+        try {
+            const [channelRows] = await connection.execute(
+                `SELECT channel_id, channel_name, channel_icon FROM channels WHERE channel_id = ?`,
+                [channelId]
+            );
+            if (channelRows.length > 0) {
+                const channel = channelRows[0];
+                await checkAndNotifyNewVideos(channelId, channel.channel_name, channel.channel_icon);
+            }
+        } finally {
+            try {
+                await connection.end();
+            } catch (e) {
+                console.error("Error closing connection:", e.message);
+            }
+        }
+        await fetchAndStoreVideos(channelId, NEW_CHANNEL_TOTAL_RESULTS);
+        const countConnection = guardConnection(await createNewPromiseConnection(), `countVideos-${channelId}`);
+        let videoCount = 0;
+        try {
+            const [countRows] = await countConnection.execute(
+                `SELECT COUNT(*) AS cnt FROM videos WHERE channel_id = ?`,
+                [channelId]
+            );
+            videoCount = (countRows[0] && countRows[0].cnt) || 0;
+        } finally {
+            try {
+                await countConnection.end();
+            } catch (e) {
+                console.error("Error closing connection:", e.message);
+            }
+        }
+        await completeChannel(channelId, videoCount === 0);
+        console.log(`Updated channel ${channelId} (tier ${claimed.tier})`);
+        return channelId;
+    } catch (error) {
+        if (error && error.isQuotaExhausted) {
+            await releaseLease(channelId);
+            throw error;
+        }
+        await failChannel(channelId, error);
+        return channelId;
+    }
+}
+
 function startChannelUpdateScheduler(cronExpression = DEFAULT_CHANNEL_UPDATE_CRON) {
     if (channelUpdateCronJob) {
         channelUpdateCronJob.stop();
@@ -291,39 +335,26 @@ function startChannelUpdateScheduler(cronExpression = DEFAULT_CHANNEL_UPDATE_CRO
         }
         isUpdatingChannels = true;
         try {
-            const channelIds = await getChannelIdsNeedingUpdate(offset, CHANNEL_UPDATE_BATCH_SIZE, CHANNEL_STALE_DAYS);
-            if (channelIds.length === 0) {
-                offset = 0;
-                console.log("No channels need update, offset reset to 0");
-            } else {
-                // Process channels and check for new videos
-                for (const channelId of channelIds) {
-                    // Get channel info for notifications
-                    const connection = guardConnection(await createNewPromiseConnection(), `getChannelInfo-${channelId}`);
-                    try {
-                        const [channelRows] = await connection.execute(
-                            `SELECT channel_id, channel_name, channel_icon FROM channels WHERE channel_id = ?`,
-                            [channelId]
-                        );
-                        if (channelRows.length > 0) {
-                            const channel = channelRows[0];
-                            // Check for new videos and notify subscribers
-                            await checkAndNotifyNewVideos(channelId, channel.channel_name, channel.channel_icon);
-                        }
-                    } finally {
-                        try {
-                            await connection.end();
-                        } catch (e) {
-                            console.error("Error closing connection:", e.message);
-                        }
+            await loadQuotaState();
+            await ensureQueueSeeded();
+            let updated = 0;
+            for (let i = 0; i < CHANNEL_UPDATE_BATCH_SIZE; i += 1) {
+                try {
+                    const channelId = await syncOneChannelFromQueue();
+                    if (!channelId) {
+                        console.log("No channels need update");
+                        break;
                     }
+                    updated += 1;
+                } catch (error) {
+                    if (error && error.isQuotaExhausted) {
+                        console.log("YouTube quota exhausted, halting channel updates until reset");
+                        break;
+                    }
+                    throw error;
                 }
-                
-                // Also run the standard processChannels for batch updates
-                await processChannels(channelIds, NEW_CHANNEL_TOTAL_RESULTS);
-                offset += CHANNEL_UPDATE_BATCH_SIZE;
-                console.log(`Updated ${channelIds.length} channels, offset now ${offset}`);
             }
+            console.log(`Channel update tick finished, updated ${updated} channels`);
         } catch (error) {
             console.error("Error in channel update scheduler:", error.message);
         } finally {

@@ -8,7 +8,7 @@ This guide is for AI agents (and humans pairing with them) editing the **VidVaul
   - `db/migrations/` — apply once against an existing DB. See `db/migrations/CONTEXT.md`.
 - `src/` — **modular Express API source** (replaces the old monolithic `server.js`). See `server/CONTEXT.md` for module map.
   - `src/routes/` — Express routers grouped by feature/domain. Add new routes here.
-  - `src/youtube/` — YouTube Data API v3 fetching logic (`fetchAndStoreVideos`, `getChannelIdsNeedingUpdate`, `processChannels`, `getNewChannelId`, `findNewChannelId`, `addNewChannel`, API key rotation). Also `streamResolver.js` — resolves a playable stream URL in-process via `youtubei.js`. `channelScheduler.js` — internal cron schedulers for channel updates (hourly) and new channel discovery (every 6 hours).
+  - `src/youtube/` — YouTube Data API v3 fetching logic (`fetchAndStoreVideos`, `getNewChannelId`, `findNewChannelId`, `addNewChannel`). All YouTube calls go through `syncQueue.js` (`apiGet`: quota-aware key rotation, budget caps). `channelScheduler.js` — internal cron schedulers for queue-driven channel updates and new channel discovery. Also `streamResolver.js` — resolves a playable stream URL in-process via `youtubei.js`.
   - `src/uploads/` — Multer + Cloudinary upload helpers.
   - `src/utils/` — ID generators, feed SQL builder, date/duration helpers, category mappings.
   - `src/feed/` — one handler file per video feed `type` (home, tag, category, trending, subscriptions, personalized, watchlater, liked, history, channel, search, related, watch, videobyid, shorts) + `index.js` registry + `helpers.js` shared plumbing. Add a new type by adding a new file here.

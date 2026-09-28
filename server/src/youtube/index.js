@@ -1,4 +1,3 @@
-const axios = require("axios");
 const { createNewConnection, createNewPromiseConnection, getConnection } = require("../db");
 const { API_KEYS } = require("../config");
 const {
@@ -11,6 +10,7 @@ const {
     createFeedAndGenerateSQL,
 } = require("../utils");
 const { checkFullTextAvailability, isFullTextAvailable } = require("../utils/fulltext");
+const { apiGet } = require("./syncQueue");
 
 let currentApiKeyIndex = 0;
 
@@ -91,18 +91,13 @@ const fetchAndStoreVideos = async (
         connection = guardConnection(await createNewPromiseConnection(), "fetchAndStoreVideos");
         let nextPageToken = startingPageToken;
 
-        const apiKey = API_KEYS[currentApiKeyIndex];
-        currentApiKeyIndex = (currentApiKeyIndex + 1) % API_KEYS.length;
-
-        const channelResponse = await axios.get(
+        const channelResponse = await apiGet(
             "https://www.googleapis.com/youtube/v3/channels",
             {
-                params: {
-                    key: apiKey,
-                    id: channelId,
-                    part: "snippet,statistics,brandingSettings",
-                },
-            }
+                id: channelId,
+                part: "snippet,statistics,brandingSettings",
+            },
+            "pool"
         );
 
         if (
@@ -223,44 +218,59 @@ const fetchAndStoreVideos = async (
             console.log("Error caching channel suggestion for " + channelId + ": " + suggestError.message);
         }
 
+        const uploadsPlaylistId =
+            channelId.startsWith("UC") ? "UU" + channelId.slice(2) : null;
+        if (!uploadsPlaylistId) {
+            console.log(`Cannot derive uploads playlist for channel: ${channelId}`);
+            return;
+        }
+
         while (newCount < dynamicTotal && pagesFetched < BACKFILL_MAX_PAGES) {
             const maxResults = 50;
 
             try {
-                const searchResponse = await axios.get(
-                    "https://www.googleapis.com/youtube/v3/search",
+                const playlistResponse = await apiGet(
+                    "https://www.googleapis.com/youtube/v3/playlistItems",
                     {
-                        params: {
-                            key: apiKey,
-                            channelId: channelId,
-                            part: "snippet",
-                            order: "date",
-                            maxResults: maxResults,
-                            pageToken: nextPageToken,
-                        },
-                    }
+                        playlistId: uploadsPlaylistId,
+                        part: "snippet,contentDetails",
+                        maxResults: maxResults,
+                        pageToken: nextPageToken,
+                    },
+                    "pool"
                 );
 
-                const videoIds = searchResponse.data.items
-                    .map((item) => item.id.videoId)
+                const videoIds = (playlistResponse.data.items || [])
+                    .map((item) => item.snippet && item.snippet.resourceId && item.snippet.resourceId.videoId)
                     .filter((videoId) => videoId);
 
                 if (videoIds.length === 0) {
                     break;
                 }
 
-                const videoStatsResponse = await axios.get(
-                    "https://www.googleapis.com/youtube/v3/videos",
-                    {
-                        params: {
-                            key: apiKey,
-                            id: videoIds.join(","),
+                const pageKnown = videoIds.filter((videoId) => knownIds.has(videoId));
+                const pageFresh = videoIds.filter((videoId) => !knownIds.has(videoId));
+
+                if (pageKnown.length === videoIds.length) {
+                    break;
+                }
+
+                let videos = [];
+                for (let i = 0; i < videoIds.length; i += 50) {
+                    const batch = videoIds.slice(i, i + 50);
+                    const videoStatsResponse = await apiGet(
+                        "https://www.googleapis.com/youtube/v3/videos",
+                        {
+                            id: batch.join(","),
                             part: "snippet,statistics,contentDetails",
                         },
-                    }
-                );
+                        "pool"
+                    );
+                    videos.push(...(videoStatsResponse.data.items || []));
+                }
 
-                const videos = videoStatsResponse.data.items.map((item) => {
+                const freshIds = new Set(pageFresh);
+                const pageVideos = videos.map((item) => {
                     const duration = convertDurationToSeconds(
                         item.contentDetails.duration
                     );
@@ -290,12 +300,10 @@ const fetchAndStoreVideos = async (
                     };
                 });
 
-                // Skip videos we already have so each run pages further into
-                // older history instead of re-writing the newest page.
-                const freshVideos = videos.filter((video) => !knownIds.has(video.videoId));
-                freshVideos.forEach((video) => knownIds.add(video.videoId));
+                const freshVideos = pageVideos.filter((video) => freshIds.has(video.videoId));
+                pageVideos.forEach((video) => knownIds.add(video.videoId));
 
-                const videoPromises = freshVideos.map((video) => {
+                const videoPromises = pageVideos.map((video) => {
                     return connection.execute(
                         `INSERT INTO videos (video_id, title, views, likes, dislikes, link, upload_time, channel_id, thumbnail_link, video_description, duration, tags, category, isShort)
                          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -338,28 +346,29 @@ const fetchAndStoreVideos = async (
 
                 newCount += freshVideos.length;
                 pagesFetched += 1;
-                nextPageToken = searchResponse.data.nextPageToken;
+                nextPageToken = playlistResponse.data.nextPageToken;
 
                 if (!nextPageToken) {
                     break;
                 }
             } catch (searchError) {
+                if (searchError && searchError.isQuotaExhausted) {
+                    throw searchError;
+                }
                 if (searchError.response) {
                     console.log(
-                        "Error during search API request:",
+                        "Error during playlist API request:",
                         searchError.response.data
                     );
                 } else {
                     console.log(
-                        "Error during search API request:",
+                        "Error during playlist API request:",
                         searchError.message
                     );
                 }
                 console.log("Request params:", {
-                    key: apiKey,
                     channelId: channelId,
-                    part: "snippet",
-                    order: "date",
+                    part: "snippet,contentDetails",
                     maxResults: maxResults,
                     pageToken: nextPageToken,
                 });
@@ -367,6 +376,9 @@ const fetchAndStoreVideos = async (
             }
         }
     } catch (error) {
+        if (error && error.isQuotaExhausted) {
+            throw error;
+        }
         if (error.response) {
             console.log(
                 "Error fetching and storing videos:",
@@ -389,10 +401,16 @@ const fetchAndStoreVideos = async (
     // `comments` low and avoid InnoDB deadlocks under parallel channel
     // processing. Runs after the raw connection above is released — this
     // uses the pool instead, and can take a while across many videos.
-    for (const video of syncedVideos) {
+    // Capped per run to bound quota spend; quota death stops warming but
+    // never fails the video sync itself.
+    const MAX_COMMENT_WARM_PER_RUN = 20;
+    for (const video of syncedVideos.slice(0, MAX_COMMENT_WARM_PER_RUN)) {
         try {
             await fetchAndCacheYoutubeComments(video.videoId);
         } catch (commentError) {
+            if (commentError && commentError.isQuotaExhausted) {
+                break;
+            }
             console.log(
                 "Error caching comments for video " +
                     video.videoId +
@@ -404,47 +422,6 @@ const fetchAndStoreVideos = async (
         }
     }
 };
-
-// Only channels whose most-recently-synced video is stale (or that have no
-// videos at all yet) are worth re-syncing — skips channels update_channels
-// already refreshed recently.
-async function getChannelIdsNeedingUpdate(offset, limit, staleDays = 3) {
-    const connection = guardConnection(await createNewConnection(), "getChannelIdsNeedingUpdate");
-    return new Promise((resolve, reject) => {
-        const query = `
-            SELECT c.channel_id
-            FROM channels c
-            LEFT JOIN (
-                SELECT channel_id, MAX(upload_time) AS last_upload
-                FROM videos
-                GROUP BY channel_id
-            ) v ON v.channel_id = c.channel_id
-            WHERE v.last_upload IS NULL OR v.last_upload < (NOW() - INTERVAL ? DAY)
-            ORDER BY c.channel_id
-            LIMIT ? OFFSET ?
-        `;
-        connection.query(query, [staleDays, limit, offset], (error, results) => {
-            connection.end();
-            if (error) {
-                return reject(error);
-            }
-            resolve(results.map((row) => row.channel_id));
-        });
-    });
-}
-
-async function processChannels(channelIds, totalResults = 50) {
-    const startingPageToken = null;
-
-    // Sequential, not Promise.all: each channel opens its own raw DB
-    // connection and makes several YouTube API calls, so running all of
-    // them at once spikes memory/connections and bursts API calls together.
-    // One at a time keeps peak resource usage flat — fine since this only
-    // runs on a cron tick, not in the request/response path a user waits on.
-    for (const channelId of channelIds) {
-        await fetchAndStoreVideos(channelId, totalResults, startingPageToken);
-    }
-}
 
 const getNewChannelId = async () => {
     try {
@@ -510,8 +487,17 @@ const addNewChannel = async (channelId, totalResults = 50) => {
 
     try {
         await fetchAndStoreVideos(channelId, totalResults, startingPageToken);
+        try {
+            const { enqueueChannel } = require("./syncQueue");
+            await enqueueChannel(channelId);
+        } catch (queueError) {
+            console.log("Error enqueueing new channel " + channelId + ": " + queueError.message);
+        }
         return true;
     } catch (error) {
+        if (error && error.isQuotaExhausted) {
+            throw error;
+        }
         console.log("Error adding new channel " + channelId + ": " + error.message);
         return false;
     }
@@ -625,23 +611,18 @@ const fetchRelatedVideos = async (video_id) => {
 };
 
 const fetchYoutubeComments = async (videoId, pageToken = null) => {
-    const apiKey = API_KEYS[currentApiKeyIndex];
-    currentApiKeyIndex = (currentApiKeyIndex + 1) % API_KEYS.length;
-
     try {
-        const response = await axios.get(
+        const response = await apiGet(
             "https://www.googleapis.com/youtube/v3/commentThreads",
             {
-                params: {
-                    key: apiKey,
-                    videoId,
-                    part: "snippet",
-                    maxResults: 10,
-                    order: "relevance",
-                    textFormat: "plainText",
-                    pageToken: pageToken || undefined,
-                },
-            }
+                videoId,
+                part: "snippet",
+                maxResults: 10,
+                order: "relevance",
+                textFormat: "plainText",
+                pageToken: pageToken || undefined,
+            },
+            "pool"
         );
 
         const comments = (response.data.items || []).map((item) => {
@@ -729,8 +710,6 @@ const fetchAndCacheYoutubeComments = async (videoId, pageToken = null) => {
 
 module.exports = {
     fetchAndStoreVideos,
-    getChannelIdsNeedingUpdate,
-    processChannels,
     getNewChannelId,
     findNewChannelId,
     addNewChannel,

@@ -31,7 +31,7 @@ The **back-end** of VidVault: a Node.js + Express REST API, the MySQL schema, an
 | `src/feed/` | Per-type video feed handlers (`home.js`, `tag.js`, `category.js`, `trending.js`, `subscriptions.js`, `personalized.js`, `watchlater.js`, `liked.js`, `history.js`, `channel.js`, `search.js`, `related.js`, `watch.js`, `videobyid.js`, `shorts.js`), auto-registered by `index.js` and backed by shared helpers in `helpers.js`. See the "Unified video endpoint" section. |
 | `src/email/` | `sendEmail()` via Resend. |
 | `src/uploads/` | Multer config (image + video), Cloudinary helper (`cloudinary.js` — `uploadImageToCloudinary`, no-op without `CLOUDINARY_*`), background video processing (`processVideoUpload`). |
-| `src/youtube/` | YouTube Data API v3 fetching: `fetchAndStoreVideos`, `getChannelIds`, `processChannels`, `getNewChannelId`, `addNewChannel`, API key rotation. Also `streamResolver.js` — resolves a playable stream URL (progressive/adaptive/HLS) for a video via `youtubei.js`, in-process (see "Stream resolution" below). `channelScheduler.js` — internal cron schedulers for channel updates (hourly) and new channel discovery (every 6 hours), replacing external cron jobs. |
+| `src/youtube/` | YouTube Data API v3 fetching: `fetchAndStoreVideos` (uploads-playlist listing, stop-at-fully-known-page, dynamic 10%-or-50 target), `getChannelIds`, `getNewChannelId`, `addNewChannel`. API access goes through `syncQueue.js` (`apiGet`: quota-aware key rotation, per-day caps, `QuotaExhaustedError` stand-down). Also `streamResolver.js` — resolves a playable stream URL (progressive/adaptive/HLS) for a video via `youtubei.js`, in-process (see "Stream resolution" below). `channelScheduler.js` — internal cron schedulers for channel updates (queue-driven) and new channel discovery, replacing external cron jobs. |
 | `src/routes/` | Express routers grouped by feature/domain (see below). |
 
 ## `src/routes/` — route modules
@@ -121,25 +121,26 @@ See the route module table above for the full list. All endpoints retain their e
 
 ## YouTube Data API fetching
 
-- Keys come from `API_KEYS` (a JSON env array). `src/youtube/index.js` indexes them with a `currentApiKeyIndex` that is rotated after each fetch inside `fetchAndStoreVideos`.
+- Keys come from `API_KEYS` (a JSON env array). All YouTube calls go through `apiGet` (`src/youtube/syncQueue.js`): quota-aware rotation that skips exhausted keys, enforces per-day caps (80 search / 9000 pool), tries each remaining key once on quota errors, then throws `QuotaExhaustedError` to halt the batch. `getNewChannelId` keeps its own lightweight rotation (discovery path).
 - `fetchAndStoreVideos(channelId, totalResults, pageToken)` (`totalResults` = minimum count of **new** videos wanted; scaled up to 10% of the channel's `video_count`, capped by the 10-page walk limit):
-  1. `channels.list` for channel details → upsert into `channels`.
-  2. Preload known `video_id`s for the channel, then loop `search.list` (50 per page) by `date`, **skipping already-synced IDs and paging further into older history** until `totalResults` new videos are collected (or `nextPageToken` runs out, or 10 pages are walked as a quota cap).
-  3. `videos.list` (`snippet,statistics,contentDetails`) → upsert only the new videos into `videos`. Sets `isShort = duration <= 61` seconds.
+  1. `channels.list` for channel details → upsert into `channels` (1 pool unit via `apiGet`).
+  2. Preload known `video_id`s, then walk the channel's **uploads playlist** (`playlistItems.list`, 1 unit/page, newest-first) instead of `search.list` (100-unit bucket). `videos.list` covers **every ID on each walked page** (same 1-unit cost for up to 50 IDs) and the upsert refreshes already-known rows' stats; brand-new IDs alone count toward the target and drive comment warming. Stops at the first fully-known page, `nextPageToken` exhaustion, or the 10-page cap. Quota errors propagate as `QuotaExhaustedError` (never swallowed).
+  3. Upsert only the new videos into `videos`. Sets `isShort = duration <= 61` seconds.
   4. After its raw connection is released, sequentially (not `Promise.all`, to avoid InnoDB deadlocks under concurrent channel processing) caches a page of YouTube comments per just-synced video — see Comments below.
 - Helpers: `getCategoryName`, `convertImageUrl`, `convertToMySQLDatetime`, `convertDurationToSeconds`.
 - `fetchAndStoreVideos` uses a raw (non-pooled) `createNewConnection()` per call, wrapped with `guardConnection()` (attaches an `'error'` listener — mysql2 emits connection-level failures like "too many connections" as an event separate from any query callback, and an unhandled one crashes the process) and always released via `finally`, even on error.
-- `/api/update_channels` calls `getChannelIdsNeedingUpdate(offset, batchSize, staleDays=3)` instead of scanning every channel — only channels with no videos yet, or whose most-recently-synced video's `upload_time` is older than `staleDays`, are re-processed. `offset` still round-robins through that (shrinking) filtered set and resets to 0 once it's exhausted.
-- `/api/addnewchannel` calls `findNewChannelId()`, which loops `getNewChannelId()` (random category → random pick among the top 50 of that category's `mostPopular` chart, not always slot #1) plus a `channelExists()` check indefinitely until it finds a channel not already in `channels`. `addNewChannel` no longer re-checks existence (the check is done in `findNewChannelId`); it returns `true` on success, `false` on failure.
+- `/api/update_channels` claims up to 5 channels from `channel_sync_queue` (tier 0 never-synced → tier 1 subscribed+stale → tier 2 rest) and syncs them one by one. A channel is marked `done` only after its videos land; quota death releases the lease back to `pending` and halts the batch; ordinary errors use `failed` + exponential backoff. Response: `{ Channels_updated_successfully: [...], quotaHalted }`.
+- `/api/addnewchannel` calls `findNewChannelId()`, which loops `getNewChannelId()` (random category → random pick among the top 50 of that category's `mostPopular` chart, not always slot #1) plus a `channelExists()` check indefinitely until it finds a channel not already in `channels`. `addNewChannel` no longer re-checks existence (the check is done in `findNewChannelId`); it returns `true` on success, `false` on failure. New channels are enqueued (tier 0) after their initial sync.
 
 ## Internal Schedulers (`src/youtube/channelScheduler.js`)
 
 Two internal cron schedulers run within the Node process, replacing external cron jobs:
 
-1. **Channel Update Scheduler** — runs every 15 minutes (`*/15 * * * *`):
-   - Calls `getChannelIdsNeedingUpdate(offset, 5, 3)` to get up to 5 channels needing update
-   - Processes each channel with `processChannels(channelIds, 50)` to fetch up to 50 videos per channel
-   - Increments `offset` by batch size (5); resets to 0 when no channels need update
+1. **Channel Update Scheduler** — runs every 15 minutes (`*/15 * * * *`, overridable via `scheduler_settings`):
+   - Seeds the queue with any unqueued channels, reloads persisted quota state
+   - Claims up to 5 channels from `channel_sync_queue` and syncs each (notify-subscribers check + `fetchAndStoreVideos`)
+   - Stale `in_progress` leases (>30 min, e.g. after a crash) are reclaimable by the claim query
+   - Halts the tick on `QuotaExhaustedError` (leases released, resume after PT-midnight reset)
    - Guarded by `isUpdatingChannels` flag to prevent overlap
 
 2. **New Channel Discovery Scheduler** — runs every 15 minutes (`*/15 * * * *`):

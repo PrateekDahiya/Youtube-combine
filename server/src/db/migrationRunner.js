@@ -103,15 +103,21 @@ async function runMigrations() {
                     }
                     
                     console.log(`Applying migration: ${migration.name}`);
-                    
-                    const statements = migration.content
+
+                    const withoutComments = migration.content
+                        .split("\n")
+                        .filter((line) => !line.trimStart().startsWith("--"))
+                        .join("\n");
+                    const statements = withoutComments
                         .split(";")
                         .map(s => s.trim())
-                        .filter(s => s.length > 0 && !s.startsWith("--"));
+                        .filter(s => s.length > 0);
                     
-                    await new Promise((res, rej) => {
-                        connection.query(statements.join(";\n") + ";", (e) => e ? rej(e) : res());
-                    });
+                    for (const statement of statements) {
+                        await new Promise((res, rej) => {
+                            connection.query(statement, (e) => e ? rej(e) : res());
+                        });
+                    }
                     
                     await new Promise((res, rej) => {
                         connection.query(
