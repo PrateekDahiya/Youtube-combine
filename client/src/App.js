@@ -3,6 +3,8 @@ import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Cookies from "js-cookie";
 import Menu from "./Menu";
 import Header from "./Header";
+import { QueueProvider } from "./QueueContext";
+import QueuePopup from "./QueuePopup";
 
 import "./App.css";
 
@@ -22,6 +24,7 @@ const Likedvideos = lazy(() => import("./Likedvideos"));
 const Watchlater = lazy(() => import("./Watchlater"));
 const Settings = lazy(() => import("./Settings"));
 const Trendings = lazy(() => import("./Trendings"));
+const QueuePage = lazy(() => import("./QueuePage"));
 
 function App() {
     const [crntuser, setCrntuser] = useState("Guest");
@@ -104,6 +107,7 @@ function App() {
 
     return (
         <Router>
+            <QueueProvider>
             <div className="App">
                 <Header onClick={toggleMenu} user={crntuser} />
 
@@ -204,6 +208,10 @@ function App() {
                             />
                             <Route path="/login" element={<Login />} />
                             <Route
+                                path="/queue"
+                                element={<QueuePage user={crntuser} />}
+                            />
+                            <Route
                                 path="/settings"
                                 element={
                                     <Settings
@@ -231,7 +239,9 @@ function App() {
                         </Suspense>
                     </div>
                 </div>
+                <QueuePopup />
             </div>
+            </QueueProvider>
         </Router>
     );
 }

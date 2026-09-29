@@ -11,6 +11,7 @@ import Comments from "./Comments";
 import Modal from "./Modal";
 import ShareDialog from "./ShareDialog";
 import { useToast } from "./ToastContext";
+import { useQueue } from "./QueueContext";
 
 const Watch = (params) => {
     
@@ -23,6 +24,7 @@ const Watch = (params) => {
     const [loading, setLoading] = useState(true);
     const user = params.user;
     const { showToast } = useToast();
+    const { queue, peekNextIndex, advance } = useQueue();
     const [showShare, setShowShare] = useState(false);
     const [showNoDownload, setShowNoDownload] = useState(false);
     const [issubed, setissubed] = useState(false);
@@ -248,7 +250,21 @@ const Watch = (params) => {
         }
     };
 
+    const queuePlayUrl = (video) =>
+        video.isShort ? `/shorts?video_id=${video.video_id}` : `/watch?video_id=${video.video_id}`;
+
     const handleEnded = () => {
+        const queueIndex = peekNextIndex();
+        if (queueIndex !== -1 && queue[queueIndex]) {
+            const nextVideo = queue[queueIndex];
+            advance();
+            if (nextVideo.video_id === video_id) {
+                window.location.reload();
+            } else {
+                window.location.href = queuePlayUrl(nextVideo);
+            }
+            return;
+        }
         if (!autoplay) return;
         const list = (relateddata && relateddata.videos) || [];
         const next = list.find((v) => v.video_id !== video_id);

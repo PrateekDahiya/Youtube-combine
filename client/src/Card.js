@@ -4,6 +4,7 @@ import { streamApi, watchlaterApi } from "./api";
 import Cookies from "js-cookie";
 import ShareDialog from "./ShareDialog";
 import { useToast } from "./ToastContext";
+import { useQueue } from "./QueueContext";
 import { avatarFallback, thumbFallback, handleImgError } from "./imgFallback";
 import "./Card.css";
 
@@ -21,6 +22,7 @@ const Card = React.memo((params) => {
     const [downloading, setDownloading] = useState(false);
     const cardMenuRef = useRef(null);
     const { showToast } = useToast();
+    const { enqueue } = useQueue();
 
     const getUserFromCookie = () => {
         const userCookie = Cookies.get("user");
@@ -284,6 +286,20 @@ const Card = React.memo((params) => {
                                 <path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm1 10.6l4.2 2.5-.8 1.3L11 13.5V7h1.5v5.6z" />
                             </svg>
                             <span>{watchlater ? "Saved to Watch later" : "Save to Watch later"}</span>
+                        </div>
+                        <div
+                            className="card-menu-item"
+                            role="menuitem"
+                            onClick={() => {
+                                setShowCardMenu(false);
+                                enqueue(params.data);
+                                showToast("Added to queue");
+                            }}
+                        >
+                            <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+                                <path d="M4 6h12v2H4zm0 5h12v2H4zm0 5h7v2H4zM17 11l5 5-5 5v-3h-3v-4h3v-3z" />
+                            </svg>
+                            <span>Add to queue</span>
                         </div>
                         {params.onRemoveHistory ? (
                             <div

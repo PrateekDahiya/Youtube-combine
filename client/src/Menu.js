@@ -61,6 +61,9 @@ function Menu(params) {
             case '/likedvideos':
                 setSelectedItem('Liked videos');
                 break;
+            case '/queue':
+                setSelectedItem('Queue');
+                break;
             case '/trendings':
                 setSelectedItem('Trending');
                 break;
@@ -290,6 +293,15 @@ function Menu(params) {
                         ) : (
                             <></>
                         )}
+                        <Menuitem
+                            imgpath="https://cdn-icons-png.flaticon.com/128/3039/3039388.png"
+                            title="Queue"
+                            head="/queue"
+                            isSelected={selectedItem === "Queue"}
+                            onClick={() =>
+                                handleItemClick("Queue")
+                            }
+                        />
                     </div>
 
                     <div className="menudiv">
