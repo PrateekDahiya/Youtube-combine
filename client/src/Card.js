@@ -1,7 +1,9 @@
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { watchlaterApi } from "./api";
+import { streamApi, watchlaterApi } from "./api";
 import Cookies from "js-cookie";
+import ShareDialog from "./ShareDialog";
+import { useToast } from "./ToastContext";
 import { avatarFallback, thumbFallback, handleImgError } from "./imgFallback";
 import "./Card.css";
 
@@ -11,10 +13,14 @@ const Card = React.memo((params) => {
     const [video_id, setVideo_id] = useState(null);
     const [user_chl_id, setUser_chl_id] = useState(null);
     const [user, setCrntuser] = useState("Guest");
-    const [isHovered, setIsHovered] = useState(false);
     const [watchlater, setWatchlater] = useState(false);
     const [forTrending, setForTrending] = useState(false);
     const [forrelated, setForrelated] = useState(false);
+    const [showCardMenu, setShowCardMenu] = useState(false);
+    const [showShare, setShowShare] = useState(false);
+    const [downloading, setDownloading] = useState(false);
+    const cardMenuRef = useRef(null);
+    const { showToast } = useToast();
 
     const getUserFromCookie = () => {
         const userCookie = Cookies.get("user");
@@ -48,6 +54,52 @@ const Card = React.memo((params) => {
             addwatchlater();
         }
     }, [watchlater, user, user_chl_id, video_id]);
+
+    useEffect(() => {
+        if (!showCardMenu) return;
+        const handleClickOutside = (event) => {
+            if (cardMenuRef.current && !cardMenuRef.current.contains(event.target)) {
+                setShowCardMenu(false);
+            }
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, [showCardMenu]);
+
+    const getShareUrl = () =>
+        `${window.location.origin}/watch?video_id=${params.data.video_id}`;
+
+    const handleDownload = async () => {
+        setShowCardMenu(false);
+        const link = params.data.link;
+        if (link && (link.startsWith("/uploads/") || link.includes("res.cloudinary.com"))) {
+            const a = document.createElement("a");
+            a.href = link;
+            a.download = "";
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            showToast("Download started");
+            return;
+        }
+        setDownloading(true);
+        try {
+            const response = await streamApi.getStream(params.data.video_id);
+            const stream = response.data || response;
+            const progressive = (stream && stream.progressive) || [];
+            if (progressive.length > 0 && progressive[0].url) {
+                window.open(progressive[0].url, "_blank", "noopener");
+                showToast("Opening video file in a new tab");
+            } else {
+                showToast("Download unavailable for this video", "error");
+            }
+        } catch (error) {
+            console.log("Error fetching download stream:", error.message);
+            showToast("Download unavailable for this video", "error");
+        } finally {
+            setDownloading(false);
+        }
+    };
 
     useEffect(() => {
         setVideo_id(params.data.video_id);
@@ -157,81 +209,13 @@ const Card = React.memo((params) => {
     }, [params.data.thumbnail_link, params.data.link]);
 
     return (
+        <>
         <Link
             to={linkto}
             className={`card ${
                 forTrending || forrelated ? "trending-card" : ""
             }`}
-            onMouseEnter={() => setIsHovered(true)}
-            onMouseLeave={() => setIsHovered(false)}
         >
-            <div
-                className={`watch-later ${isHovered ? "show" : ""} ${watchlater ? "active" : ""}`}
-                role="button"
-                tabIndex={0}
-                onClick={(e) => {
-                    e.preventDefault();
-                    handleWatchlater();
-                }}
-                onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                        e.preventDefault();
-                        handleWatchlater();
-                    }
-                }}
-            >
-                {watchlater ? (
-                    <img
-                        alt="removeWatchlater"
-                        title="Remove from Watch Later"
-                        src="https://cdn-icons-png.flaticon.com/128/15641/15641363.png"
-                    />
-                ) : (
-                    <img
-                        alt="addWatchlater"
-                        title="Add to Watch Later"
-                        src="https://cdn-icons-png.flaticon.com/128/15469/15469061.png"
-                    />
-                )}
-            </div>
-            {params.onEdit ? (
-                <span
-                    className="card-edit"
-                    title="Edit video"
-                    onClick={(e) => {
-                        e.preventDefault();
-                        params.onEdit(params.data);
-                    }}
-                >
-                    <svg
-                        viewBox="0 0 24 24"
-                        width="16"
-                        height="16"
-                        fill="white"
-                    >
-                        <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34a.996.996 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
-                    </svg>
-                </span>
-            ) : null}
-            {params.onDelete ? (
-                <span
-                    className="card-delete"
-                    title="Delete video"
-                    onClick={(e) => {
-                        e.preventDefault();
-                        params.onDelete(params.data);
-                    }}
-                >
-                    <svg
-                        viewBox="0 0 24 24"
-                        width="16"
-                        height="16"
-                        fill="white"
-                    >
-                        <path d="M6 7h12l-1 13.01A2 2 0 0 1 15.01 22H8.99a2 2 0 0 1-1.99-1.99L6 7zm3-3h6l1 2H8l1-2zM4 6h16v2H4V6z" />
-                    </svg>
-                </span>
-            ) : null}
             <div
                 className={
                     forrelated
@@ -239,6 +223,115 @@ const Card = React.memo((params) => {
                         : "card-thumb thumbnail"
                 }
             >
+                <button
+                    className="card-menu-trigger"
+                    title="More actions"
+                    aria-label="More actions"
+                    aria-haspopup="menu"
+                    aria-expanded={showCardMenu}
+                    onClick={(e) => {
+                        e.preventDefault();
+                        setShowCardMenu((prev) => !prev);
+                    }}
+                >
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="white">
+                        <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z" />
+                    </svg>
+                </button>
+                {showCardMenu ? (
+                    <div
+                        className="card-menu"
+                        role="menu"
+                        ref={cardMenuRef}
+                        onClick={(e) => {
+                            e.preventDefault();
+                        }}
+                    >
+                        <div
+                            className="card-menu-item"
+                            role="menuitem"
+                            onClick={() => {
+                                setShowCardMenu(false);
+                                setShowShare(true);
+                            }}
+                        >
+                            <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+                                <path d="M14 9V5l7 7-7 7v-4.1c-5 0-8.5 1.6-11 5.1 1-5 4-10 11-11z" />
+                            </svg>
+                            <span>Share</span>
+                        </div>
+                        <div
+                            className={`card-menu-item ${downloading ? "disabled" : ""}`}
+                            role="menuitem"
+                            onClick={() => {
+                                if (!downloading) handleDownload();
+                            }}
+                        >
+                            <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+                                <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z" />
+                            </svg>
+                            <span>{downloading ? "Preparing…" : "Download"}</span>
+                        </div>
+                        <div
+                            className="card-menu-item"
+                            role="menuitem"
+                            onClick={() => {
+                                setShowCardMenu(false);
+                                handleWatchlater();
+                            }}
+                        >
+                            <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+                                <path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm1 10.6l4.2 2.5-.8 1.3L11 13.5V7h1.5v5.6z" />
+                            </svg>
+                            <span>{watchlater ? "Saved to Watch later" : "Save to Watch later"}</span>
+                        </div>
+                        {params.onRemoveHistory ? (
+                            <div
+                                className="card-menu-item"
+                                role="menuitem"
+                                onClick={() => {
+                                    setShowCardMenu(false);
+                                    params.onRemoveHistory(params.data);
+                                }}
+                            >
+                                <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+                                    <path d="M13 3a9 9 0 0 0-9 9H1l3.89 3.89.07.14L9 12H6a7 7 0 1 1 7 7 7 7 0 0 1-4.93-2.03l-1.42 1.42A8.96 8.96 0 0 0 13 21a9 9 0 0 0 0-18zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z" />
+                                </svg>
+                                <span>Remove from history</span>
+                            </div>
+                        ) : null}
+                        {params.onEdit ? (
+                            <div
+                                className="card-menu-item"
+                                role="menuitem"
+                                onClick={() => {
+                                    setShowCardMenu(false);
+                                    params.onEdit(params.data);
+                                }}
+                            >
+                                <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+                                    <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34a.996.996 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
+                                </svg>
+                                <span>Edit video</span>
+                            </div>
+                        ) : null}
+                        {params.onDelete ? (
+                            <div
+                                className="card-menu-item card-menu-danger"
+                                role="menuitem"
+                                onClick={() => {
+                                    setShowCardMenu(false);
+                                    params.onDelete(params.data);
+                                }}
+                            >
+                                <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+                                    <path d="M6 7h12l-1 13.01A2 2 0 0 1 15.01 22H8.99a2 2 0 0 1-1.99-1.99L6 7zm3-3h6l1 2H8l1-2zM4 6h16v2H4V6z" />
+                                </svg>
+                                <span>Delete video</span>
+                            </div>
+                        ) : null}
+                    </div>
+                ) : null}
                 <img
                     title={params.data.channel_name}
                     src={thumbnailSrc}
@@ -273,16 +366,16 @@ const Card = React.memo((params) => {
                         <p className="videotitle" title={params.data.title || ""}>
                             {params.data.title || ""}
                         </p>
-                        <div
-                            className="channelname"
-                            onClick={(e) => {
-                                e.preventDefault();
-                                handleChannelClick(e, params.data.channel_id);
-                            }}
-                        >
-                            {params.data.channel_name || ""}
-                        </div>
-                        <div className="viewsntime">
+                        <div className="card-meta">
+                            <div
+                                className="channelname"
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    handleChannelClick(e, params.data.channel_id);
+                                }}
+                            >
+                                {params.data.channel_name || ""}
+                            </div>
                             <p className="views">
                                 {formatNumber(params.data.views)} views &bull;
                             </p>
@@ -304,6 +397,21 @@ const Card = React.memo((params) => {
                     </div>
                 </div>
         </Link>
+        <ShareDialog
+            isOpen={showShare}
+            onClose={() => setShowShare(false)}
+            url={getShareUrl()}
+            title={params.data.title}
+            onCopied={(ok) => {
+                if (ok) {
+                    showToast("Link copied to clipboard");
+                    setShowShare(false);
+                } else {
+                    showToast("Copy failed — select the link manually", "error");
+                }
+            }}
+        />
+        </>
     );
 });
 

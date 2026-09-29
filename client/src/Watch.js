@@ -9,6 +9,7 @@ import CardGrid from "./CardGrid";
 import Cardloading from "./Cardloading";
 import Comments from "./Comments";
 import Modal from "./Modal";
+import ShareDialog from "./ShareDialog";
 import { useToast } from "./ToastContext";
 
 const Watch = (params) => {
@@ -266,15 +267,6 @@ const Watch = (params) => {
         } catch (error) {
             console.log("Error copying link:", error.message);
             showToast("Copy failed — select the link manually", "error");
-        }
-    };
-
-    const nativeShare = async () => {
-        if (!navigator.share) return;
-        try {
-            await navigator.share({ title: watchdata.title || "VidVault video", url: getShareUrl() });
-        } catch (error) {
-            console.log("Native share dismissed:", error.message);
         }
     };
 
@@ -700,30 +692,20 @@ const Watch = (params) => {
                     </div>
                 )}
             </div>
-            <Modal
+            <ShareDialog
                 isOpen={showShare}
                 onClose={() => setShowShare(false)}
-                title="Share"
-                size="small"
-            >
-                <input
-                    type="text"
-                    readOnly
-                    value={getShareUrl()}
-                    onFocus={(e) => e.target.select()}
-                    style={{ width: "100%", padding: "8px", marginBottom: "12px" }}
-                />
-                <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end" }}>
-                    <button className="subscribe" onClick={copyShareUrl}>
-                        Copy link
-                    </button>
-                    {navigator.share ? (
-                        <button className="subscribe ed" onClick={nativeShare}>
-                            More options
-                        </button>
-                    ) : null}
-                </div>
-            </Modal>
+                url={getShareUrl()}
+                title={watchdata.title}
+                onCopied={(ok) => {
+                    if (ok) {
+                        showToast("Link copied to clipboard");
+                        setShowShare(false);
+                    } else {
+                        showToast("Copy failed — select the link manually", "error");
+                    }
+                }}
+            />
             <Modal
                 isOpen={showNoDownload}
                 onClose={() => setShowNoDownload(false)}

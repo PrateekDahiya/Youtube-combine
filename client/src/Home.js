@@ -6,9 +6,23 @@ import Cardloading from "./Cardloading";
 import CardGrid from "./CardGrid";
 import InfiniteScroll from "./InfiniteScroll";
 
+const videoTypes = ["Music", "Gaming", "Movies", "News", "Sports"];
+
+const shuffleFilters = (tags) => {
+    const items = [
+        ...tags.map((label) => ({ label, kind: "tag" })),
+        ...videoTypes.map((label) => ({ label, kind: "type" })),
+    ];
+    for (let i = items.length - 1; i > 0; i -= 1) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [items[i], items[j]] = [items[j], items[i]];
+    }
+    return items;
+};
+
 const Home = (params) => {
     const [data, setData] = useState(null);
-    const [topTags, setTopTags] = useState([]);
+    const [shuffledFilters, setShuffledFilters] = useState(() => shuffleFilters([]));
     const [selectedTags, setSelectedTags] = useState([]);
     const [selectedTypes, setSelectedTypes] = useState([]);
     const [newForYou, setNewForYou] = useState(false);
@@ -17,7 +31,6 @@ const Home = (params) => {
     const [loadingMore, setLoadingMore] = useState(false);
     const [hasMore, setHasMore] = useState(true);
     const user = params.user;
-    const videoTypes = ["Music", "Gaming", "Movies", "News", "Sports"];
 
     const toggleInList = (list, value) =>
         list.includes(value) ? list.filter((v) => v !== value) : [...list, value];
@@ -67,13 +80,13 @@ const Home = (params) => {
     useEffect(() => {
         const fetchHomeTags = async () => {
             if (user === "Guest" || !user.channel_id) {
-                setTopTags([]);
+                setShuffledFilters(shuffleFilters([]));
                 return;
             }
 
             try {
                 const response = await feedApi.getHomeTags(user.channel_id);
-                setTopTags(response.tags || []);
+                setShuffledFilters(shuffleFilters(response.tags || []));
             } catch (error) {
                 console.log("Error in fetching home tags: ", error.message);
             }
@@ -120,23 +133,27 @@ const Home = (params) => {
         <>
             <div className="home-tags">
                 <div className="home-tag-row">
-                    {topTags.length > 0 ? (
-                        <>
-                            <span className="home-tag-label">Top tags</span>
-                            {topTags.map((tag) => (
-                                <button
-                                    key={tag}
-                                    className={
-                                        "home-tag " +
-                                        (selectedTags.includes(tag) ? "active" : "")
-                                    }
-                                    onClick={() => toggleTag(tag)}
-                                >
-                                    {tag}
-                                </button>
-                            ))}
-                        </>
-                    ) : null}
+                    {shuffledFilters.map((item) => (
+                        <button
+                            key={`${item.kind}-${item.label}`}
+                            className={
+                                "home-tag " +
+                                ((item.kind === "tag" && selectedTags.includes(item.label)) ||
+                                (item.kind === "type" && selectedTypes.includes(item.label))
+                                    ? "active"
+                                    : "")
+                            }
+                            onClick={() => {
+                                if (item.kind === "tag") {
+                                    toggleTag(item.label);
+                                } else {
+                                    toggleType(item.label);
+                                }
+                            }}
+                        >
+                            {item.label}
+                        </button>
+                    ))}
                     {user !== "Guest" && user.channel_id ? (
                         <button
                             className={"home-tag " + (newForYou ? "active" : "")}
@@ -153,21 +170,6 @@ const Home = (params) => {
                             Clear
                         </button>
                     ) : null}
-                </div>
-                <div className="home-tag-row">
-                    <span className="home-tag-label">Video type</span>
-                    {videoTypes.map((tag) => (
-                        <button
-                            key={tag}
-                            className={
-                                "home-tag " +
-                                (selectedTypes.includes(tag) ? "active" : "")
-                            }
-                            onClick={() => toggleType(tag)}
-                        >
-                            {tag}
-                        </button>
-                    ))}
                 </div>
             </div>
             {data ? (

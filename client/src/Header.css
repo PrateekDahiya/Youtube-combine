@@ -70,7 +70,7 @@
     align-items: center;
     position: relative;
     flex: 1;
-    max-width: 600px;
+    max-width: 720px;
     margin: 0 20px;
     justify-content: flex-end;
 }
@@ -83,9 +83,9 @@
 
 .search {
     width: 100%;
-    height: 30px;
-    padding-left: 10px;
-    font-size: 13px;
+    height: 40px;
+    padding-left: 14px;
+    font-size: 15px;
     border: 1px solid var(--alt-color);
     border-radius: 30px 0 0 30px;
     background-color: var(--background-color);
@@ -104,7 +104,7 @@
 
 .searchbutton {
     width: 60px;
-    height: 33.5px;
+    height: 44px;
     background-color: var(--background-color);
     border: 1px solid var(--alt-color);
     border-radius: 0 30px 30px 0;
@@ -116,7 +116,7 @@
 }
 
 .searchbutton img {
-    height: 25px;
+    height: 28px;
     filter: var(--image-filter);
 }
 
@@ -224,21 +224,34 @@
     margin-right: 20px;
 }
 
-.create {
-    width: 40px;
-    height: 40px;
+.create-pill {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background-color: #272727;
+    color: #fff;
+    border: none;
+    border-radius: 999px;
+    padding: 8px 16px 8px 12px;
     margin-left: 10px;
-    border-radius: 50%;
-    filter: var(--image-filter);
+    font-size: 14px;
+    font-weight: 500;
     cursor: pointer;
-    transition: all 0.2s ease;
-    padding: 8px;
+    white-space: nowrap;
+    flex-shrink: 0;
+    transition: background-color 0.2s ease, transform 0.15s ease;
     box-sizing: border-box;
 }
 
-.create:hover {
-    background-color: var(--alt-color);
-    transform: scale(1.05);
+.create-pill:hover {
+    background-color: #3d3d3d;
+    transform: translateY(-1px);
+}
+
+.create-plus {
+    font-size: 22px;
+    line-height: 1;
+    font-weight: 400;
 }
 
 .header-guest-menu {
@@ -462,21 +475,34 @@ body.dark .notification-badge {
     flex-shrink: 0;
 }
 
-.create {
-    width: 40px;
-    height: 40px;
+.create-pill {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background-color: #272727;
+    color: #fff;
+    border: none;
+    border-radius: 999px;
+    padding: 8px 16px 8px 12px;
     margin-left: 10px;
-    border-radius: 50%;
-    filter: var(--image-filter);
+    font-size: 14px;
+    font-weight: 500;
     cursor: pointer;
-    transition: all 0.2s ease;
-    padding: 8px;
+    white-space: nowrap;
+    flex-shrink: 0;
+    transition: background-color 0.2s ease, transform 0.15s ease;
     box-sizing: border-box;
 }
 
-.create:hover {
-    background-color: var(--alt-color);
-    transform: scale(1.05);
+.create-pill:hover {
+    background-color: #3d3d3d;
+    transform: translateY(-1px);
+}
+
+.create-plus {
+    font-size: 22px;
+    line-height: 1;
+    font-weight: 400;
 }
 
 .profilepic {
@@ -554,11 +580,12 @@ body.dark .notification-badge {
         width: 18px;
     }
 
-    .create {
-        width: 28px;
-        height: 28px;
-        padding: 5px;
+    .create-pill {
+        padding: 6px;
         margin-left: 4px;
+    }
+    .create-pill .create-label {
+        display: none;
     }
     .notification-bell {
         width: 28px;
@@ -659,11 +686,12 @@ body.dark .notification-badge {
         display: flex;
     }
     
-    .create {
-        width: 24px;
-        height: 24px;
-        padding: 4px;
+    .create-pill {
+        padding: 5px;
         margin-left: 3px;
+    }
+    .create-pill .create-label {
+        display: none;
     }
     
     .notification-bell {
@@ -769,11 +797,11 @@ body.dark .notification-badge {
         margin-right: 0;
     }
 
-    .create {
-        width: 32px;
-        height: 32px;
-        padding: 6px;
+    .create-pill {
         margin-left: 4px;
+    }
+    .create-pill .create-label {
+        display: none;
     }
     .notification-bell {
         width: 32px;
@@ -831,11 +859,11 @@ body.dark .notification-badge {
         margin-right: 15px;
     }
 
-    .create {
-        width: 32px;
-        height: 32px;
-        padding: 6px;
+    .create-pill {
         margin-left: 6px;
+    }
+    .create-pill .create-label {
+        display: none;
     }
     .notification-bell {
         width: 32px;
@@ -873,7 +901,7 @@ body.dark .notification-badge {
 
 @media (min-width: 769px) and (max-width: 992px) {
     .search-container {
-        max-width: 300px;
+        max-width: 360px;
         margin: 0 12px;
     }
 
@@ -881,10 +909,7 @@ body.dark .notification-badge {
         font-size: 14px;
     }
 
-    .create {
-        width: 36px;
-        height: 36px;
-        padding: 7px;
+    .create-pill {
         margin-left: 8px;
     }
     .notification-bell {
@@ -910,14 +935,11 @@ body.dark .notification-badge {
 
 @media (min-width: 993px) and (max-width: 1200px) {
     .search-container {
-        max-width: 400px;
+        max-width: 480px;
         margin: 0 15px;
     }
 
-    .create {
-        width: 38px;
-        height: 38px;
-        padding: 8px;
+    .create-pill {
         margin-left: 10px;
     }
     .notification-bell {
@@ -939,14 +961,11 @@ body.dark .notification-badge {
 
 @media (min-width: 1201px) {
     .search-container {
-        max-width: 600px;
+        max-width: 720px;
         margin: 0 20px;
     }
 
-    .create {
-        width: 40px;
-        height: 40px;
-        padding: 8px;
+    .create-pill {
         margin-left: 12px;
     }
     .notification-bell {

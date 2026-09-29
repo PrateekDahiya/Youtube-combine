@@ -148,14 +148,6 @@ function Menu(params) {
                     ) : null}
 
                     <Menuitem
-                        imgpath="https://cdn-icons-png.flaticon.com/128/2989/2989849.png"
-                        title="Subscriptions"
-                        head="/subscriptions"
-                        menu="Hidden"
-                        isSelected={selectedItem === "Subscriptions"}
-                        onClick={() => handleItemClick("Subscriptions")}
-                    />
-                    <Menuitem
                         imgpath="https://cdn-icons-png.flaticon.com/128/456/456212.png"
                         title="You"
                         head="/me"
@@ -186,13 +178,56 @@ function Menu(params) {
                             />
                         ) : null}
 
+                    </div>
+                    <div className="menudiv">
                         <Menuitem
-                            imgpath="https://cdn-icons-png.flaticon.com/128/2989/2989849.png"
-                            title="Subscriptions"
+                            title="Subscriptions >"
                             head="/subscriptions"
                             isSelected={selectedItem === "Subscriptions"}
                             onClick={() => handleItemClick("Subscriptions")}
                         />
+                        {params.user !== "Guest" ? (
+                            subsdata.subscription &&
+                            subsdata.subscription.length > 0 ? (
+                                <>
+                                    {subsdata.subscription.map((item) => (
+                                        <Menuitem
+                                            key={item.channel_id}
+                                            imgpath={item.channel_icon}
+                                            title={item.channel_name}
+                                            head={`/channel?channel_id=${item.channel_id}`}
+                                            profile={true}
+                                            isSelected={
+                                                selectedItem === item.channel_name
+                                            }
+                                            onClick={() =>
+                                                handleItemClick(item.channel_name)
+                                            }
+                                        />
+                                    ))}
+                                </>
+                            ) : null
+                        ) : (
+                            <div className="menuguestuser">
+                                <p className="guestuserp">
+                                    Sign in to like videos, comment, and
+                                    subscribe.
+                                </p>
+                                <Link
+                                    to="/login"
+                                    style={{ textDecoration: "none" }}
+                                >
+                                    <button className="sign_in">
+                                        <img
+                                            className="guesticon"
+                                            src="https://cdn-icons-png.flaticon.com/128/1077/1077063.png"
+                                            alt="user"
+                                        />
+                                        Sign In
+                                    </button>
+                                </Link>
+                            </div>
+                        )}
                     </div>
                     <div className="menudiv">
                         <Menuitem
@@ -256,53 +291,6 @@ function Menu(params) {
                             <></>
                         )}
                     </div>
-
-                    {params.user !== "Guest" ? (
-                        subsdata.subscription &&
-                        subsdata.subscription.length > 0 ? (
-                            <div className="menudiv">
-                                <h3>Subscriptions</h3>
-                                {subsdata.subscription.map((item) => (
-                                    <Menuitem
-                                        key={item.channel_id}
-                                        imgpath={item.channel_icon}
-                                        title={item.channel_name}
-                                        head={`/channel?channel_id=${item.channel_id}`}
-                                        profile={true}
-                                        isSelected={
-                                            selectedItem === item.channel_name
-                                        }
-                                        onClick={() =>
-                                            handleItemClick(item.channel_name)
-                                        }
-                                    />
-                                ))}
-                            </div>
-                        ) : null
-                    ) : (
-                        <div className="menudiv">
-                            <h3>Subscriptions</h3>
-                            <div className="menuguestuser">
-                                <p className="guestuserp">
-                                    Sign in to like videos, comment, and
-                                    subscribe.
-                                </p>
-                                <Link
-                                    to="/login"
-                                    style={{ textDecoration: "none" }}
-                                >
-                                    <button className="sign_in">
-                                        <img
-                                            className="guesticon"
-                                            src="https://cdn-icons-png.flaticon.com/128/1077/1077063.png"
-                                            alt="user"
-                                        />
-                                        Sign In
-                                    </button>
-                                </Link>
-                            </div>
-                        </div>
-                    )}
 
                     <div className="menudiv">
                         <h3>Explore</h3>

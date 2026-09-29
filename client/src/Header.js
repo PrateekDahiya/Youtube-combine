@@ -275,13 +275,14 @@ const Header = (params) => {
                 <div className="login-profile">
                     {params.user !== "Guest" ? (
                         <>
-                            <img
-                                className="create"
-                                src="https://cdn-icons-png.flaticon.com/128/4189/4189286.png"
-                                alt="Create"
+                            <button
+                                className="create-pill"
                                 title="Create"
                                 onClick={() => setShowUpload(true)}
-                            />
+                            >
+                                <span className="create-plus">+</span>
+                                <span className="create-label">Create</span>
+                            </button>
                             <div className="notification-bell-wrapper" ref={notificationBellRef}>
                                 <button
                                     className="notification-bell"

@@ -10,7 +10,6 @@ const History = (params) => {
     const [data, setData] = useState([]);
     const [loading, setLoading] = useState(true);
     const [user_chl_id, setUser_chl_id] = useState(null);
-    const [hoveredCards, setHoveredCards] = useState({});
     const [updateonDelete, setUpdateonDelete] = useState(0);
 
     const compareTimestamps = (timestamp) => {
@@ -53,20 +52,6 @@ const History = (params) => {
         setUpdateonDelete((prev) => prev + 1);
     };
 
-    const handleMouseEnter = (videoId) => {
-        setHoveredCards((prevHoveredCards) => ({
-            ...prevHoveredCards,
-            [videoId]: true,
-        }));
-    };
-
-    const handleMouseLeave = (videoId) => {
-        setHoveredCards((prevHoveredCards) => ({
-            ...prevHoveredCards,
-            [videoId]: false,
-        }));
-    };
-
     const renderCardsByTime = (timeCategory) => {
         if (!Array.isArray(data) || data.length === 0) return [];
         return data
@@ -77,25 +62,12 @@ const History = (params) => {
                 <div
                     key={item.video_id}
                     className="history-card"
-                    onMouseEnter={() => handleMouseEnter(item.video_id)}
-                    onMouseLeave={() => handleMouseLeave(item.video_id)}
                 >
-                    <div
-                        className={`remove-history ${
-                            hoveredCards[item.video_id] ? "show" : ""
-                        }`}
-                        onClick={() => {
-                            handleRemoveHistory(item.video_id);
-                        }}
-                    >
-                        <img
-                            alt="remove-history"
-                            src="https://cdn-icons-png.flaticon.com/128/1828/1828778.png"
-                            title="Remove from History"
-                        />
-                        <span>Remove History</span>
-                    </div>
-                    <Card key={item.video_id} data={item} />
+                    <Card
+                        key={item.video_id}
+                        data={item}
+                        onRemoveHistory={(video) => handleRemoveHistory(video.video_id)}
+                    />
                 </div>
             ));
     };
