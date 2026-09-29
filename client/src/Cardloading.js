@@ -141,18 +141,7 @@ const Cardloading = (params) => {
             </div>
         );
     if (page === "subscription")
-        return (
-            <div className="sk-page">
-                <div className="sk-line" style={{ width: 200, height: 24, marginBottom: 16 }}></div>
-                <div className="sk-line" style={{ width: 100, marginBottom: 16 }}></div>
-                <div className="sk-channel-strip" style={{ display: "flex", gap: 12, marginBottom: 20 }}>
-                    {[0, 1, 2, 3, 4].map((i) => (
-                        <div className="sk-pill" style={{ width: 130, height: 40 }} key={i}></div>
-                    ))}
-                </div>
-                <SkeletonGrid count={8} />
-            </div>
-        );
+        return <SkeletonGrid count={8} />;
     if (page === "you")
         return (
             <div className="sk-page">

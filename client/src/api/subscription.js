@@ -14,6 +14,6 @@ export const subscriptionApi = {
     getSubscriptions: (userId) =>
         api.get("/get-subs", { params: { user_id: userId } }),
 
-    getSubscriptionVideos: (userId, isShort, page = 1, cursor) =>
-        videosApi.getVideos({ type: "subscriptions", user_id: userId, isShort, page, cursor }),
+    getSubscriptionVideos: (userId, isShort, page = 1, cursor, channelId) =>
+        videosApi.getVideos({ type: "subscriptions", user_id: userId, isShort, page, cursor, channel_id: channelId || undefined }),
 };

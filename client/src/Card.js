@@ -20,7 +20,11 @@ const Card = React.memo((params) => {
     const [showCardMenu, setShowCardMenu] = useState(false);
     const [showShare, setShowShare] = useState(false);
     const [downloading, setDownloading] = useState(false);
+    const [statsWrapped, setStatsWrapped] = useState(false);
     const cardMenuRef = useRef(null);
+    const metaRef = useRef(null);
+    const channelRef = useRef(null);
+    const statsRef = useRef(null);
     const { showToast } = useToast();
     const { enqueue } = useQueue();
 
@@ -56,6 +60,22 @@ const Card = React.memo((params) => {
             addwatchlater();
         }
     }, [watchlater, user, user_chl_id, video_id]);
+
+    useEffect(() => {
+        const checkWrap = () => {
+            if (channelRef.current && statsRef.current) {
+                setStatsWrapped(statsRef.current.offsetTop > channelRef.current.offsetTop);
+            }
+        };
+        checkWrap();
+        const observer = new ResizeObserver(checkWrap);
+        if (metaRef.current) observer.observe(metaRef.current);
+        window.addEventListener("resize", checkWrap);
+        return () => {
+            observer.disconnect();
+            window.removeEventListener("resize", checkWrap);
+        };
+    }, [params.data.video_id]);
 
     useEffect(() => {
         if (!showCardMenu) return;
@@ -382,9 +402,10 @@ const Card = React.memo((params) => {
                         <p className="videotitle" title={params.data.title || ""}>
                             {params.data.title || ""}
                         </p>
-                        <div className="card-meta">
+                        <div className="card-meta" ref={metaRef}>
                             <div
                                 className="channelname"
+                                ref={channelRef}
                                 onClick={(e) => {
                                     e.preventDefault();
                                     handleChannelClick(e, params.data.channel_id);
@@ -392,11 +413,9 @@ const Card = React.memo((params) => {
                             >
                                 {params.data.channel_name || ""}
                             </div>
-                            <p className="views">
-                                {formatNumber(params.data.views)} views &bull;
-                            </p>
-                            <p className="time">
-                                {getDateDifference(
+                            <p className="meta-stats" ref={statsRef}>
+                                {statsWrapped ? null : <>&bull; </>}
+                                {formatNumber(params.data.views)} views &bull; {getDateDifference(
                                     new Date(),
                                     new Date(params.data.upload_time)
                                 ) + " ago"}

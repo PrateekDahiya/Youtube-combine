@@ -46,14 +46,20 @@ const Subscription = (params) => {
         cursorRef.current = null;
         setHasMore(true);
         setLoading(true);
-    }, [typeShort]);
+    }, [typeShort, selectedChannel]);
 
     useEffect(() => {
         if (loadingMore || !hasMore) return;
         setLoadingMore(true);
         const fetchData = async () => {
             try {
-                const response = await subscriptionApi.getSubscriptionVideos(user.channel_id, typeShort, page_no, cursorRef.current);
+                const response = await subscriptionApi.getSubscriptionVideos(
+                    user.channel_id,
+                    typeShort,
+                    page_no,
+                    cursorRef.current,
+                    selectedChannel === "all" ? undefined : selectedChannel
+                );
                 mergeVideos(response.videos || [], response.nextCursor);
             } catch (error) {
                 console.log("Error fetching subscription videos:", error.message);
@@ -63,7 +69,7 @@ const Subscription = (params) => {
             }
         };
         fetchData();
-    }, [typeShort, page_no, user.channel_id, user]);
+    }, [typeShort, page_no, selectedChannel, user.channel_id, user]);
 
     useEffect(() => {
         const fetchChannels = async () => {
@@ -77,12 +83,7 @@ const Subscription = (params) => {
         fetchChannels();
     }, [user.channel_id, user]);
 
-    const filteredVideos =
-        selectedChannel === "all"
-            ? videos.data || []
-            : (videos.data || []).filter(
-                  (item) => item.channel_id === selectedChannel
-              );
+    const filteredVideos = videos.data || [];
 
     const loadMore = () => {
         if (loadingMore || !hasMore) return;
@@ -92,9 +93,6 @@ const Subscription = (params) => {
     return (
         <>
             {params.user !== "Guest" ? (
-                loading ? (
-                    <Cardloading page="subscription" />
-                ) : (
                 <div className="subsbox">
                     <h1>Subscriptions</h1>
                     <h3>Latest</h3>
@@ -158,7 +156,9 @@ const Subscription = (params) => {
                         </p>
                     </div>
                     </div>
-                    {filteredVideos.length > 0 ? (
+                    {loading ? (
+                        <Cardloading page="subscription" />
+                    ) : filteredVideos.length > 0 ? (
                         <CardGrid variant="fluid">
                             {filteredVideos.map((item) => (
                                 <Card key={item.video_id} data={item} />
@@ -173,7 +173,6 @@ const Subscription = (params) => {
                         <></>
                     )}
                 </div>
-                )
             ) : (
                 <div className="guestuser">
                     <img
