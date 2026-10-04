@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from "react";
-import { NavLink } from "react-router-dom";
 import "./Login.css";
 import { authApi } from "./api";
 import CryptoJS from "crypto-js";
@@ -14,42 +13,21 @@ const CHANNEL_ID_REGEX = /^UC[a-zA-Z0-9-_]{22}$/;
 
 function Login(params) {
     const [email, setEmail] = useState("");
-    const [validEmail, setValidEmail] = useState(false);
-    const [emailError, setEmailError] = useState("");
     const [password, setPassword] = useState("");
     const [showPassword, setShowPassword] = useState(false);
     const [showCPassword, setShowCPassword] = useState(false);
-    const [validPassword, setValidPassword] = useState(false);
-    const [passwordError, setPasswordError] = useState("");
     const [username, setUsername] = useState("");
-    const [validUsername, setValidUsername] = useState(false);
-    const [usernameError, setUsernameError] = useState("");
     const [firstname, setfirstname] = useState("");
-    const [validFirstname, setValidFirstname] = useState(false);
-    const [firstnameError, setFirstnameError] = useState("");
     const [lastname, setlastname] = useState("");
-    const [validLastname, setValidLastname] = useState(false);
-    const [lastnameError, setLastnameError] = useState("");
     const [DOB, setDOB] = useState("");
-    const [validDOB, setValidDOB] = useState(false);
-    const [DOBError, setDOBError] = useState("");
     const [confirm_password, setConfirmpassword] = useState("");
-    const [validMatch, setValidMatch] = useState(false);
-    const [matchError, setMatchError] = useState("");
     const [channel_name, setChannel_name] = useState("");
-    const [validChannel, setValidChannel] = useState(false);
-    const [channelError, setChannelError] = useState("");
     const [location, setLocation] = useState("");
-    const [validLocation, setValidLocation] = useState(false);
-    const [locationError, setLocationError] = useState("");
     const [channel_desc, setChannel_desc] = useState("");
-    const [allValid4login, setAllValid4login] = useState(false);
-    const [allValid4reg, setAllValid4reg] = useState(false);
     const [feedback, setFeedback] = useState("");
     const [reqchannelid, setReqchannelid] = useState("");
-    const [validChannelid, setValidChannelid] = useState(false);
-    const [channelidError, setChannelidError] = useState("");
     const [errorMessage, setErrorMessage] = useState("");
+    const [touched, setTouched] = useState({});
     const [ishandlesubmit, setIshandlesubmit] = useState(false);
     const queryParams = new URLSearchParams(window.location.search);
     const type = queryParams.get("type");
@@ -58,11 +36,6 @@ function Login(params) {
     const [i, seti] = useState(
         type === "register" ? 0 : type === "feedback" ? 10 : 8
     );
-
-    const handleNext = async (e) => {
-        e.preventDefault();
-        seti(i + 1);
-    };
 
     const togglePasswordVisibility = () => {
         setShowPassword(!showPassword);
@@ -179,117 +152,79 @@ function Login(params) {
         setIshandlesubmit(false);
     };
 
-    useEffect(() => {
-        setValidUsername(USERNAME_REGEX.test(username));
-        setUsernameError(
-            USERNAME_REGEX.test(username)
-                ? ""
-                : "Username must contain alteast 4 letters."
-        );
-    }, [username]);
+    const validUsername = USERNAME_REGEX.test(username);
+    const usernameError = validUsername
+        ? ""
+        : "Username must contain alteast 4 letters.";
+    const validFirstname =
+        ALPHANUMERIC_REGEX.test(firstname) && firstname !== "";
+    const firstnameError = validFirstname
+        ? ""
+        : "First name must contain only alphanumeric characters.";
+    const validLastname =
+        ALPHANUMERIC_REGEX.test(lastname) || lastname === "";
+    const lastnameError = validLastname
+        ? ""
+        : "Last name must contain only alphanumeric characters.";
+    const validMatch = password === confirm_password;
+    const matchError = validMatch ? "" : "Passwords do not match.";
+    const validEmail = EMAIL_REGEX.test(email);
+    const emailError = validEmail ? "" : "Invalid email format.";
+    const validPassword = PASSWORD_REGEX.test(password);
+    const passwordError = validPassword
+        ? ""
+        : "Password must contain atleast one of each uppercase, lowercase, number and special character.";
+    const validChannel =
+        ALPHANUMERIC_REGEX.test(channel_name) && channel_name !== "";
+    const channelError = validChannel
+        ? ""
+        : "Channel name must contain only alphanumeric characters.";
+    const validLocation = location !== "";
+    const locationError = validLocation ? "" : "Location is required.";
+    const validDOB = DOB !== "";
+    const DOBError = validDOB ? "" : "Date of birth is required.";
+    const validChannelid =
+        CHANNEL_ID_REGEX.test(reqchannelid) || reqchannelid === "";
+    const channelidError = validChannelid
+        ? ""
+        : "Invalid Channel id. You can find it at Navigate to youtube channel > click on more details > share channel > copy channel id";
+    const allValid4reg =
+        validEmail &&
+        validUsername &&
+        validPassword &&
+        validMatch &&
+        validFirstname &&
+        validLastname &&
+        validDOB &&
+        validChannel &&
+        validLocation;
 
-    useEffect(() => {
-        setValidFirstname(
-            ALPHANUMERIC_REGEX.test(firstname) && firstname !== ""
-        );
-        setFirstnameError(
-            ALPHANUMERIC_REGEX.test(firstname) && firstname !== ""
-                ? ""
-                : "First name must contain only alphanumeric characters."
-        );
-    }, [firstname]);
+    const touch = (...fields) => {
+        setTouched((prev) => {
+            const next = { ...prev };
+            fields.forEach((field) => {
+                next[field] = true;
+            });
+            return next;
+        });
+    };
 
-    useEffect(() => {
-        setValidLastname(ALPHANUMERIC_REGEX.test(lastname) || lastname === "");
-        setLastnameError(
-            ALPHANUMERIC_REGEX.test(lastname) || lastname === ""
-                ? ""
-                : "Last name must contain only alphanumeric characters."
-        );
-    }, [lastname]);
+    const showErr = (field, message) =>
+        touched[field] && message ? <p className="error">{message}</p> : null;
 
-    useEffect(() => {
-        setValidMatch(password === confirm_password);
-        setMatchError(
-            password === confirm_password ? "" : "Passwords do not match."
-        );
-    }, [password, confirm_password]);
+    const fieldClass = (field, valid) =>
+        !touched[field] ? "" : valid ? "valid" : "invalid";
 
-    useEffect(() => {
-        setValidEmail(EMAIL_REGEX.test(email));
-        setEmailError(EMAIL_REGEX.test(email) ? "" : "Invalid email format.");
-    }, [email]);
+    const fieldAriaInvalid = (field, valid) =>
+        touched[field] && !valid ? "true" : "false";
 
-    useEffect(() => {
-        setValidPassword(PASSWORD_REGEX.test(password));
-        setPasswordError(
-            PASSWORD_REGEX.test(password)
-                ? ""
-                : "Password must contain atleast one of each uppercase, lowercase, number and special character."
-        );
-    }, [password]);
-
-    useEffect(() => {
-        setValidChannel(
-            ALPHANUMERIC_REGEX.test(channel_name) && channel_name !== ""
-        );
-        setChannelError(
-            ALPHANUMERIC_REGEX.test(channel_name) && channel_name !== ""
-                ? ""
-                : "Channel name must contain only alphanumeric characters."
-        );
-    }, [channel_name]);
-
-    useEffect(() => {
-        setValidLocation(location !== "");
-        setLocationError(location !== "" ? "" : "Location is required.");
-    }, [location]);
-
-    useEffect(() => {
-        setValidDOB(DOB !== "");
-        setDOBError(DOB !== "" ? "" : "Date of birth is required.");
-    }, [DOB]);
-
-    useEffect(() => {
-        setValidChannelid(
-            CHANNEL_ID_REGEX.test(reqchannelid) || reqchannelid === ""
-        );
-        setChannelidError(
-            CHANNEL_ID_REGEX.test(reqchannelid) || reqchannelid === ""
-                ? ""
-                : "Invalid Channel id. You can find it at Navigate to youtube channel > click on more details > share channel > copy channel id"
-        );
-    }, [reqchannelid]);
-
-    useEffect(() => {
-        setAllValid4login(
-            (validEmail || email === "") &&
-                (validUsername || username === "") &&
-                validPassword
-        );
-
-        setAllValid4reg(
-            validEmail &&
-                validUsername &&
-                validPassword &&
-                validMatch &&
-                validFirstname &&
-                validLastname &&
-                validDOB &&
-                validChannel &&
-                validLocation
-        );
-    }, [
-        validEmail,
-        validUsername,
-        validPassword,
-        validMatch,
-        validFirstname,
-        validLastname,
-        validDOB,
-        validChannel,
-        validLocation,
-    ]);
+    const goNext = (e, fields, ok, next) => {
+        e.preventDefault();
+        touch(...fields);
+        if (ok) {
+            seti(next);
+        }
+    };
 
     return (
         <div className="login-box">
@@ -311,31 +246,15 @@ function Login(params) {
                     </p>
                     <p className="box-desc">
                         {i === 0
-                            ? "Enter your name"
+                            ? "About you"
                             : i === 1
-                            ? "Create a Username"
-                            : i === 2
-                            ? "Enter your email"
-                            : i === 3
-                            ? "Enter your date of birth"
-                            : i === 4
-                            ? "Set a password"
-                            : i === 5
-                            ? "Setup your channel"
-                            : i === 6
-                            ? "Select your country"
-                            : i === 7
-                            ? "Set channel description"
+                            ? "Account details"
+                            : i === 2 || i === 3
+                            ? "Your channel"
                             : i === 8
-                            ? "Enter your Username"
-                            : i === 81
-                            ? "Enter your Email"
-                            : i === 9
-                            ? "Enter your Password"
+                            ? "Enter your details"
                             : i === 10
                             ? "Give your Feedback"
-                            : i === 11
-                            ? "Enter Channel Id"
                             : ""}
                     </p>
                 </div>
@@ -348,36 +267,47 @@ function Login(params) {
                     >
                         <div className="inputdata">
                             <input
-                                className={validFirstname ? "valid" : "invalid"}
+                                className={fieldClass("firstname", validFirstname)}
                                 type="text"
                                 value={firstname}
                                 id="firstname"
                                 onChange={(e) => setfirstname(e.target.value)}
+                                onBlur={() => touch("firstname")}
                                 placeholder="First Name"
                                 autoComplete="off"
-                                aria-invalid={validFirstname ? "false" : "true"}
+                                aria-invalid={fieldAriaInvalid("firstname", validFirstname)}
                                 required
                                 autoFocus
                             />
-                            {firstnameError && (
-                                <p className="error">{firstnameError}</p>
-                            )}
+                            {showErr("firstname", firstnameError)}
 
                             <br></br>
 
                             <input
-                                className={validLastname ? "valid" : "invalid"}
+                                className={fieldClass("lastname", validLastname)}
                                 type="text"
                                 value={lastname}
                                 id="lastname"
                                 autoComplete="off"
                                 onChange={(e) => setlastname(e.target.value)}
+                                onBlur={() => touch("lastname")}
                                 placeholder="Last Name (Optional)"
-                                aria-invalid={validLastname ? "false" : "true"}
+                                aria-invalid={fieldAriaInvalid("lastname", validLastname)}
                             />
-                            {lastnameError && (
-                                <p className="error">{lastnameError}</p>
-                            )}
+                            {showErr("lastname", lastnameError)}
+                            <br></br>
+                            <input
+                                className={fieldClass("DOB", validDOB)}
+                                type="date"
+                                value={DOB}
+                                id="DOB"
+                                autoComplete="off"
+                                onChange={(e) => setDOB(e.target.value)}
+                                onBlur={() => touch("DOB")}
+                                aria-invalid={fieldAriaInvalid("DOB", validDOB)}
+                                required
+                            />
+                            {showErr("DOB", DOBError)}
                             <br></br>
                             <span
                                 className="login-ques"
@@ -392,9 +322,12 @@ function Login(params) {
                             <button
                                 className="next-btn"
                                 onClick={(e) => {
-                                    if (validFirstname && validLastname) {
-                                        handleNext(e);
-                                    }
+                                    goNext(
+                                        e,
+                                        ["firstname", "lastname", "DOB"],
+                                        validFirstname && validLastname && validDOB,
+                                        1
+                                    );
                                 }}
                             >
                                 Next
@@ -409,112 +342,37 @@ function Login(params) {
                     >
                         <div className="inputdata">
                             <input
-                                className={validUsername ? "valid" : "invalid"}
+                                className={fieldClass("username", validUsername)}
                                 type="text"
                                 value={username}
                                 id="username"
                                 onChange={(e) => setUsername(e.target.value)}
+                                onBlur={() => touch("username")}
                                 placeholder="Username"
                                 autoComplete="off"
-                                aria-invalid={validUsername ? "false" : "true"}
+                                aria-invalid={fieldAriaInvalid("username", validUsername)}
                                 required
                                 autoFocus
                             />
-                            {usernameError && (
-                                <p className="error">{usernameError}</p>
-                            )}
+                            {showErr("username", usernameError)}
                             <br></br>
-                            <button
-                                className="next-btn"
-                                onClick={(e) => {
-                                    if (validUsername) {
-                                        handleNext(e);
-                                    }
-                                }}
-                            >
-                                Next
-                            </button>
-                        </div>
-                    </form>
-                ) : i === 2 ? (
-                    <form
-                        onSubmit={(e) => {
-                            e.preventDefault();
-                        }}
-                    >
-                        <div className="inputdata">
                             <input
-                                className={validEmail ? "valid" : "invalid"}
+                                className={fieldClass("email", validEmail)}
                                 type="email"
                                 value={email}
                                 id="email"
                                 onChange={(e) => setEmail(e.target.value)}
+                                onBlur={() => touch("email")}
                                 placeholder="Email"
                                 autoComplete="off"
-                                aria-invalid={validEmail ? "false" : "true"}
+                                aria-invalid={fieldAriaInvalid("email", validEmail)}
                                 required
-                                autoFocus
                             />
-                            {emailError && (
-                                <p className="error">{emailError}</p>
-                            )}
+                            {showErr("email", emailError)}
                             <br></br>
-                            <button
-                                className="next-btn"
-                                onClick={(e) => {
-                                    if (validEmail) {
-                                        handleNext(e);
-                                    }
-                                }}
-                            >
-                                Next
-                            </button>
-                        </div>
-                    </form>
-                ) : i === 3 ? (
-                    <form
-                        onSubmit={(e) => {
-                            e.preventDefault();
-                        }}
-                    >
-                        <div className="inputdata">
-                            <input
-                                className={validDOB ? "valid" : "invalid"}
-                                type="date"
-                                value={DOB}
-                                id="DOB"
-                                autoComplete="off"
-                                onChange={(e) => setDOB(e.target.value)}
-                                aria-invalid={validDOB ? "false" : "true"}
-                                required
-                                autoFocus
-                            />
-                            {DOBError && <p className="error">{DOBError}</p>}
-                            <br></br>
-                            <button
-                                className="next-btn"
-                                onClick={(e) => {
-                                    if (validDOB) {
-                                        handleNext(e);
-                                    }
-                                }}
-                            >
-                                Next
-                            </button>
-                        </div>
-                    </form>
-                ) : i === 4 ? (
-                    <form
-                        onSubmit={(e) => {
-                            e.preventDefault();
-                        }}
-                    >
-                        <div className="inputdata">
                             <div className="pass-eye-box">
                                 <input
-                                    className={
-                                        validPassword ? "valid" : "invalid"
-                                    }
+                                    className={fieldClass("password", validPassword)}
                                     type={showPassword ? "text" : "password"}
                                     value={password}
                                     id="password"
@@ -522,12 +380,10 @@ function Login(params) {
                                     onChange={(e) =>
                                         setPassword(e.target.value)
                                     }
+                                    onBlur={() => touch("password")}
                                     placeholder="Password"
-                                    aria-invalid={
-                                        validPassword ? "false" : "true"
-                                    }
+                                    aria-invalid={fieldAriaInvalid("password", validPassword)}
                                     required
-                                    autoFocus
                                 />
                                 {showPassword ? (
                                     <img
@@ -548,13 +404,11 @@ function Login(params) {
                                 )}
                             </div>
 
-                            {passwordError && (
-                                <p className="error">{passwordError}</p>
-                            )}
+                            {showErr("password", passwordError)}
                             <br></br>
                             <div className="pass-eye-box">
                                 <input
-                                    className={validMatch ? "valid" : "invalid"}
+                                    className={fieldClass("confirm_password", validMatch)}
                                     type={showCPassword ? "text" : "password"}
                                     value={confirm_password}
                                     id="confirm_password"
@@ -562,7 +416,8 @@ function Login(params) {
                                     onChange={(e) =>
                                         setConfirmpassword(e.target.value)
                                     }
-                                    aria-invalid={validMatch ? "false" : "true"}
+                                    onBlur={() => touch("confirm_password")}
+                                    aria-invalid={fieldAriaInvalid("confirm_password", validMatch)}
                                     placeholder="Confirm Password"
                                     required
                                 />
@@ -585,23 +440,36 @@ function Login(params) {
                                 )}
                             </div>
 
-                            {matchError && (
-                                <p className="error">{matchError}</p>
-                            )}
+                            {showErr("confirm_password", matchError)}
                             <br></br>
+                            <button
+                                className="next-btn back-btn"
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    seti(0);
+                                }}
+                            >
+                                Back
+                            </button>
                             <button
                                 className="next-btn"
                                 onClick={(e) => {
-                                    if (validPassword && validMatch) {
-                                        handleNext(e);
-                                    }
+                                    goNext(
+                                        e,
+                                        ["username", "email", "password", "confirm_password"],
+                                        validUsername &&
+                                            validEmail &&
+                                            validPassword &&
+                                            validMatch,
+                                        2
+                                    );
                                 }}
                             >
                                 Next
                             </button>
                         </div>
                     </form>
-                ) : i === 5 ? (
+                ) : i === 2 ? (
                     <form
                         onSubmit={(e) => {
                             e.preventDefault();
@@ -609,7 +477,7 @@ function Login(params) {
                     >
                         <div className="inputdata">
                             <input
-                                className={validChannel ? "valid" : "invalid"}
+                                className={fieldClass("channel_name", validChannel)}
                                 type="text"
                                 value={channel_name}
                                 id="channel_name"
@@ -617,28 +485,50 @@ function Login(params) {
                                 onChange={(e) =>
                                     setChannel_name(e.target.value)
                                 }
+                                onBlur={() => touch("channel_name")}
                                 placeholder="Channel Name"
-                                aria-invalid={validChannel ? "false" : "true"}
+                                aria-invalid={fieldAriaInvalid("channel_name", validChannel)}
                                 required
                                 autoFocus
                             />
-                            {channelError && (
-                                <p className="error">{channelError}</p>
-                            )}
+                            {showErr("channel_name", channelError)}
                             <br></br>
+                            <input
+                                type="text"
+                                value={channel_desc}
+                                id="channel_desc"
+                                autoComplete="off"
+                                onChange={(e) =>
+                                    setChannel_desc(e.target.value)
+                                }
+                                placeholder="Channel Description (Optional)"
+                            />
+                            <br></br>
+                            <button
+                                className="next-btn back-btn"
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    seti(1);
+                                }}
+                            >
+                                Back
+                            </button>
                             <button
                                 className="next-btn"
                                 onClick={(e) => {
-                                    if (validChannel) {
-                                        handleNext(e);
-                                    }
+                                    goNext(
+                                        e,
+                                        ["channel_name"],
+                                        validChannel,
+                                        3
+                                    );
                                 }}
                             >
                                 Next
                             </button>
                         </div>
                     </form>
-                ) : i === 6 ? (
+                ) : i === 3 ? (
                     <form
                         onSubmit={(e) => {
                             e.preventDefault();
@@ -646,11 +536,12 @@ function Login(params) {
                     >
                         <div className="inputdata">
                             <select
-                                className={validLocation ? "valid" : "invalid"}
+                                className={fieldClass("location", validLocation)}
                                 id="country"
                                 name="country"
                                 onChange={(e) => setLocation(e.target.value)}
-                                aria-invalid={validLocation ? "false" : "true"}
+                                onBlur={() => touch("location")}
+                                aria-invalid={fieldAriaInvalid("location", validLocation)}
                                 aria-placeholder="Select your location"
                             >
                                 <option value="">Select your country</option>
@@ -947,46 +838,21 @@ function Login(params) {
                                 <option value="ZW">Zimbabwe</option>
                             </select>
                             <br></br>
-                            {locationError && (
-                                <p className="error">{locationError}</p>
-                            )}
+                            {showErr("location", locationError)}
                             <button
-                                className="next-btn"
+                                className="next-btn back-btn"
                                 onClick={(e) => {
-                                    if (validLocation) {
-                                        handleNext(e);
-                                    }
+                                    e.preventDefault();
+                                    seti(2);
                                 }}
                             >
-                                Next
+                                Back
                             </button>
-                        </div>
-                    </form>
-                ) : i === 7 ? (
-                    <form
-                        onSubmit={(e) => {
-                            e.preventDefault();
-                        }}
-                    >
-                        <div className="inputdata">
-                            <input
-                                type="text"
-                                value={channel_desc}
-                                id="channel_desc"
-                                autoComplete="off"
-                                onChange={(e) =>
-                                    setChannel_desc(e.target.value)
-                                }
-                                placeholder="Channel Description (Optional)"
-                                autoFocus
-                            />
-                            {errorMessage && (
-                                <div className="error">{errorMessage}</div>
-                            )}
-                            <br></br>
                             <button
                                 type="submit"
                                 onClick={async (e) => {
+                                    e.preventDefault();
+                                    touch("location");
                                     if (allValid4reg) {
                                         const result = await handleSubmit(
                                             e,
@@ -1005,120 +871,17 @@ function Login(params) {
                             >
                                 Submit
                             </button>
+                            {errorMessage && (
+                                <div className="error">{errorMessage}</div>
+                            )}
                         </div>
                     </form>
                 ) : i === 8 ? (
                     <form
-                        onSubmit={(e) => {
-                            e.preventDefault();
-                        }}
-                    >
-                        <div className="inputdata">
-                            <input
-                                className={validUsername ? "valid" : "invalid"}
-                                type="text"
-                                value={username}
-                                id="username"
-                                onChange={(e) => setUsername(e.target.value)}
-                                placeholder="Username"
-                                required
-                                autoFocus
-                            />
-                            {usernameError && (
-                                <p className="error">{usernameError}</p>
-                            )}
-                            <br></br>
-                            <span
-                                className="login-ques"
-                                onClick={(e) => {
-                                    e.preventDefault();
-                                    seti(81);
-                                }}
-                            >
-                                Forgot username? Try using Email
-                            </span>
-                            <br></br>
-                            <span
-                                className="login-ques"
-                                onClick={(e) => {
-                                    e.preventDefault();
-                                    seti(0);
-                                }}
-                            >
-                                New? Register now
-                            </span>
-                            <br></br>
-                            <button
-                                className="next-btn"
-                                onClick={(e) => {
-                                    if (validUsername) {
-                                        handleNext(e);
-                                    }
-                                }}
-                            >
-                                Next
-                            </button>
-                        </div>
-                    </form>
-                ) : i === 81 ? (
-                    <form
-                        onSubmit={(e) => {
-                            e.preventDefault();
-                        }}
-                    >
-                        <div className="inputdata">
-                            <input
-                                className={validEmail ? "valid" : "invalid"}
-                                type="email"
-                                value={email}
-                                id="email"
-                                onChange={(e) => setEmail(e.target.value)}
-                                placeholder="Email"
-                                required
-                                autoFocus
-                            />
-                            {emailError && (
-                                <p className="error">{emailError}</p>
-                            )}
-                            <br></br>
-                            <span
-                                className="login-ques"
-                                onClick={(e) => {
-                                    e.preventDefault();
-                                    seti(8);
-                                }}
-                            >
-                                Forgot email? Try using username
-                            </span>
-                            <br></br>
-                            <span
-                                className="login-ques"
-                                onClick={(e) => {
-                                    e.preventDefault();
-                                    seti(0);
-                                }}
-                            >
-                                New? Register now
-                            </span>
-                            <br></br>
-                            <button
-                                className="next-btn"
-                                onClick={(e) => {
-                                    if (validEmail) {
-                                        e.preventDefault();
-                                        seti(9);
-                                    }
-                                }}
-                            >
-                                Next
-                            </button>
-                        </div>
-                    </form>
-                ) : i === 9 ? (
-                    <form
                         onSubmit={async (e) => {
                             e.preventDefault();
-                            if (validPassword && allValid4login) {
+                            touch("username", "email", "password");
+                            if ((validUsername || validEmail) && validPassword) {
                                 const result = await handleSubmit(e, "login");
                                 if (result.success) {
                                     window.location.href = "/home";
@@ -1131,20 +894,46 @@ function Login(params) {
                         }}
                     >
                         <div className="inputdata">
+                            <input
+                                className={fieldClass("username", validUsername)}
+                                type="text"
+                                value={username}
+                                id="username"
+                                onChange={(e) => setUsername(e.target.value)}
+                                onBlur={() => touch("username")}
+                                placeholder="Username"
+                                autoComplete="off"
+                                aria-invalid={fieldAriaInvalid("username", validUsername)}
+                                autoFocus
+                            />
+                            {showErr("username", usernameError)}
+                            <br></br>
+                            <input
+                                className={fieldClass("email", validEmail)}
+                                type="email"
+                                value={email}
+                                id="email"
+                                onChange={(e) => setEmail(e.target.value)}
+                                onBlur={() => touch("email")}
+                                placeholder="Email"
+                                autoComplete="off"
+                                aria-invalid={fieldAriaInvalid("email", validEmail)}
+                            />
+                            {showErr("email", emailError)}
+                            <br></br>
                             <div className="pass-eye-box">
                                 <input
-                                    className={
-                                        validPassword ? "valid" : "invalid"
-                                    }
+                                    className={fieldClass("password", validPassword)}
                                     type={showPassword ? "text" : "password"}
                                     id="password"
                                     value={password}
                                     onChange={(e) =>
                                         setPassword(e.target.value)
                                     }
+                                    onBlur={() => touch("password")}
                                     placeholder="Password"
+                                    aria-invalid={fieldAriaInvalid("password", validPassword)}
                                     required
-                                    autoFocus
                                 />
                                 {showPassword ? (
                                     <img
@@ -1165,51 +954,76 @@ function Login(params) {
                                 )}
                             </div>
 
-                            {passwordError && (
-                                <p className="error">{passwordError}</p>
-                            )}
+                            {showErr("password", passwordError)}
                             {errorMessage && (
                                 <div className="error">{errorMessage}</div>
                             )}
+                            <br></br>
+                            <span
+                                className="login-ques"
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    seti(0);
+                                }}
+                            >
+                                New? Register now
+                            </span>
                             <br></br>
                             <button type="submit">Submit</button>
                         </div>
                     </form>
                 ) : i === 10 ? (
                     <form
-                        onSubmit={(e) => {
+                        onSubmit={async (e) => {
                             e.preventDefault();
+                            touch("firstname", "lastname", "channelid");
+                            if (validFirstname && validChannelid) {
+                                const result = await handleSubmit(
+                                    e,
+                                    "feedback"
+                                );
+                                if (result.success) {
+                                    window.location.href = `${
+                                        reqchannelid.length > 0
+                                            ? `/channel?channel_id=${reqchannelid}`
+                                            : "/home"
+                                    }`;
+                                } else {
+                                    setErrorMessage(
+                                        result.message ||
+                                            "Feedback submission failed"
+                                    );
+                                }
+                            }
                         }}
                     >
                         <input
-                            className={validFirstname ? "valid" : "invalid"}
+                            className={fieldClass("firstname", validFirstname)}
                             type="text"
                             value={firstname}
                             id="firstname"
                             onChange={(e) => setfirstname(e.target.value)}
+                            onBlur={() => touch("firstname")}
                             placeholder="First Name"
                             autoComplete="off"
-                            aria-invalid={validFirstname ? "false" : "true"}
+                            aria-invalid={fieldAriaInvalid("firstname", validFirstname)}
                             required
                             autoFocus
                         />
-                        {firstnameError && (
-                            <p className="error">{firstnameError}</p>
-                        )}
+                        {showErr("firstname", firstnameError)}
 
                         <input
-                            className={validLastname ? "valid" : "invalid"}
+                            className={fieldClass("lastname", validLastname)}
                             type="text"
                             value={lastname}
                             id="lastname"
                             autoComplete="off"
                             onChange={(e) => setlastname(e.target.value)}
+                            onBlur={() => touch("lastname")}
                             placeholder="Last Name (Optional)"
-                            aria-invalid={validLastname ? "false" : "true"}
+                            aria-invalid={fieldAriaInvalid("lastname", validLastname)}
                         />
-                        {lastnameError && (
-                            <p className="error">{lastnameError}</p>
-                        )}
+                        {showErr("lastname", lastnameError)}
                         <div className="inputdata">
                             <textarea
                                 className="valid"
@@ -1218,73 +1032,28 @@ function Login(params) {
                                 onChange={(e) => setFeedback(e.target.value)}
                                 placeholder="Feedback"
                                 required
-                                autoFocus
                             />
 
                             <br></br>
-                            <button
-                                className="next-btn"
-                                onClick={(e) => {
-                                    if (validFirstname) {
-                                        e.preventDefault();
-                                        seti(11);
-                                    }
-                                }}
-                            >
-                                Next
-                            </button>
-                        </div>
-                    </form>
-                ) : i === 11 ? (
-                    <form
-                        onSubmit={(e) => {
-                            e.preventDefault();
-                        }}
-                    >
-                        <div className="inputdata">
                             <input
-                                className={validChannelid ? "valid" : "invalid"}
+                                className={fieldClass("channelid", validChannelid)}
                                 type="text"
                                 value={reqchannelid}
                                 id="channel_id"
                                 onChange={(e) =>
                                     setReqchannelid(e.target.value)
                                 }
-                                placeholder="Channel id"
-                                autoFocus
+                                onBlur={() => touch("channelid")}
+                                placeholder="Channel id (Optional)"
+                                aria-invalid={fieldAriaInvalid("channelid", validChannelid)}
                             />
-                            {channelidError && (
-                                <p className="error">{channelidError}</p>
-                            )}
+                            {showErr("channelid", channelidError)}
                             {errorMessage && (
                                 <div className="error">{errorMessage}</div>
                             )}
 
                             <br></br>
-                            <button
-                                type="submit"
-                                onClick={async (e) => {
-                                    if (validChannelid) {
-                                        const result = await handleSubmit(
-                                            e,
-                                            "feedback"
-                                        );
-                                        if (result.success) {
-                                            window.location.href = `${
-                                                reqchannelid.length > 0
-                                                    ? `/channel?channel_id=${reqchannelid}`
-                                                    : "/home"
-                                            }`;
-                                        } else {
-                                            setErrorMessage(
-                                                result.message ||
-                                                    "Feedback submission failed"
-                                            );
-                                            NavLink.replace("/home");
-                                        }
-                                    }
-                                }}
-                            >
+                            <button type="submit">
                                 Submit
                             </button>
                         </div>

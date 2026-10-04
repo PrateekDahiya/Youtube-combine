@@ -37,7 +37,7 @@ All React application source for the VidVault front-end: the root component, pag
 | `Likedvideos.js` + `Likedvideos.css` | `Likedvideos` | `/likedvideos` | User's liked videos via `POST /api/videos {type:"liked"}`. Honors the `islikedvideos` toggle. |
 | `Watchlater.js` + `Watchlater.css` | `Watchlater` | `/watchlater` | User's watch-later list via `POST /api/videos {type:"watchlater"}`. Honors the `iswatchlater` toggle. |
 | `Settings.js` + `Settings.css` | `Settings` | `/settings` | Settings hub: Account, General (theme/shorts/privacy toggles), Profile (editable user fields → `/api/updateUserDetail`), Channel (editable channel fields → `/api/updateChannelDetail` + profile photo/banner upload via `/api/upload` then saving the returned URL), Advanced (channel_id/user_id/Delete account → `/api/deleteUser`). Refetches user via `/api/getUser` after edits. |
-| `Login.js` + `Login.css` | `Login` | `/login` (also `?type=register|feedback|logout`) | Multi-step auth form. Login (`/api/login`), Registration (`/api/register`), Feedback (`/api/feedback`), and Logout (clears `user` cookie). Hashes password client-side before sending. |
+| `Login.js` + `Login.css` | `Login` | `/login` (also `?type=register|feedback|logout`) | Grouped auth forms with pure validators + a `touched` set (errors/`invalid` only after blur or page submit; Next/Submit marks the page touched and advances only when the group validates). Register: About you → Account → Channel (+Back buttons). Login: identifier + password on one page (password rule gate preserved). Feedback: single page. Hashes password client-side before sending. Covered by `Login.test.js` (6 interaction tests). |
 
 ### Reusable building blocks
 | File | Component | Used by |
