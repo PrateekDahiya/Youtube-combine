@@ -82,9 +82,21 @@ describe("Login form validation", () => {
     test("login page shows no errors pristine, blocks empty submit", async () => {
         go("");
         expect(errorCount()).toBe(0);
+        expect(byPlaceholder("Username")).not.toBeNull();
+        expect(byPlaceholder("Email")).toBeNull();
         await click(byButton("Submit"));
         expect(errorCount()).toBeGreaterThan(0);
         expect(byPlaceholder("Username")).not.toBeNull();
+    });
+
+    test("login identifier toggle switches between username and email", async () => {
+        go("");
+        await click(screen.getByText("Forgot username? Try using Email"));
+        expect(byPlaceholder("Email")).not.toBeNull();
+        expect(byPlaceholder("Username")).toBeNull();
+        await click(screen.getByText("Forgot email? Try using username"));
+        expect(byPlaceholder("Username")).not.toBeNull();
+        expect(byPlaceholder("Email")).toBeNull();
     });
 
     test("feedback page validates on submit", async () => {

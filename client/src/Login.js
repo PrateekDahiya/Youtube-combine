@@ -28,6 +28,7 @@ function Login(params) {
     const [reqchannelid, setReqchannelid] = useState("");
     const [errorMessage, setErrorMessage] = useState("");
     const [touched, setTouched] = useState({});
+    const [loginIdType, setLoginIdType] = useState("username");
     const [ishandlesubmit, setIshandlesubmit] = useState(false);
     const queryParams = new URLSearchParams(window.location.search);
     const type = queryParams.get("type");
@@ -880,8 +881,10 @@ function Login(params) {
                     <form
                         onSubmit={async (e) => {
                             e.preventDefault();
-                            touch("username", "email", "password");
-                            if ((validUsername || validEmail) && validPassword) {
+                            const idField = loginIdType === "email" ? "email" : "username";
+                            const idValid = loginIdType === "email" ? validEmail : validUsername;
+                            touch(idField, "password");
+                            if (idValid && validPassword) {
                                 const result = await handleSubmit(e, "login");
                                 if (result.success) {
                                     window.location.href = "/home";
@@ -894,33 +897,41 @@ function Login(params) {
                         }}
                     >
                         <div className="inputdata">
-                            <input
-                                className={fieldClass("username", validUsername)}
-                                type="text"
-                                value={username}
-                                id="username"
-                                onChange={(e) => setUsername(e.target.value)}
-                                onBlur={() => touch("username")}
-                                placeholder="Username"
-                                autoComplete="off"
-                                aria-invalid={fieldAriaInvalid("username", validUsername)}
-                                autoFocus
-                            />
-                            {showErr("username", usernameError)}
-                            <br></br>
-                            <input
-                                className={fieldClass("email", validEmail)}
-                                type="email"
-                                value={email}
-                                id="email"
-                                onChange={(e) => setEmail(e.target.value)}
-                                onBlur={() => touch("email")}
-                                placeholder="Email"
-                                autoComplete="off"
-                                aria-invalid={fieldAriaInvalid("email", validEmail)}
-                            />
-                            {showErr("email", emailError)}
-                            <br></br>
+                            {loginIdType === "email" ? (
+                                <>
+                                    <input
+                                        className={fieldClass("email", validEmail)}
+                                        type="email"
+                                        value={email}
+                                        id="email"
+                                        onChange={(e) => setEmail(e.target.value)}
+                                        onBlur={() => touch("email")}
+                                        placeholder="Email"
+                                        autoComplete="off"
+                                        aria-invalid={fieldAriaInvalid("email", validEmail)}
+                                        autoFocus
+                                    />
+                                    {showErr("email", emailError)}
+                                    <br></br>
+                                </>
+                            ) : (
+                                <>
+                                    <input
+                                        className={fieldClass("username", validUsername)}
+                                        type="text"
+                                        value={username}
+                                        id="username"
+                                        onChange={(e) => setUsername(e.target.value)}
+                                        onBlur={() => touch("username")}
+                                        placeholder="Username"
+                                        autoComplete="off"
+                                        aria-invalid={fieldAriaInvalid("username", validUsername)}
+                                        autoFocus
+                                    />
+                                    {showErr("username", usernameError)}
+                                    <br></br>
+                                </>
+                            )}
                             <div className="pass-eye-box">
                                 <input
                                     className={fieldClass("password", validPassword)}
@@ -958,6 +969,20 @@ function Login(params) {
                             {errorMessage && (
                                 <div className="error">{errorMessage}</div>
                             )}
+                            <br></br>
+                            <span
+                                className="login-ques"
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    setLoginIdType(
+                                        loginIdType === "email" ? "username" : "email"
+                                    );
+                                }}
+                            >
+                                {loginIdType === "email"
+                                    ? "Forgot email? Try using username"
+                                    : "Forgot username? Try using Email"}
+                            </span>
                             <br></br>
                             <span
                                 className="login-ques"
