@@ -192,6 +192,12 @@ setInterval(() => {
 
 server.listen(PORT, () => {
     console.log(`stream-service on port ${PORT}`);
+    downloader.checkTools().then((tools) => {
+        console.log(`tools: yt-dlp=${tools.ytdlp} ffmpeg=${tools.ffmpeg}`);
+        if (!tools.ytdlp || !tools.ffmpeg) {
+            console.log("WARNING: downloads will fail until yt-dlp and ffmpeg are on PATH (see YT_DLP_PATH)");
+        }
+    });
 });
 
 module.exports = server;

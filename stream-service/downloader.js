@@ -12,16 +12,46 @@ function formatSelector(quality) {
     );
 }
 
-function runYtDlp(args, timeoutMs = 600000) {
+function execCandidate(cmd, args, opts) {
     return new Promise((resolve, reject) => {
-        execFile("yt-dlp", args, { timeout: timeoutMs, maxBuffer: 64 * 1024 * 1024 }, (error, stdout, stderr) => {
+        execFile(cmd, args, opts, (error, stdout, stderr) => {
             if (error) {
-                reject(new Error((stderr || error.message || "").trim().split("\n").pop()));
+                const detail = (stderr || error.message || "").trim().split("\n").pop();
+                const wrapped = new Error(detail);
+                wrapped.code = error.code;
+                reject(wrapped);
                 return;
             }
             resolve(stdout);
         });
     });
+}
+
+function ytDlpCommands() {
+    if (process.env.YT_DLP_PATH) {
+        return [[process.env.YT_DLP_PATH, []]];
+    }
+    return [
+        ["yt-dlp", []],
+        ["python3", ["-m", "yt_dlp"]],
+        ["python", ["-m", "yt_dlp"]],
+    ];
+}
+
+async function runYtDlp(args, timeoutMs = 600000) {
+    const opts = { timeout: timeoutMs, maxBuffer: 64 * 1024 * 1024 };
+    let lastError = null;
+    for (const [cmd, prefix] of ytDlpCommands()) {
+        try {
+            return await execCandidate(cmd, [...prefix, ...args], opts);
+        } catch (error) {
+            lastError = error;
+            if (error.code !== "ENOENT") {
+                break;
+            }
+        }
+    }
+    throw lastError;
 }
 
 function pickSize(formats) {
@@ -71,4 +101,21 @@ async function download(videoId, quality, destFile) {
     ]);
 }
 
-module.exports = { formatSelector, pickSize, inspect, download };
+function execOk(cmd, args) {
+    return new Promise((resolve) => {
+        execFile(cmd, args, { timeout: 30000 }, (error) => resolve(!error));
+    });
+}
+
+async function checkTools() {
+    let ytdlp = false;
+    try {
+        await runYtDlp(["--version"], 30000);
+        ytdlp = true;
+    } catch (error) {
+        ytdlp = false;
+    }
+    return { ytdlp, ffmpeg: await execOk("ffmpeg", ["-version"]) };
+}
+
+module.exports = { formatSelector, pickSize, inspect, download, runYtDlp, ytDlpCommands, checkTools };

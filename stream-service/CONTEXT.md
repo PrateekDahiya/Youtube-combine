@@ -22,6 +22,6 @@ On-demand yt-dlp download cache for VidVault adaptive qualities. Separate deploy
 
 ## Conventions
 
-- Zero npm dependencies (plain `node:http`); host must provide `yt-dlp`, `ffmpeg`, and a JS runtime (`--js-runtimes node`).
+- Zero npm dependencies (plain `node:http`); host must provide `yt-dlp`, `ffmpeg`, and a JS runtime (`--js-runtimes node`). Resolution order for yt-dlp: `YT_DLP_PATH` env → `yt-dlp` → `python3 -m yt_dlp` → `python -m yt_dlp`. Startup logs `tools: yt-dlp=… ffmpeg=…` so a missing toolchain is visible immediately.
 - `PORT` (default 5001). Behind a proxy, `X-Forwarded-Proto` is honored when building file URLs.
 - Never commit `media/` (gitignored) — the cache is disposable by design.
