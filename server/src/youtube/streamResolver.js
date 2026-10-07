@@ -1,5 +1,6 @@
 const { Innertube, Platform, ClientType } = require("youtubei.js");
 const vm = require("vm");
+const { ipv4Fetch } = require("../utils/ipv4");
 
 Platform.shim.eval = async (data) => {
     return vm.runInNewContext("(function(){" + data.output + "})()", {});
@@ -17,7 +18,7 @@ const CLIENT_FALLBACK_ORDER = [
 const clientPromises = new Map();
 function getClient(clientType) {
     if (!clientPromises.has(clientType)) {
-        clientPromises.set(clientType, Innertube.create({ client_type: clientType }));
+        clientPromises.set(clientType, Innertube.create({ client_type: clientType, fetch: ipv4Fetch }));
     }
     return clientPromises.get(clientType);
 }

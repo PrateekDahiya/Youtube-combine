@@ -4,6 +4,7 @@ const axios = require("axios");
 const { asyncHandler } = require("../utils/asyncHandler");
 const { successResponse, validationErrorResponse, sendResponse } = require("../utils/responseWrapper");
 const { getConnection } = require("../db");
+const { httpAgent, httpsAgent } = require("../utils/ipv4");
 
 const STREAM_SERVICE_URL = process.env.STREAM_SERVICE_URL;
 
@@ -111,6 +112,8 @@ router.get("/stream/fetch", asyncHandler(async (req, res) => {
             responseType: "stream",
             timeout: 60000,
             maxRedirects: 5,
+            httpAgent,
+            httpsAgent,
             headers: {
                 "User-Agent":
                     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36",

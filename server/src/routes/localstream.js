@@ -4,6 +4,7 @@ const path = require("path");
 const router = express.Router();
 const { asyncHandler } = require("../utils/asyncHandler");
 const { successResponse, errorResponse, validationErrorResponse, sendResponse } = require("../utils/responseWrapper");
+const { ipv4Fetch } = require("../utils/ipv4");
 
 const MEDIA_DIR = path.join(__dirname, "../../media");
 const MANIFEST_PATH = path.join(MEDIA_DIR, "manifest.json");
@@ -109,7 +110,7 @@ router.post("/local-stream/add", asyncHandler(async (req, res) => {
     const fileName = `${videoId}.${label}.mp4`;
     const dest = path.join(MEDIA_DIR, fileName);
     try {
-        const response = await fetch(playable.url, {
+        const response = await ipv4Fetch(playable.url, {
             headers: {
                 "User-Agent":
                     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36",
