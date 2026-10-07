@@ -6,4 +6,4 @@ export const streamApi = {
     addLocalVideo: (videoId) => api.post(`/local-stream/add`, { video_id: videoId }),
 };
 
-export { pickAdaptiveAudio } from "../streamUtils";
+export { pickAdaptiveAudio, isGoogleVideoUrl, proxyStreamUrl } from "../streamUtils";

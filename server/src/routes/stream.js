@@ -86,6 +86,52 @@ async function resolveViaExternalService(videoId) {
     return response.data.data;
 }
 
+function isAllowedStreamUrl(raw) {
+    let target;
+    try {
+        target = new URL(raw);
+    } catch (error) {
+        return false;
+    }
+    return (
+        target.protocol === "https:" &&
+        /(^|\.)googlevideo\.com$/.test(target.hostname) &&
+        target.pathname.startsWith("/videoplayback")
+    );
+}
+
+router.get("/stream/fetch", asyncHandler(async (req, res) => {
+    const raw = req.query.u;
+    if (!raw || !isAllowedStreamUrl(raw)) {
+        return sendResponse(res, validationErrorResponse("A valid googlevideo url query param (u) is required"));
+    }
+    let upstream;
+    try {
+        upstream = await axios.get(raw, {
+            responseType: "stream",
+            timeout: 60000,
+            maxRedirects: 5,
+            headers: {
+                "User-Agent":
+                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36",
+                Accept: "*/*",
+                ...(req.headers.range ? { Range: req.headers.range } : {}),
+            },
+            validateStatus: () => true,
+        });
+    } catch (error) {
+        return sendResponse(res, errorResponse("Stream fetch failed: " + error.message, 502));
+    }
+    for (const header of ["content-type", "content-length", "content-range", "accept-ranges", "cache-control"]) {
+        const value = upstream.headers[header];
+        if (value !== undefined) {
+            res.setHeader(header, value);
+        }
+    }
+    res.status(upstream.status);
+    upstream.data.pipe(res);
+}));
+
 router.get("/stream/:videoId", asyncHandler(async (req, res) => {
     const { videoId } = req.params;
     if (!videoId) {
@@ -126,3 +172,4 @@ router.get("/stream/:videoId", asyncHandler(async (req, res) => {
 }));
 
 module.exports = router;
+module.exports.isAllowedStreamUrl = isAllowedStreamUrl;

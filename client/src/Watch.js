@@ -300,6 +300,10 @@ const Watch = (params) => {
         }
     };
 
+    const handleStreamError = () => {
+        setFetchFailed(true);
+    };
+
     const getShareUrl = () => window.location.href;
 
     const copyShareUrl = async () => {
@@ -611,6 +615,7 @@ const Watch = (params) => {
                                 thumbnail={watchdata.thumbnail_link}
                                 streamData={streamData}
                                 onEnded={handleEnded}
+                                onStreamError={handleStreamError}
                             />
                         )}
                         <div className="autoplay-row">

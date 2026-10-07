@@ -156,6 +156,10 @@ const Shortbox = (params) => {
         }
     };
 
+    const handleStreamError = () => {
+        setFetchFailed(true);
+    };
+
     const short = params.short;
 
     return (
@@ -184,6 +188,7 @@ const Shortbox = (params) => {
                         video_resolution={videoResolution}
                         thumbnail={short?.thumbnail_link}
                         streamData={streamData}
+                        onStreamError={handleStreamError}
                     />
                 )}
             </div>

@@ -104,6 +104,45 @@ describe("VideoPlayer quality switching", () => {
         expect(onQualityChange).toHaveBeenCalledWith("360p", "local", "", "");
     });
 
+    test("retries a failed googlevideo stream through the same-origin proxy", async () => {
+        const { container } = render(
+            <VideoPlayer
+                {...baseProps}
+                streamUrl="https://rr1---sn-x.googlevideo.com/videoplayback?itag=18"
+                streamData={{ progressive: [], adaptive: { video: [], audio: [] } }}
+            />
+        );
+        const first = container.querySelector(".video-layer video");
+        expect(first.getAttribute("src")).toBe("https://rr1---sn-x.googlevideo.com/videoplayback?itag=18");
+        await act(async () => {
+            fireEvent.error(first);
+        });
+        const second = container.querySelector(".video-layer video");
+        expect(second).not.toBe(first);
+        expect(second.getAttribute("src")).toContain("/stream/fetch?u=");
+        expect(second.getAttribute("src")).toContain("googlevideo.com");
+    });
+
+    test("reports to the parent when even the proxied stream fails", async () => {
+        const onStreamError = jest.fn();
+        const { container } = render(
+            <VideoPlayer
+                {...baseProps}
+                streamUrl="https://rr1---sn-x.googlevideo.com/videoplayback?itag=18"
+                streamData={{ progressive: [], adaptive: { video: [], audio: [] } }}
+                onStreamError={onStreamError}
+            />
+        );
+        await act(async () => {
+            fireEvent.error(container.querySelector(".video-layer video"));
+        });
+        expect(onStreamError).not.toHaveBeenCalled();
+        await act(async () => {
+            fireEvent.error(container.querySelector(".video-layer video"));
+        });
+        expect(onStreamError).toHaveBeenCalledTimes(1);
+    });
+
     test("buffering spinner appears while waiting", async () => {
         const { container } = render(<VideoPlayer {...baseProps} />);
         const video = container.querySelector(".video-layer video");

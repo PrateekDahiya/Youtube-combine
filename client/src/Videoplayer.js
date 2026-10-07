@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from "react";
 import Hls from "hls.js";
-import { pickAdaptiveAudio } from "./streamUtils";
+import { pickAdaptiveAudio, isGoogleVideoUrl, proxyStreamUrl } from "./streamUtils";
 import "./Videoplayer.css";
 
 const VideoPlayer = (params) => {
@@ -50,6 +50,25 @@ const VideoPlayer = (params) => {
     const isHls = mode === "hls";
     const streamUrl = params.streamUrl;
     const audioUrl = params.audioUrl;
+    const [useProxy, setUseProxy] = useState(false);
+
+    useEffect(() => {
+        setUseProxy(false);
+    }, [streamUrl, audioUrl]);
+
+    const effectiveStreamUrl =
+        !isHls && useProxy && isGoogleVideoUrl(streamUrl) ? proxyStreamUrl(streamUrl) : streamUrl;
+    const effectiveAudioUrl =
+        !isHls && useProxy && isGoogleVideoUrl(audioUrl) ? proxyStreamUrl(audioUrl) : audioUrl;
+
+    const handleMediaError = () => {
+        if (isHls || (!streamUrl && !audioUrl)) return;
+        if (!useProxy && (isGoogleVideoUrl(streamUrl) || isGoogleVideoUrl(audioUrl))) {
+            setUseProxy(true);
+        } else {
+            params.onStreamError?.();
+        }
+    };
 
     useEffect(() => {
         setMuted(params.muted);
@@ -304,15 +323,16 @@ const VideoPlayer = (params) => {
         <div className="videoplayer-wrap" onMouseMove={handleMouseMove}>
             <div className="video-layer" onClick={handlePlayPause}>
                 <video
-                    key={isHls ? "hls" : `v-${streamUrl || "empty"}`}
+                    key={isHls ? "hls" : `v-${effectiveStreamUrl || "empty"}`}
                     ref={videoRef}
                     className={streamUrl ? "video" : "hidden-video"}
-                    src={isHls ? undefined : streamUrl}
+                    src={isHls ? undefined : effectiveStreamUrl}
                     muted={hasAudioElement ? true : muted}
                     loop={params.type === "short"}
                     playsInline
                     preload={isLocal ? "auto" : "metadata"}
                     onEnded={params.onEnded}
+                    onError={streamUrl ? handleMediaError : undefined}
                 />
                 <video
                     className={streamUrl ? "hidden-video" : "video"}
@@ -328,10 +348,11 @@ const VideoPlayer = (params) => {
                 ) : null}
                 {hasAudioElement && (
                     <audio
-                        key={`a-${audioUrl || "empty"}`}
+                        key={`a-${effectiveAudioUrl || "empty"}`}
                         ref={audioRef}
-                        src={audioUrl !== "" ? audioUrl : ""}
+                        src={effectiveAudioUrl !== "" ? effectiveAudioUrl : ""}
                         muted={!muted ? false : true}
+                        onError={audioUrl ? handleMediaError : undefined}
                     />
                 )}
             </div>
