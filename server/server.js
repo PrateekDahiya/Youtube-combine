@@ -26,6 +26,7 @@ const commentRoutes = require("./src/routes/comments");
 const streamRoutes = require("./src/routes/stream");
 const notificationRoutes = require("./src/routes/notifications");
 const suggestRoutes = require("./src/routes/suggest");
+const localstreamRoutes = require("./src/routes/localstream");
 
 const app = express();
 const port = process.env.PORT || 5000;
@@ -49,6 +50,7 @@ app.use("/api", commentRoutes);
 app.use("/api", streamRoutes);
 app.use("/api", notificationRoutes);
 app.use("/api", suggestRoutes);
+app.use("/api", localstreamRoutes);
 
 const clientBuildPath = path.join(__dirname, "../client/build");
 app.use(express.static(clientBuildPath));

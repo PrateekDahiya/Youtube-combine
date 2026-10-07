@@ -1,0 +1,32 @@
+{
+    "wesBRrrPMgA": {
+        "qualities": [
+            { "label": "720p", "file": "wesBRrrPMgA.720p.mp4" },
+            { "label": "360p", "file": "wesBRrrPMgA.360p.mp4" }
+        ]
+    },
+    "YfAIQcJiGJY": {
+        "qualities": [
+            { "label": "720p", "file": "YfAIQcJiGJY.720p.mp4" },
+            { "label": "360p", "file": "YfAIQcJiGJY.360p.mp4" }
+        ]
+    },
+    "F14Xbje0YTE": {
+        "qualities": [
+            { "label": "720p", "file": "F14Xbje0YTE.720p.mp4" },
+            { "label": "360p", "file": "F14Xbje0YTE.360p.mp4" }
+        ]
+    },
+    "n2LBCywLYZk": {
+        "qualities": [
+            { "label": "720p", "file": "n2LBCywLYZk.720p.mp4" },
+            { "label": "360p", "file": "n2LBCywLYZk.360p.mp4" }
+        ]
+    },
+    "y1qme8YeZfU": {
+        "qualities": [
+            { "label": "720p", "file": "y1qme8YeZfU.720p.mp4" },
+            { "label": "360p", "file": "y1qme8YeZfU.360p.mp4" }
+        ]
+    }
+}
