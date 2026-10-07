@@ -504,7 +504,9 @@ const Watch = (params) => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [streamData?.video_id, isUploaded, localManifest, video_id]);
 
-    const handleQualityChange = (resolution, newMode, videoUrl, audioUrl) => {
+    const qualityReqRef = useRef(0);
+
+    const handleQualityChange = async (resolution, newMode, videoUrl, audioUrl) => {
         if (resolution === 0) {
             if (mode === "local") {
                 const localEntry = video_id && localManifest && localManifest[video_id];
@@ -555,11 +557,23 @@ const Watch = (params) => {
 
         const adaptiveMatch = adaptV.find((f) => f.resolution === resolution);
         if (adaptiveMatch) {
-            const audioMatch = pickAdaptiveAudio(adaptA);
-            setMode("adaptive");
-            setVideo_url(adaptiveMatch.url);
-            setAudio_url(audioMatch ? audioMatch.url : "");
-            setVideo_resolution(resolution);
+            const ticket = ++qualityReqRef.current;
+            try {
+                const fileRes = await streamApi.getQualityFile(video_id, resolution);
+                if (qualityReqRef.current !== ticket) return;
+                const file = fileRes.data || fileRes;
+                if (file && file.url) {
+                    setMode("progressive");
+                    setVideo_url(file.url);
+                    setAudio_url("");
+                    setVideo_resolution(resolution);
+                    return;
+                }
+            } catch (error) {
+                console.log("Quality file unavailable:", error.message);
+            }
+            if (qualityReqRef.current !== ticket) return;
+            setFetchFailed(true);
             return;
         }
 

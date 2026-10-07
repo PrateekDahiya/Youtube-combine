@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import "./Shortbox.css";
 import { Link } from "react-router-dom";
 import { streamApi, pickAdaptiveAudio } from "./api";
@@ -99,7 +99,9 @@ const Shortbox = (params) => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [streamData?.video_id]);
 
-    const handleQualityChange = (resolution, newMode, videoUrl, audioUrl) => {
+    const qualityReqRef = useRef(0);
+
+    const handleQualityChange = async (resolution, newMode, videoUrl, audioUrl) => {
         if (newMode === "local" && localQualities) {
             const match = localQualities.find((q) => q.label === resolution);
             if (match) {
@@ -141,10 +143,23 @@ const Shortbox = (params) => {
 
         const adaptiveMatch = adaptV.find((f) => f.resolution === resolution);
         if (adaptiveMatch) {
-            setMode("adaptive");
-            setVideoUrl(adaptiveMatch.url);
-            setAudioUrl(pickAdaptiveAudio(adaptA)?.url || "");
-            setVideoResolution(resolution);
+            const ticket = ++qualityReqRef.current;
+            try {
+                const fileRes = await streamApi.getQualityFile(params.short.video_id, resolution);
+                if (qualityReqRef.current !== ticket) return;
+                const file = fileRes.data || fileRes;
+                if (file && file.url) {
+                    setMode("progressive");
+                    setVideoUrl(file.url);
+                    setAudioUrl("");
+                    setVideoResolution(resolution);
+                    return;
+                }
+            } catch (error) {
+                console.log("Quality file unavailable:", error.message);
+            }
+            if (qualityReqRef.current !== ticket) return;
+            setFetchFailed(true);
             return;
         }
 

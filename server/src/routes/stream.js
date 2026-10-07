@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 const axios = require("axios");
 const { asyncHandler } = require("../utils/asyncHandler");
-const { successResponse, validationErrorResponse, sendResponse } = require("../utils/responseWrapper");
+const { successResponse, errorResponse, validationErrorResponse, sendResponse } = require("../utils/responseWrapper");
 const { getConnection } = require("../db");
 const { httpAgent, httpsAgent } = require("../utils/ipv4");
 
@@ -109,9 +109,40 @@ function sleep(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function fetchUpstream(raw, range) {
+const PROXY_CHUNK = 1048576;
+
+function parseRangeHeader(header) {
+    if (!header) {
+        return { start: 0, end: null };
+    }
+    const match = /^bytes=(\d*)-(\d*)$/.exec(header.trim());
+    if (!match || (match[1] === "" && match[2] === "")) {
+        return null;
+    }
+    if (match[1] === "") {
+        const suffix = parseInt(match[2], 10);
+        return Number.isNaN(suffix) ? null : { suffix };
+    }
+    const start = parseInt(match[1], 10);
+    const end = match[2] === "" ? null : parseInt(match[2], 10);
+    if (Number.isNaN(start) || (end !== null && (Number.isNaN(end) || end < start))) {
+        return null;
+    }
+    return { start, end };
+}
+
+function parseContentRangeTotal(headers) {
+    const value = headers && headers["content-range"];
+    if (!value) {
+        return null;
+    }
+    const match = /\/(\d+)\s*$/.exec(value);
+    return match ? parseInt(match[1], 10) : null;
+}
+
+async function fetchChunk(raw, start, end) {
     return axios.get(raw, {
-        responseType: "stream",
+        responseType: "arraybuffer",
         timeout: 60000,
         maxRedirects: 5,
         httpAgent,
@@ -120,7 +151,7 @@ async function fetchUpstream(raw, range) {
             "User-Agent":
                 "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36",
             Accept: "*/*",
-            ...(range ? { Range: range } : {}),
+            Range: `bytes=${start}-${end}`,
         },
         validateStatus: () => true,
     });
@@ -131,17 +162,12 @@ router.get("/stream/fetch", asyncHandler(async (req, res) => {
     if (!raw || !isAllowedStreamUrl(raw)) {
         return sendResponse(res, validationErrorResponse("A valid googlevideo url query param (u) is required"));
     }
-    let upstream;
-    try {
-        upstream = await fetchUpstream(raw, req.headers.range);
-        if (shouldRetryProxy(upstream.status, 0)) {
-            await sleep(1500);
-            upstream = await fetchUpstream(raw, req.headers.range);
-        }
-    } catch (error) {
-        return sendResponse(res, errorResponse("Stream fetch failed: " + error.message, 502));
+    const range = parseRangeHeader(req.headers.range);
+    if (!range) {
+        res.status(416);
+        return res.end();
     }
-    if (upstream.status < 200 || upstream.status >= 300) {
+    const logFailure = (status) => {
         let tag = "unparseable";
         try {
             const target = new URL(raw);
@@ -149,16 +175,103 @@ router.get("/stream/fetch", asyncHandler(async (req, res) => {
         } catch (parseError) {
             console.log("Stream proxy URL parse note:", parseError.message);
         }
-        console.log(`Stream proxy upstream=${upstream.status} ${tag}`);
-    }
-    for (const header of ["content-type", "content-length", "content-range", "accept-ranges", "cache-control"]) {
-        const value = upstream.headers[header];
-        if (value !== undefined) {
-            res.setHeader(header, value);
+        console.log(`Stream proxy upstream=${status} ${tag} range=${req.headers.range || "none"} ua=${(req.headers["user-agent"] || "").slice(0, 40)}`);
+    };
+    let start;
+    let end;
+    let total = null;
+    let contentType = "video/mp4";
+    try {
+        if (range.suffix !== undefined) {
+            const probe = await fetchChunk(raw, 0, 0);
+            if (probe.status !== 206) {
+                logFailure(probe.status);
+                res.status(probe.status);
+                return res.end();
+            }
+            total = parseContentRangeTotal(probe.headers);
+            if (!total) {
+                return sendResponse(res, errorResponse("Stream fetch failed: unknown length", 502));
+            }
+            contentType = probe.headers["content-type"] || contentType;
+            start = Math.max(0, total - range.suffix);
+            end = total - 1;
+        } else {
+            start = range.start;
+            end = range.end;
         }
+        let first = await fetchChunk(raw, start, end === null ? start + PROXY_CHUNK - 1 : Math.min(end, start + PROXY_CHUNK - 1));
+        if (shouldRetryProxy(first.status, 0)) {
+            await sleep(1500);
+            first = await fetchChunk(raw, start, end === null ? start + PROXY_CHUNK - 1 : Math.min(end, start + PROXY_CHUNK - 1));
+        }
+        if (first.status === 200) {
+            const body = Buffer.from(first.data);
+            res.writeHead(200, {
+                "Content-Length": body.length,
+                "Content-Type": first.headers["content-type"] || contentType,
+                "Accept-Ranges": "bytes",
+            });
+            return res.end(body);
+        }
+        if (first.status !== 206) {
+            logFailure(first.status);
+            res.status(first.status);
+            return res.end();
+        }
+        total = total || parseContentRangeTotal(first.headers);
+        contentType = first.headers["content-type"] || contentType;
+        if (end === null) {
+            if (!total) {
+                return sendResponse(res, errorResponse("Stream fetch failed: unknown length", 502));
+            }
+            end = total - 1;
+        }
+        if (total && start >= total) {
+            res.writeHead(416, { "Content-Range": `bytes */${total}` });
+            return res.end();
+        }
+        if (total) {
+            end = Math.min(end, total - 1);
+        }
+        res.writeHead(206, {
+            "Content-Range": `bytes ${start}-${end}/${total === null ? "*" : total}`,
+            "Accept-Ranges": "bytes",
+            "Content-Length": end - start + 1,
+            "Content-Type": contentType,
+        });
+        let cursor = start;
+        let chunk = first;
+        let complete = false;
+        while (cursor <= end) {
+            const body = Buffer.from(chunk.data);
+            if (body.length === 0) {
+                break;
+            }
+            if (!res.write(body.slice(0, Math.min(body.length, end - cursor + 1)))) {
+                await new Promise((resolve) => res.once("drain", resolve));
+            }
+            cursor += body.length;
+            if (cursor > end) {
+                complete = true;
+                break;
+            }
+            chunk = await fetchChunk(raw, cursor, Math.min(end, cursor + PROXY_CHUNK - 1));
+            if (chunk.status !== 206) {
+                break;
+            }
+        }
+        if (!complete) {
+            res.destroy();
+            return;
+        }
+        return res.end();
+    } catch (error) {
+        if (!res.headersSent) {
+            return sendResponse(res, errorResponse("Stream fetch failed: " + error.message, 502));
+        }
+        res.destroy();
     }
-    res.status(upstream.status);
-    upstream.data.pipe(res);
 }));
 
 router.get("/stream/:videoId", asyncHandler(async (req, res) => {
@@ -201,6 +314,42 @@ router.get("/stream/:videoId", asyncHandler(async (req, res) => {
     sendResponse(res, successResponse(result, fromCache ? "Stream resolved (cached)" : "Stream resolved"));
 }));
 
+router.get("/stream/file/:videoId", asyncHandler(async (req, res) => {
+    const { videoId } = req.params;
+    const quality = Number(req.query.quality);
+    if (!videoId || !/^[a-zA-Z0-9-_]{11}$/.test(videoId)) {
+        return sendResponse(res, validationErrorResponse("A valid 11-character videoId is required"));
+    }
+    if (!Number.isInteger(quality) || quality <= 0) {
+        return sendResponse(res, validationErrorResponse("A numeric quality query param is required"));
+    }
+    if (!STREAM_SERVICE_URL) {
+        return sendResponse(res, errorResponse("File service not configured", 501));
+    }
+    let response;
+    try {
+        response = await axios.post(
+            `${STREAM_SERVICE_URL.replace(/\/$/, "")}/api/ensure`,
+            { video_id: videoId, quality },
+            { timeout: 600000 }
+        );
+    } catch (error) {
+        const data = error.response && error.response.data;
+        if (data && data.too_big) {
+            return sendResponse(res, errorResponse("File exceeds size cap", 404));
+        }
+        return sendResponse(res, errorResponse("File service failed: " + error.message, 502));
+    }
+    const data = response.data && response.data.data;
+    if (!data || !data.url) {
+        return sendResponse(res, errorResponse("File service failed", 502));
+    }
+    sendResponse(res, successResponse({ video_id: videoId, quality, url: data.url, size: data.size }, "Quality file ready"));
+}));
+
 module.exports = router;
 module.exports.isAllowedStreamUrl = isAllowedStreamUrl;
 module.exports.shouldRetryProxy = shouldRetryProxy;
+module.exports.parseRangeHeader = parseRangeHeader;
+module.exports.parseContentRangeTotal = parseContentRangeTotal;
+module.exports.PROXY_CHUNK = PROXY_CHUNK;

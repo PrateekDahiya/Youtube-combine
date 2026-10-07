@@ -35,3 +35,15 @@ services:
         sync: false
       - key: REACT_APP_SERVER_URL
         value: "/api"
+      - key: STREAM_SERVICE_URL
+        sync: false
+  - type: web
+    name: vidvault-stream-service
+    runtime: docker
+    dockerfilePath: ./stream-service/Dockerfile
+    dockerContext: ./stream-service
+    plan: free
+    healthCheckPath: /api/health
+    envVars:
+      - key: MEDIA_DIR
+        value: /data/media
