@@ -29,7 +29,7 @@ async function getCachedStream(videoId) {
     const pool = getConnection();
     return new Promise((resolve, reject) => {
         pool.query(
-            `SELECT * FROM stream_cache WHERE video_id = ? AND (expires_at IS NULL OR expires_at > NOW())`,
+            `SELECT * FROM stream_cache WHERE video_id = ? AND (expires_at IS NULL OR expires_at > DATE_ADD(NOW(), INTERVAL 10 MINUTE))`,
             [videoId],
             (err, rows) => {
                 if (err) return reject(err);
