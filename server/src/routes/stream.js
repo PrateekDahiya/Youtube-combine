@@ -125,6 +125,16 @@ router.get("/stream/fetch", asyncHandler(async (req, res) => {
     } catch (error) {
         return sendResponse(res, errorResponse("Stream fetch failed: " + error.message, 502));
     }
+    if (upstream.status < 200 || upstream.status >= 300) {
+        let tag = "unparseable";
+        try {
+            const target = new URL(raw);
+            tag = `itag=${target.searchParams.get("itag")} ip=${target.searchParams.get("ip")} expire=${target.searchParams.get("expire")}`;
+        } catch (parseError) {
+            console.log("Stream proxy URL parse note:", parseError.message);
+        }
+        console.log(`Stream proxy upstream=${upstream.status} ${tag}`);
+    }
     for (const header of ["content-type", "content-length", "content-range", "accept-ranges", "cache-control"]) {
         const value = upstream.headers[header];
         if (value !== undefined) {
