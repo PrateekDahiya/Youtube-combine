@@ -334,11 +334,13 @@ router.get("/stream/file/:videoId", asyncHandler(async (req, res) => {
             { timeout: 600000 }
         );
     } catch (error) {
+        const status = error.response && error.response.status;
         const data = error.response && error.response.data;
         if (data && data.too_big) {
             return sendResponse(res, errorResponse("File exceeds size cap", 404));
         }
-        return sendResponse(res, errorResponse("File service failed: " + error.message, 502));
+        const detail = typeof data === "string" ? data.slice(0, 160) : (data && data.message) || error.message;
+        return sendResponse(res, errorResponse(`File service failed (upstream ${status || "unreachable"}): ${detail}`, 502));
     }
     const data = response.data && response.data.data;
     if (!data || !data.url) {
