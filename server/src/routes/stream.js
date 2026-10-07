@@ -101,6 +101,31 @@ function isAllowedStreamUrl(raw) {
     );
 }
 
+function shouldRetryProxy(status, attempt) {
+    return attempt === 0 && (status === 403 || status === 429);
+}
+
+function sleep(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function fetchUpstream(raw, range) {
+    return axios.get(raw, {
+        responseType: "stream",
+        timeout: 60000,
+        maxRedirects: 5,
+        httpAgent,
+        httpsAgent,
+        headers: {
+            "User-Agent":
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36",
+            Accept: "*/*",
+            ...(range ? { Range: range } : {}),
+        },
+        validateStatus: () => true,
+    });
+}
+
 router.get("/stream/fetch", asyncHandler(async (req, res) => {
     const raw = req.query.u;
     if (!raw || !isAllowedStreamUrl(raw)) {
@@ -108,20 +133,11 @@ router.get("/stream/fetch", asyncHandler(async (req, res) => {
     }
     let upstream;
     try {
-        upstream = await axios.get(raw, {
-            responseType: "stream",
-            timeout: 60000,
-            maxRedirects: 5,
-            httpAgent,
-            httpsAgent,
-            headers: {
-                "User-Agent":
-                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36",
-                Accept: "*/*",
-                ...(req.headers.range ? { Range: req.headers.range } : {}),
-            },
-            validateStatus: () => true,
-        });
+        upstream = await fetchUpstream(raw, req.headers.range);
+        if (shouldRetryProxy(upstream.status, 0)) {
+            await sleep(1500);
+            upstream = await fetchUpstream(raw, req.headers.range);
+        }
     } catch (error) {
         return sendResponse(res, errorResponse("Stream fetch failed: " + error.message, 502));
     }
@@ -151,8 +167,9 @@ router.get("/stream/:videoId", asyncHandler(async (req, res) => {
         return sendResponse(res, validationErrorResponse("videoId is required"));
     }
 
-    // Try cache first
-    let result = await getCachedStream(videoId);
+    // Try cache first (unless a fresh resolve is requested)
+    const fresh = req.query.fresh === "1";
+    let result = fresh ? null : await getCachedStream(videoId);
     let fromCache = !!result;
 
     if (!result) {
@@ -186,3 +203,4 @@ router.get("/stream/:videoId", asyncHandler(async (req, res) => {
 
 module.exports = router;
 module.exports.isAllowedStreamUrl = isAllowedStreamUrl;
+module.exports.shouldRetryProxy = shouldRetryProxy;
