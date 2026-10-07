@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import "./Shortbox.css";
 import { Link } from "react-router-dom";
-import { streamApi } from "./api";
+import { streamApi, pickAdaptiveAudio } from "./api";
 import Videoplayer from "./Videoplayer";
 import { avatarFallback, handleImgError } from "./imgFallback";
 
@@ -13,7 +13,7 @@ const Shortbox = (params) => {
     const [audioUrl, setAudioUrl] = useState("");
     const [qualityoptions, setQualityoptions] = useState(["Auto"]);
     const [videoResolution, setVideoResolution] = useState(0);
-    
+    const [localQualities, setLocalQualities] = useState(null);
 
     function formatNumber(num) {
         if (num >= 1000000) {
@@ -28,6 +28,22 @@ const Shortbox = (params) => {
     useEffect(() => {
         if (params.short) {
             const fetchstreamURL = async () => {
+                try {
+                    const listResponse = await streamApi.getLocalList();
+                    const manifest = listResponse.data || listResponse || {};
+                    const localEntry = manifest[params.short.video_id];
+                    if (localEntry && localEntry.qualities && localEntry.qualities.length > 0) {
+                        setLocalQualities(localEntry.qualities);
+                        setQualityoptions(localEntry.qualities.map((q) => q.label));
+                        setMode("local");
+                        setVideoUrl(localEntry.qualities[0].url);
+                        setAudioUrl("");
+                        setFetchFailed(false);
+                        return;
+                    }
+                } catch (error) {
+                    console.log("Error fetching local media list:", error.message);
+                }
                 try {
                     const response = await streamApi.getStream(params.short.video_id);
                     const data = response.data || response;
@@ -75,7 +91,7 @@ const Shortbox = (params) => {
         if (streamData.adaptive && streamData.adaptive.video && streamData.adaptive.video.length > 0) {
             setMode("adaptive");
             setVideoUrl(streamData.adaptive.video[0].url);
-            setAudioUrl(streamData.adaptive.audio?.[0]?.url || "");
+            setAudioUrl(pickAdaptiveAudio(streamData.adaptive.audio)?.url || "");
             return;
         }
 
@@ -84,7 +100,22 @@ const Shortbox = (params) => {
     }, [streamData?.video_id]);
 
     const handleQualityChange = (resolution, newMode, videoUrl, audioUrl) => {
+        if (newMode === "local" && localQualities) {
+            const match = localQualities.find((q) => q.label === resolution);
+            if (match) {
+                setVideoUrl(match.url);
+                setAudioUrl("");
+                setVideoResolution(0);
+            }
+            return;
+        }
         if (resolution === 0) {
+            if (mode === "local" && localQualities && localQualities.length > 0) {
+                setVideoUrl(localQualities[0].url);
+                setAudioUrl("");
+                setVideoResolution(0);
+                return;
+            }
             const prog = streamData?.progressive || [];
             if (prog.length > 0) {
                 setMode("progressive");
@@ -112,7 +143,7 @@ const Shortbox = (params) => {
         if (adaptiveMatch) {
             setMode("adaptive");
             setVideoUrl(adaptiveMatch.url);
-            setAudioUrl(adaptA[0]?.url || "");
+            setAudioUrl(pickAdaptiveAudio(adaptA)?.url || "");
             setVideoResolution(resolution);
             return;
         }

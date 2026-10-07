@@ -93,22 +93,63 @@ async function resolveWithClient(clientType, videoId) {
     return result;
 }
 
-async function resolveStream(videoId) {
-    let last = emptyResult(videoId);
-
-    for (const clientType of CLIENT_FALLBACK_ORDER) {
-        try {
-            const result = await resolveWithClient(clientType, videoId);
-            if (result.extraction_ok) {
-                return result;
+function mergeResults(videoId, results) {
+    let hls_url = null;
+    const progressive = [];
+    const adaptiveVideo = [];
+    const adaptiveAudio = [];
+    for (const result of results) {
+        if (!result) continue;
+        if (!hls_url && result.hls_url) {
+            hls_url = result.hls_url;
+        }
+        if (Array.isArray(result.progressive)) {
+            progressive.push(...result.progressive);
+        }
+        if (result.adaptive) {
+            if (Array.isArray(result.adaptive.video)) {
+                adaptiveVideo.push(...result.adaptive.video);
             }
-            last = result;
-        } catch (error) {
-            console.log("Error resolving stream for " + videoId + " via " + clientType + ": " + error.message);
+            if (Array.isArray(result.adaptive.audio)) {
+                adaptiveAudio.push(...result.adaptive.audio);
+            }
         }
     }
-
-    return last;
+    const merged = {
+        video_id: videoId,
+        hls_url,
+        progressive: dedupeByResolution(progressive),
+        adaptive: {
+            video: dedupeByResolution(adaptiveVideo),
+            audio: adaptiveAudio.sort((a, b) => (b.bitrate || 0) - (a.bitrate || 0)),
+        },
+    };
+    merged.extraction_ok = Boolean(
+        merged.hls_url || merged.progressive.length > 0 || merged.adaptive.video.length > 0
+    );
+    return merged;
 }
 
-module.exports = { resolveStream };
+async function resolveWithClientLogged(clientType, videoId) {
+    try {
+        return await resolveWithClient(clientType, videoId);
+    } catch (error) {
+        console.log("Error resolving stream for " + videoId + " via " + clientType + ": " + error.message);
+        return null;
+    }
+}
+
+async function resolveStream(videoId) {
+    const settled = await Promise.allSettled(
+        CLIENT_FALLBACK_ORDER.map((clientType) => resolveWithClientLogged(clientType, videoId))
+    );
+    const successful = settled
+        .filter((result) => result.status === "fulfilled" && result.value && result.value.extraction_ok)
+        .map((result) => result.value);
+    if (successful.length === 0) {
+        return emptyResult(videoId);
+    }
+    return mergeResults(videoId, successful);
+}
+
+module.exports = { resolveStream, mergeResults, dedupeByResolution, emptyResult };

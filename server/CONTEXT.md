@@ -31,6 +31,8 @@ The **back-end** of VidVault: a Node.js + Express REST API, the MySQL schema, an
 | `src/feed/` | Per-type video feed handlers (`home.js`, `tag.js`, `category.js`, `trending.js`, `subscriptions.js`, `personalized.js`, `watchlater.js`, `liked.js`, `history.js`, `channel.js`, `search.js`, `related.js`, `watch.js`, `videobyid.js`, `shorts.js`), auto-registered by `index.js` and backed by shared helpers in `helpers.js`. See the "Unified video endpoint" section. |
 | `src/email/` | `sendEmail()` via Resend. |
 | `src/uploads/` | Multer config (image + video), Cloudinary helper (`cloudinary.js` — `uploadImageToCloudinary`, no-op without `CLOUDINARY_*`), background video processing (`processVideoUpload`). |
+| `media/` | Committed self-hosted MP4 library + `manifest.json` (`{video_id: {qualities: [{label, file}]}}`). Add via `node scripts/add-local-video.js <id…>` (yt-dlp 360p + muxed 720p, skips 720p over GitHub's 100MB/file limit). |
+| `scripts/` | One-off operator scripts (e.g. `add-local-video.js`). Not started by Node, never imported into `src/`. |
 | `src/youtube/` | YouTube Data API v3 fetching: `fetchAndStoreVideos` (uploads-playlist listing, stop-at-fully-known-page, dynamic 10%-or-50 target), `getChannelIds`, `getNewChannelId`, `addNewChannel`. API access goes through `syncQueue.js` (`apiGet`: quota-aware key rotation, per-day caps, `QuotaExhaustedError` stand-down). Also `streamResolver.js` — resolves a playable stream URL (progressive/adaptive/HLS) for a video via `youtubei.js`, in-process (see "Stream resolution" below). `channelScheduler.js` — internal cron schedulers for channel updates (queue-driven) and new channel discovery, replacing external cron jobs. |
 | `src/routes/` | Express routers grouped by feature/domain (see below). |
 
@@ -47,6 +49,7 @@ The **back-end** of VidVault: a Node.js + Express REST API, the MySQL schema, an
 | `subscriptions.js` | `/api` | `/api/addtosubs`, `/api/removefromsubs`, `/api/issub`, `/api/get-subs` |
 | `auth.js` | `/api` | `/api/login`, `/api/register`, `/api/getUser`, `/api/updateUserDetail`, `/api/updateChannelDetail`, `/api/deleteUser` |
 | `uploads.js` | `/api` | `/api/upload` (profile/banner images → Cloudinary `vidvault/photos` when `CLOUDINARY_*` is set, local `/uploads/` fallback otherwise), `/api/uploadVideo`, `/api/replaceVideo` |
+| `localstream.js` | `/api` | Self-hosted media library: `GET /api/local-stream/list` (manifest with per-quality URLs), `GET /api/local-stream/:videoId/:quality` (HTTP Range `206` chunked MP4, `416` on bad range), `POST /api/local-stream/add` (validated 11-char id; downloads best progressive MP4, ephemeral until committed). Serves only files listed in `media/manifest.json` (no path traversal). |
 | `channels.js` | `/api` | `/api/yourchannel`, `/api/channel`, `/api/getallchannels`, `/api/get-channel-ids`, `/api/update_channels`, `/api/addnewchannel` |
 | `feedback.js` | `/api` | `/api/feedback` |
 | `comments.js` | `/api` | `GET /api/comments`, `/api/addComment`, `/api/editComment`, `/api/deleteComment`, `GET /api/youtubeComments` |
@@ -168,7 +171,7 @@ Settings are persisted in the `scheduler_settings` table and loaded on startup. 
 { "video_id": "...", "hls_url": "..." | null, "progressive": [{resolution, itag, bitrate, mimeType, url}], "adaptive": { "video": [...], "audio": [...] }, "extraction_ok": true }
 ```
 
-- A single module-level `Innertube` client (`getClient()`) is created once and reused across requests.
+- One cached `Innertube` client per `ClientType` (`getClient()`, `CLIENT_FALLBACK_ORDER` = MWEB → IOS → WEB_EMBEDDED → ANDROID → TV_EMBEDDED → WEB). `resolveStream` queries all six **in parallel** and `mergeResults` unions their tiers (first `hls_url` wins, progressive/adaptive deduped by resolution with highest bitrate kept) — a single client often returns only 360p progressive, so the merge is what produces multi-quality ladders.
 - `Platform.shim.eval` is wired to Node's `vm` module at module load — `youtubei.js` refuses to execute YouTube's obfuscated deciphering JS unless the host explicitly opts in (security-sensitive by design), so signed format URLs fail to decipher without this.
 - Formats are classified by `has_audio`/`has_video`: both → `progressive`; video-only → `adaptive.video`; audio-only → `adaptive.audio`. Each is deciphered via `format.decipher(client.session.player)` and deduped by resolution (highest bitrate wins).
 - `extraction_ok` is `false` only when every tier comes back empty (or `getInfo` throws) — the client's iframe fallback is keyed off this flag, not off network errors.

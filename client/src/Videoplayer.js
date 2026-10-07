@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from "react";
 import Hls from "hls.js";
+import { pickAdaptiveAudio } from "./streamUtils";
 import "./Videoplayer.css";
 
 const VideoPlayer = (params) => {
@@ -22,6 +23,12 @@ const VideoPlayer = (params) => {
     const [hlsActiveLevel, setHlsActiveLevel] = useState(-1);
     const [qualities, setQualities] = useState([]);
     const [selectedQuality, setSelectedQuality] = useState("auto");
+    const [buffering, setBuffering] = useState(false);
+    const [buffered, setBuffered] = useState(0);
+    const timeRef = useRef(0);
+    const playingRef = useRef(false);
+    const volumeRef = useRef(80);
+    const speedRef = useRef(1);
     const videoRef = useRef(null);
     const audioRef = useRef(null);
     const hlsRef = useRef(null);
@@ -55,24 +62,74 @@ const VideoPlayer = (params) => {
 
         const handlePlay = () => {
             setIsPlaying(true);
+            playingRef.current = true;
             if (audio) audio.muted = false;
         };
         const handlePause = () => {
             setIsPlaying(false);
+            playingRef.current = false;
             if (audio) audio.muted = true;
         };
         const handleTimeUpdate = () => {
             setCurrentTime(video.currentTime);
+            timeRef.current = video.currentTime;
             if (audio && Math.abs(video.currentTime - audio.currentTime) > 0.3) {
                 audio.currentTime = video.currentTime;
             }
         };
-        const handleLoadedMetadata = () => setDuration(video.duration);
+        const handleLoadedMetadata = () => {
+            setDuration(video.duration);
+            if (timeRef.current > 0) {
+                try {
+                    video.currentTime = timeRef.current;
+                } catch (e) {
+                    console.error("Seek error:", e);
+                }
+            }
+            if (playingRef.current) {
+                video.play().catch((error) => {
+                    console.error("Error resuming video:", error);
+                });
+                if (audio) {
+                    try {
+                        audio.currentTime = timeRef.current;
+                    } catch (e) {
+                        console.error("Audio seek error:", e);
+                    }
+                    audio.play().catch((error) => {
+                        console.error("Error resuming audio:", error);
+                    });
+                }
+            }
+        };
+        const handleWaiting = () => setBuffering(true);
+        const handlePlaying = () => setBuffering(false);
+        const handleCanPlay = () => setBuffering(false);
+        const handleProgress = () => {
+            try {
+                if (video.buffered.length > 0 && video.duration > 0) {
+                    setBuffered(video.buffered.end(video.buffered.length - 1) / video.duration);
+                }
+            } catch (e) {
+                console.error("Buffered read error:", e);
+            }
+        };
+
+        video.volume = volumeRef.current / 100;
+        video.playbackRate = speedRef.current;
+        if (audio) {
+            audio.volume = volumeRef.current / 100;
+            audio.playbackRate = speedRef.current;
+        }
 
         video.addEventListener("play", handlePlay);
         video.addEventListener("pause", handlePause);
         video.addEventListener("timeupdate", handleTimeUpdate);
         video.addEventListener("loadedmetadata", handleLoadedMetadata);
+        video.addEventListener("waiting", handleWaiting);
+        video.addEventListener("playing", handlePlaying);
+        video.addEventListener("canplay", handleCanPlay);
+        video.addEventListener("progress", handleProgress);
         if (audio) {
             audio.addEventListener("play", handlePlay);
             audio.addEventListener("pause", handlePause);
@@ -84,13 +141,17 @@ const VideoPlayer = (params) => {
             video.removeEventListener("pause", handlePause);
             video.removeEventListener("timeupdate", handleTimeUpdate);
             video.removeEventListener("loadedmetadata", handleLoadedMetadata);
+            video.removeEventListener("waiting", handleWaiting);
+            video.removeEventListener("playing", handlePlaying);
+            video.removeEventListener("canplay", handleCanPlay);
+            video.removeEventListener("progress", handleProgress);
             if (audio) {
                 audio.removeEventListener("play", handlePlay);
                 audio.removeEventListener("pause", handlePause);
                 audio.removeEventListener("timeupdate", handleTimeUpdate);
             }
         };
-    }, [hasAudioElement]);
+    }, [streamUrl, audioUrl, isHls, hasAudioElement]);
 
     useEffect(() => {
         if (!isHls || !streamUrl) return;
@@ -127,47 +188,21 @@ const VideoPlayer = (params) => {
         };
     }, [isHls, streamUrl]);
 
+    const isLocal = mode === "local";
+
     useEffect(() => {
         if (isHls) return;
         if (!params.qualityoptions || params.qualityoptions.length === 0) return;
         const opts = params.qualityoptions.filter((q) => q !== "Auto" && q !== "auto");
         if (opts.length > 0) {
-            setQualities(opts.map((q) => ({ height: parseInt(q), label: q + "p" })));
+            if (isLocal) {
+                setQualities(opts.map((q) => ({ height: q, label: q })));
+            } else {
+                setQualities(opts.map((q) => ({ height: parseInt(q), label: q + "p" })));
+            }
             setSelectedQuality("auto");
         }
-    }, [params.qualityoptions, isHls]);
-
-    useEffect(() => {
-        if (isHls) return;
-        const video = videoRef.current;
-        if (!video || !streamUrl) return;
-        const wasPlaying = !video.paused;
-        const prevTime = video.currentTime;
-        video.load();
-        const onLoaded = () => {
-            try {
-                video.currentTime = prevTime;
-            } catch (e) {
-                console.error("Seek error:", e);
-            }
-            if (wasPlaying) video.play().catch(console.error);
-            if (hasAudioElement && audioRef.current) {
-                audioRef.current.currentTime = prevTime;
-                if (wasPlaying) audioRef.current.play().catch(console.error);
-            }
-            video.removeEventListener("loadedmetadata", onLoaded);
-        };
-        video.addEventListener("loadedmetadata", onLoaded);
-        return () => video.removeEventListener("loadedmetadata", onLoaded);
-    }, [streamUrl, isHls, hasAudioElement]);
-
-    useEffect(() => {
-        if (!hasAudioElement) return;
-        const audio = audioRef.current;
-        if (!audio || !audioUrl) return;
-        audio.src = audioUrl;
-        audio.load();
-    }, [audioUrl, hasAudioElement]);
+    }, [params.qualityoptions, isHls, isLocal]);
 
     const handlePlayPause = () => {
         const video = videoRef.current;
@@ -189,14 +224,16 @@ const VideoPlayer = (params) => {
     };
 
     const handleVolumeChange = (e) => {
+        volumeRef.current = Number(e.target.value);
         const target = hasAudioElement ? audioRef.current : videoRef.current;
-        if (target) target.volume = e.target.value / 100;
+        if (target) target.volume = volumeRef.current / 100;
     };
 
     const handleSpeedChange = (value) => {
         const video = videoRef.current;
         const audio = hasAudioElement ? audioRef.current : null;
         const rate = parseFloat(value);
+        speedRef.current = rate;
         if (video) video.playbackRate = rate;
         if (audio) audio.playbackRate = rate;
         setPlaybackSpeed(rate);
@@ -224,27 +261,26 @@ const VideoPlayer = (params) => {
     };
 
     const selectProgressiveQuality = (height) => {
+        if (isLocal) {
+            params.onQualityChange?.(height, "local", "", "");
+            setSelectedQuality(height);
+            setShowQuality(false);
+            return;
+        }
         const prog = streamData.progressive || [];
         const adapt = streamData.adaptive?.video || [];
-        const allFormats = [...prog, ...adapt];
-        const match = allFormats.find((f) => f.resolution === height);
-        
-        if (match) {
-            // Check if it's from adaptive
-            const isAdaptive = adapt.some((f) => f.resolution === height);
-            
-            if (isAdaptive) {
-                // Switch to adaptive mode
-                const audio = streamData.adaptive?.audio?.[0];
+        const progressiveMatch = prog.find((f) => f.resolution === height);
+        if (progressiveMatch) {
+            params.onQualityChange?.(height, "progressive", progressiveMatch.url, "");
+        } else {
+            const adaptiveMatch = adapt.find((f) => f.resolution === height);
+            if (adaptiveMatch) {
+                const audio = pickAdaptiveAudio(streamData.adaptive?.audio);
                 if (audio) {
-                    // Need to tell parent to switch mode - use callback
-                    params.onQualityChange?.(height, "adaptive", match.url, audio.url);
+                    params.onQualityChange?.(height, "adaptive", adaptiveMatch.url, audio.url);
                 } else {
-                    // Fallback to progressive
-                    params.onQualityChange?.(height, "progressive", match.url, "");
+                    params.onQualityChange?.(height, "progressive", adaptiveMatch.url, "");
                 }
-            } else {
-                params.onQualityChange?.(height, "progressive", match.url, "");
             }
         }
         setSelectedQuality(height);
@@ -268,12 +304,14 @@ const VideoPlayer = (params) => {
         <div className="videoplayer-wrap" onMouseMove={handleMouseMove}>
             <div className="video-layer" onClick={handlePlayPause}>
                 <video
+                    key={isHls ? "hls" : `v-${streamUrl || "empty"}`}
                     ref={videoRef}
                     className={streamUrl ? "video" : "hidden-video"}
                     src={isHls ? undefined : streamUrl}
                     muted={hasAudioElement ? true : muted}
                     loop={params.type === "short"}
                     playsInline
+                    preload={isLocal ? "auto" : "metadata"}
                     onEnded={params.onEnded}
                 />
                 <video
@@ -283,8 +321,14 @@ const VideoPlayer = (params) => {
                     muted
                     loop
                 />
+                {buffering && streamUrl ? (
+                    <div className="buffer-spinner" aria-label="Buffering">
+                        <div className="buffer-spinner-ring" />
+                    </div>
+                ) : null}
                 {hasAudioElement && (
                     <audio
+                        key={`a-${audioUrl || "empty"}`}
                         ref={audioRef}
                         src={audioUrl !== "" ? audioUrl : ""}
                         muted={!muted ? false : true}
@@ -295,6 +339,10 @@ const VideoPlayer = (params) => {
             {(playerHovered || !isPlaying || showSettings || showPlaybackSpeed || showQuality) && (
                 <div className="controls">
                     <div className="progress-bar">
+                        <div
+                            className="buffered-fill"
+                            style={{ width: `${Math.min(100, Math.max(0, buffered * 100))}%` }}
+                        />
                         <input
                             type="range"
                             min="0"

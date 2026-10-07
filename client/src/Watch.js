@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import "./Watch.css";
-import { videoApi, subscriptionApi, likeApi, historyApi, streamApi, authApi } from "./api";
+import { videoApi, subscriptionApi, likeApi, historyApi, streamApi, authApi, pickAdaptiveAudio } from "./api";
 import Videoplayer from "./Videoplayer";
 import { avatarFallback, handleImgError } from "./imgFallback";
 import Card from "./Card";
@@ -38,6 +38,8 @@ const Watch = (params) => {
     const [isUploaded, setIsUploaded] = useState(false);
     const [mode, setMode] = useState(null);
     const [streamData, setStreamData] = useState(null);
+    const [localManifest, setLocalManifest] = useState(null);
+    const [addingLocal, setAddingLocal] = useState(false);
     const [autoplay, setAutoplay] = useState(() => {
         if (user && user !== "Guest" && user.autoplay !== undefined && user.autoplay !== null) {
             return Number(user.autoplay) === 1;
@@ -171,8 +173,32 @@ const Watch = (params) => {
     }, [video_id]);
 
     useEffect(() => {
+        let cancelled = false;
+        const fetchLocalList = async () => {
+            try {
+                const response = await streamApi.getLocalList();
+                if (!cancelled) {
+                    setLocalManifest(response.data || response || {});
+                }
+            } catch (error) {
+                console.log("Error fetching local media list:", error.message);
+                if (!cancelled) {
+                    setLocalManifest({});
+                }
+            }
+        };
+        fetchLocalList();
+        return () => {
+            cancelled = true;
+        };
+    }, []);
+
+    useEffect(() => {
         if (!watchdata || !watchdata.video_id) return;
         if (watchdata.link && isUploadedLink(watchdata.link)) {
+            return;
+        }
+        if (localManifest && localManifest[watchdata.video_id]) {
             return;
         }
         let cancelled = false;
@@ -194,6 +220,7 @@ const Watch = (params) => {
         return () => {
             cancelled = true;
         };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [watchdata]);
 
     useEffect(() => {
@@ -286,7 +313,49 @@ const Watch = (params) => {
         }
     };
 
+    const handleAddLocal = async () => {
+        if (!video_id || addingLocal) return;
+        if (localManifest && localManifest[video_id]) {
+            showToast("Already in the local media list");
+            return;
+        }
+        setAddingLocal(true);
+        try {
+            const response = await streamApi.addLocalVideo(video_id);
+            const data = response.data || response;
+            const qualities = (data && data.qualities) || [];
+            if (qualities.length > 0) {
+                const fresh = { ...(localManifest || {}) };
+                fresh[video_id] = { qualities };
+                setLocalManifest(fresh);
+                setMode("local");
+                setQualityoptions(qualities.map((q) => q.label));
+                setVideo_url(qualities[0].url);
+                setAudio_url("");
+                setFetchFailed(false);
+                showToast("Added to local media — now playing self-hosted");
+            } else {
+                showToast("Could not add this video", "error");
+            }
+        } catch (error) {
+            console.log("Error adding local video:", error.message);
+            showToast("Could not add this video", "error");
+        } finally {
+            setAddingLocal(false);
+        }
+    };
+
     const handleDownload = () => {
+        if (mode === "local" && video_url) {
+            const a = document.createElement("a");
+            a.href = video_url;
+            a.download = "";
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            showToast("Download started");
+            return;
+        }
         if (isUploaded && watchdata.link) {
             const a = document.createElement("a");
             a.href = watchdata.link;
@@ -372,10 +441,21 @@ const Watch = (params) => {
         };
     }, [fetchFailed, isUploaded, video_id]);
 
-// Initial setup: picks the best available playback tier from streamData.
-// Runs only when streamData first loads, NOT when user changes quality.
+// Initial setup: self-hosted file first, then the best available
+// playback tier from streamData. Runs on fresh loads, NOT on
+// user-triggered quality changes.
     useEffect(() => {
-        if (isUploaded || !streamData || !streamData.video_id) return;
+        if (isUploaded || !localManifest) return;
+        const localEntry = video_id && localManifest[video_id];
+        if (localEntry && localEntry.qualities && localEntry.qualities.length > 0) {
+            setMode("local");
+            setQualityoptions(localEntry.qualities.map((q) => q.label));
+            setVideo_url(localEntry.qualities[0].url);
+            setAudio_url("");
+            setFetchFailed(false);
+            return;
+        }
+        if (!streamData || !streamData.video_id) return;
 
         const progressiveResolutions = streamData.progressive
             ? streamData.progressive.map((f) => f.resolution).filter(Boolean)
@@ -410,7 +490,7 @@ const Watch = (params) => {
             setMode("adaptive");
             const match = streamData.adaptive.video.find((f) => f.resolution === video_resolution);
             const chosenVideo = match || streamData.adaptive.video[0];
-            const chosenAudio = streamData.adaptive.audio && streamData.adaptive.audio[0];
+            const chosenAudio = pickAdaptiveAudio(streamData.adaptive.audio);
             setVideo_url(chosenVideo.url);
             setAudio_url(chosenAudio ? chosenAudio.url : "");
             return;
@@ -418,15 +498,36 @@ const Watch = (params) => {
 
         setMode(null);
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [streamData?.video_id, isUploaded]);
+    }, [streamData?.video_id, isUploaded, localManifest, video_id]);
 
     const handleQualityChange = (resolution, newMode, videoUrl, audioUrl) => {
         if (resolution === 0) {
+            if (mode === "local") {
+                const localEntry = video_id && localManifest && localManifest[video_id];
+                const best = localEntry && localEntry.qualities && localEntry.qualities[0];
+                if (best) {
+                    setVideo_url(best.url);
+                    setAudio_url("");
+                    setVideo_resolution(0);
+                }
+                return;
+            }
             // Auto - reset to default progressive
             const prog = streamData?.progressive || [];
             if (prog.length > 0) {
                 setMode("progressive");
                 setVideo_url(prog[0].url);
+                setAudio_url("");
+                setVideo_resolution(0);
+            }
+            return;
+        }
+
+        if (newMode === "local") {
+            const localEntry = video_id && localManifest && localManifest[video_id];
+            const match = localEntry && (localEntry.qualities || []).find((q) => q.label === resolution);
+            if (match) {
+                setVideo_url(match.url);
                 setAudio_url("");
                 setVideo_resolution(0);
             }
@@ -450,7 +551,7 @@ const Watch = (params) => {
 
         const adaptiveMatch = adaptV.find((f) => f.resolution === resolution);
         if (adaptiveMatch) {
-            const audioMatch = adaptA[0];
+            const audioMatch = pickAdaptiveAudio(adaptA);
             setMode("adaptive");
             setVideo_url(adaptiveMatch.url);
             setAudio_url(audioMatch ? audioMatch.url : "");
@@ -644,6 +745,16 @@ const Watch = (params) => {
                                     />
                                     Download
                                 </button>
+                                {localManifest && video_id && !localManifest[video_id] && !isUploaded ? (
+                                    <button
+                                        className="download_btn"
+                                        onClick={handleAddLocal}
+                                        disabled={addingLocal}
+                                        title="Save to self-hosted media list"
+                                    >
+                                        {addingLocal ? "Saving…" : "Save locally"}
+                                    </button>
+                                ) : null}
                             </div>
                         </div>
                     </div>

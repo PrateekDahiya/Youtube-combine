@@ -11,6 +11,6 @@ export { uploadApi } from "./upload";
 export { commentApi } from "./comment";
 export { channelApi } from "./channel";
 export { searchApi, categoryApi, trendingApi } from "./discover";
-export { streamApi } from "./stream";
+export { streamApi, pickAdaptiveAudio } from "./stream";
 export { notificationApi } from "./notification";
 export { default as api } from "./client";
