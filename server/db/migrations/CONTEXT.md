@@ -18,6 +18,7 @@ A collection of **one-off SQL migrations** that take an already-provisioned data
 | `012_add_search_suggestions.sql` | Adds `search_suggestions` prefix index (`term`, `kind`, `ref_id`, `popularity`) for search typeahead; written by `fetchAndStoreVideos`, read by `GET /api/suggest`. `ref_id` is `''` (not NULL) so the PK dedupes tag rows. Assumptions: `channels`, `videos` tables exist. |
 | `013_add_videos_views_index.sql` | Adds `idx_video_views (views DESC)` so discovery feeds can pull the most popular candidate set via an index range scan instead of a full-table filesort. Assumptions: `videos` table exists. |
 | `011_add_user_autoplay.sql` | Adds `user.autoplay` (`TINYINT(1)`, default 1) so the Watch page autoplay toggle persists per user across sessions. Guarded `ADD COLUMN IF NOT EXISTS` via procedure. Assumptions: `user` table exists. |
+| `015_drop_videos_fulltext.sql` | Drops `ft_videos_search` on `videos` — its auxiliary tables (~236MB) were the largest disk consumer and don't shrink on row deletes. The three `MATCH..AGAINST` call sites (`feed/search.js`, `feed/personalized.js` via `feed/helpers.js`, `youtube/index.js`) all gate on `src/utils/fulltext.js` availability and fall back to `LIKE`/unfiltered queries. `ft_channels_search` is kept. Assumptions: 003 applied. |
 
 ## Why this migration exists
 

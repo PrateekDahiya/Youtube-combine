@@ -9,6 +9,7 @@
     "007_add_notifications_table.sql",
     "009_add_stream_cache_table.sql",
     "012_add_search_suggestions.sql",
-    "014_channel_sync_queue.sql"
+    "014_channel_sync_queue.sql",
+    "015_drop_videos_fulltext.sql"
   ]
 }
