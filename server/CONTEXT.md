@@ -152,7 +152,7 @@ Two internal cron schedulers run within the Node process, replacing external cro
    - Guarded by `isAddingChannel` flag to prevent overlap
    - No max attempts — runs until YouTube API quota is exhausted or a new channel is found
 
-Both schedulers are started in `server.js` after migrations run. Cron expressions are stored in the `scheduler_settings` table and can be configured via API.
+Both schedulers are started in `server.js` after migrations run only when `SCHEDULERS_ENABLED=1` (default off — ingestion is the main DB grower). Cron expressions are stored in the `scheduler_settings` table and can be configured via API. The 15-minute notification cron (`startNotificationCron`, subscribed channels only) is independent of this flag.
 
 ## Scheduler Settings API (`/api/scheduler-settings`)
 

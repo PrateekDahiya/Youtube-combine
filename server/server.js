@@ -83,7 +83,11 @@ const server = app.listen(port, async () => {
     }
 
     startNotificationCron();
-    initializeAndStartSchedulers();
+    if (process.env.SCHEDULERS_ENABLED === "1") {
+        initializeAndStartSchedulers();
+    } else {
+        console.log("Channel schedulers disabled (set SCHEDULERS_ENABLED=1 to enable)");
+    }
 });
 
 server.on("error", (error) => {
